@@ -6,7 +6,6 @@
 
 import { z } from 'zod'
 import { sendEmail } from '@@/server/services/email'
-import { env } from '@@/env'
 import { findUserByEmail } from '@@/server/database/queries/users'
 import {
   saveEmailVerificationCode,
@@ -23,6 +22,7 @@ const resendVerificationSchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
+  const config = useRuntimeConfig();
   // 1. Validate body and find user by email
   const data = await validateBody(event, resendVerificationSchema)
   const user = await findUserByEmail(data.email)
@@ -57,15 +57,15 @@ export default defineEventHandler(async (event) => {
   const htmlTemplate = await render(EmailVerification, {
     verificationCode: emailVerificationCode,
   })
-  if (env.MOCK_EMAIL) {
+  if (config.email.mock) {
     console.table({
       email: data.email,
       name: user.name,
-      verificationLink: `${env.BASE_URL}/api/auth/verify-account?token=${emailVerificationCode}`,
+      verificationLink: `${config.public.baseUrl}/api/auth/verify-account?token=${emailVerificationCode}`,
     })
   } else {
     await sendEmail({
-      subject: `Verify your email for ${env.APP_NAME}`,
+      subject: `Verify your email for ${config.public.appName}`,
       to: data.email,
       html: htmlTemplate,
     })

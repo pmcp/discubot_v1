@@ -1,7 +1,6 @@
-import { env } from '@@/env'
 import Stripe from 'stripe'
-
-export const stripe = new Stripe(env.NUXT_STRIPE_SECRET_KEY)
+const config = useRuntimeConfig();
+export const stripe = new Stripe(config.stripe.secretKey)
 
 export interface CreateCheckoutSessionParams {
   customerId: string
@@ -38,8 +37,8 @@ export const stripeService = {
           address: 'auto',
         },
         allow_promotion_codes: true,
-        success_url: `${env.BASE_URL}/dashboard/${teamSlug}/settings/billing?success=true`,
-        cancel_url: `${env.BASE_URL}/dashboard/${teamSlug}/settings/billing?cancel=true`,
+        success_url: `${config.public.baseUrl}/dashboard/${teamSlug}/settings/billing?success=true`,
+        cancel_url: `${config.public.baseUrl}/dashboard/${teamSlug}/settings/billing?cancel=true`,
         line_items: [
           {
             price: priceId,

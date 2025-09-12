@@ -10,7 +10,7 @@ import {
   Preview,
   Text,
 } from '@vue-email/components'
-import { env } from '@@/env'
+const config = useRuntimeConfig();
 
 interface MemberInviteProps {
   inviterName?: string
@@ -71,17 +71,17 @@ const footer = {
 <template>
   <Html>
     <Head />
-    <Preview>Join {{ organizationName }} on {{ env.APP_NAME }}</Preview>
+    <Preview>Join {{ organizationName }} on {{ config.public.appName }}</Preview>
     <Body :style="main">
       <Container :style="container">
-        <Img :src="env.LOGO_URL" width="40" alt="Logo" />
+        <Img :src="config.public.logoUrl" width="40" alt="Logo" />
 
         <Heading :style="heading">
           {{ inviterName }} invited you to join {{ organizationName }}
         </Heading>
 
         <Text :style="text">
-          {{ organizationName }} is using {{ env.APP_NAME }} to collaborate.
+          {{ organizationName }} is using {{ config.public.appName }} to collaborate.
           Accept the invitation below to get started.
         </Text>
 
@@ -93,13 +93,13 @@ const footer = {
           If you weren't expecting this invitation, you can ignore this email.
           <br>
           <Link
-            :href="env.BASE_URL"
+            :href="config.public.baseUrl"
             target="_blank"
             :style="{ color: '#898989', textDecoration: 'underline' }"
           >
-            {{ env.APP_NAME }}
+            {{ config.public.appName }}
           </Link>
-          - {{ env.APP_DESCRIPTION }}
+          - {{ config.public.appDescription }}
         </Text>
       </Container>
     </Body>

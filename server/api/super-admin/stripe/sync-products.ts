@@ -1,5 +1,4 @@
 import Stripe from 'stripe'
-import { env } from '@@/env'
 import {
   clearStripeData,
   createStripeProduct,
@@ -8,7 +7,8 @@ import {
 import { consola } from 'consola'
 
 export default defineEventHandler(async (_event) => {
-  const stripe = new Stripe(env.NUXT_STRIPE_SECRET_KEY)
+  const config = useRuntimeConfig();
+  const stripe = new Stripe(config.stripe.secretKey)
   consola.start('Syncing Stripe products and prices...')
   try {
     // First, clear all existing data

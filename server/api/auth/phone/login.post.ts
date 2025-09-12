@@ -2,13 +2,12 @@ import { findUserByPhoneNumber } from '@@/server/database/queries/users'
 import { validateBody } from '@@/server/utils/bodyValidation'
 import { phoneSchema } from '@@/shared/validations/auth'
 import { generateNumericCode } from '@@/server/utils/nanoid'
-import { env } from '@@/env'
 import { saveOneTimePassword } from '@@/server/database/queries/auth'
 import { OneTimePasswordTypes } from '@@/constants'
 
 export default defineEventHandler(async (event) => {
+  const config = useRuntimeConfig();
   const data = await validateBody(event, phoneSchema)
-
   const user = await findUserByPhoneNumber(data.phoneNumber)
   if (!user) {
     throw createError({
@@ -41,17 +40,17 @@ export default defineEventHandler(async (event) => {
   })
 
   await $fetch(
-    `https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_ACCOUNT_SID}/Messages.json`,
+    `https://api.twilio.com/2010-04-01/Accounts/${config.twilio.accountSid}/Messages.json`,
     {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${Buffer.from(`${env.TWILIO_ACCOUNT_SID}:${env.TWILIO_AUTH_TOKEN}`).toString('base64')}`,
+        'Authorization': `Basic ${Buffer.from(`${config.twilio.accountSid}:${config.twilio.authToken}`).toString('base64')}`,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: new URLSearchParams({
-        Body: `Your verification code for ${env.APP_NAME} is: ${oneTimePassword}`,
+        Body: `Your verification code for ${config.public.appName} is: ${oneTimePassword}`,
         To: data.phoneNumber,
-        From: env.TWILIO_PHONE_NUMBER,
+        From: config.twilio.phoneNumber,
       }).toString(),
     },
   )

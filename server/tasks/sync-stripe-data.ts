@@ -1,5 +1,5 @@
 import Stripe from 'stripe'
-import { env } from '@@/env'
+
 import {
   createOrUpdateStripeProduct,
   createOrUpdateStripePrice,
@@ -12,7 +12,8 @@ export default defineTask({
     description: 'Sync Stripe products and prices with local database',
   },
   async run() {
-    const stripe = new Stripe(env.NUXT_STRIPE_SECRET_KEY)
+    const config = useRuntimeConfig();
+    const stripe = new Stripe(config.stripe.secretKey)
     consola.start('Syncing Stripe products and prices...')
     try {
       // Sync Products

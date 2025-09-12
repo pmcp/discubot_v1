@@ -1,7 +1,6 @@
 import { useEmail } from 'use-email'
-import { env } from '@@/env'
-
-const EMAIL_PROVIDER = env.EMAIL_PROVIDER
+const config = useRuntimeConfig()
+const EMAIL_PROVIDER = process.env.EMAIL_PROVIDER as string
 const emailService = useEmail(EMAIL_PROVIDER)
 
 export interface BaseEmailPayload {
@@ -24,7 +23,7 @@ export type EmailPayload = TextEmailPayload | HtmlEmailPayload
 export async function sendEmail({ to, subject, text, html }: EmailPayload) {
   try {
     await emailService.send({
-      from: env.FROM_EMAIL,
+      from: config.email.fromEmail,
       to,
       subject,
       text,

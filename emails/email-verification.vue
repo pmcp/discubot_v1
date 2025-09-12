@@ -9,72 +9,72 @@ import {
   Link,
   Preview,
   Text,
-} from '@vue-email/components'
-import { env } from '@@/env'
+} from "@vue-email/components";
+const config = useRuntimeConfig();
 
 interface EmailVerificationProps {
-  verificationCode?: string
+  verificationCode?: string;
 }
 
 withDefaults(defineProps<EmailVerificationProps>(), {
-  verificationCode: '',
-})
+  verificationCode: "",
+});
 
 const main = {
-  backgroundColor: '#ffffff',
-}
+  backgroundColor: "#ffffff",
+};
 
 const container = {
-  paddingLeft: '12px',
-  paddingRight: '12px',
-  margin: '0 auto',
-}
+  paddingLeft: "12px",
+  paddingRight: "12px",
+  margin: "0 auto",
+};
 
 const h1 = {
-  color: '#333',
+  color: "#333",
   fontFamily:
     "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif",
-  fontSize: '24px',
-  fontWeight: 'bold',
-  margin: '40px 0',
-  padding: '0',
-}
+  fontSize: "24px",
+  fontWeight: "bold",
+  margin: "40px 0",
+  padding: "0",
+};
 
 const link = {
-  color: '#2754C5',
+  color: "#2754C5",
   fontFamily:
     "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif",
-  fontSize: '14px',
-  textDecoration: 'underline',
-}
+  fontSize: "14px",
+  textDecoration: "underline",
+};
 
 const text = {
-  color: '#333',
+  color: "#333",
   fontFamily:
     "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif",
-  fontSize: '14px',
-  margin: '24px 0',
-}
+  fontSize: "14px",
+  margin: "24px 0",
+};
 
 const footer = {
-  color: '#898989',
+  color: "#898989",
   fontFamily:
     "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif",
-  fontSize: '12px',
-  lineHeight: '22px',
-  marginTop: '12px',
-  marginBottom: '24px',
-}
+  fontSize: "12px",
+  lineHeight: "22px",
+  marginTop: "12px",
+  marginBottom: "24px",
+};
 
 const code = {
-  display: 'inline-block',
-  padding: '16px 4.5%',
-  width: '90.5%',
-  backgroundColor: '#f4f4f4',
-  borderRadius: '5px',
-  border: '1px solid #eee',
-  color: '#333',
-}
+  display: "inline-block",
+  padding: "16px 4.5%",
+  width: "90.5%",
+  backgroundColor: "#f4f4f4",
+  borderRadius: "5px",
+  border: "1px solid #eee",
+  color: "#333",
+};
 </script>
 
 <template>
@@ -85,7 +85,7 @@ const code = {
       <Container :style="container">
         <Heading :style="h1"> Verify your email </Heading>
         <Link
-          :href="`${env.BASE_URL}/api/auth/verify-account?token=${verificationCode}`"
+          :href="`${config.public.baseUrl}/api/auth/verify-account?token=${verificationCode}`"
           target="_blank"
           :style="{ ...link, display: 'block', marginBottom: '16px' }"
         >
@@ -95,7 +95,7 @@ const code = {
           Or, copy and paste this link into your browser:
         </Text>
         <code :style="code">{{
-          `${env.BASE_URL}/api/auth/verify-account?token=${verificationCode}`
+          `${config.public.baseUrl}/api/auth/verify-account?token=${verificationCode}`
         }}</code>
         <Text
           :style="{
@@ -116,15 +116,15 @@ const code = {
             marginBottom: '38px',
           }"
         />
-        <Img :src="env.LOGO_URL" width="32" alt="Logo" />
+        <Img :src="config.public.logoUrl" width="32" alt="Logo" />
         <Text :style="footer">
           <Link
-            :href="env.BASE_URL"
+            :href="config.public.baseUrl"
             target="_blank"
             :style="{ ...link, color: '#898989' }"
           >
-            {{ env.APP_NAME }}
-          </Link>, {{ env.APP_DESCRIPTION }}
+            {{ config.public.appName }} </Link
+          >, {{ config.public.appDescription }}
         </Text>
       </Container>
     </Body>

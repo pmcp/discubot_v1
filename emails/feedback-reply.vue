@@ -10,7 +10,7 @@ import {
   Preview,
   Text,
 } from '@vue-email/components'
-import { env } from '@@/env'
+const config = useRuntimeConfig();
 
 interface FeedbackReplyProps {
   userName?: string
@@ -105,18 +105,18 @@ const footer = {
 
         <Text :style="text">
           Thanks,<br>
-          {{ env.APP_NAME }} team
+          {{ config.public.appName }} team
         </Text>
 
-        <Img :src="env.LOGO_URL" width="32" alt="Logo" />
+        <Img :src="config.public.logoUrl" width="32" alt="Logo" />
         <Text :style="footer">
           <Link
-            :href="env.BASE_URL"
+            :href="config.public.baseUrl"
             target="_blank"
             :style="{ color: '#898989', textDecoration: 'underline' }"
           >
-            {{ env.APP_NAME }}
-          </Link>, {{ env.APP_DESCRIPTION }}
+            {{ config.public.appName }}
+          </Link>, {{ config.public.appDescription }}
         </Text>
       </Container>
     </Body>

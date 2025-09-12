@@ -4,12 +4,12 @@ import { validateBody } from '@@/server/utils/bodyValidation'
 import { findUserByEmail } from '@@/server/database/queries/users'
 import { inviteTeamMember, isTeamMember } from '@@/server/database/queries/teams'
 import { generateAlphaNumericCode } from '@@/server/utils/nanoid'
-import { env } from '@@/env'
 import { render } from '@vue-email/render'
 import TeamInvitation from '@@/emails/member-invite.vue'
 import { sendEmail } from '@@/server/services/email'
 
 export default defineEventHandler(async (event) => {
+  const config = useRuntimeConfig();
   // 1. Validate team ownership and get team details
   const teamId = getRouterParam(event, 'id')
   if (!teamId) {
@@ -48,20 +48,20 @@ export default defineEventHandler(async (event) => {
   const htmlTemplate = await render(TeamInvitation, {
     organizationName: team.name,
     inviterName: user.name,
-    inviteLink: `${env.BASE_URL}/api/teams/verify-invite?token=${inviteToken}`,
+    inviteLink: `${config.public.baseUrl}/api/teams/verify-invite?token=${inviteToken}`,
   })
 
-  if (env.MOCK_EMAIL) {
+  if (config.email.mock) {
     console.table({
       email: body.email,
       teamName: team.name,
       inviterName: user.name,
-      inviteLink: `${env.BASE_URL}/api/teams/verify-invite?token=${inviteToken}`,
+      inviteLink: `${config.public.baseUrl}/api/teams/verify-invite?token=${inviteToken}`,
     })
   } else {
     await sendEmail({
       to: body.email,
-      subject: `Invitation to join ${team.name} on ${env.APP_NAME}`,
+      subject: `Invitation to join ${team.name} on ${config.public.appName}`,
       html: htmlTemplate,
     })
   }

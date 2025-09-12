@@ -10,7 +10,7 @@ import {
   Preview,
   Text,
 } from '@vue-email/components'
-import { env } from '@@/env'
+const config = useRuntimeConfig();
 
 interface EmailVerificationProps {
   otp?: string
@@ -87,11 +87,11 @@ const code = {
       <Container :style="container">
         <Heading :style="h1"> Your login link </Heading>
         <Link
-          :href="`${env.BASE_URL}/auth/verify/magic-link?code=${verificationCode}`"
+          :href="`${config.public.baseUrl}/auth/verify/magic-link?code=${verificationCode}`"
           target="_blank"
           :style="{ ...link, display: 'block', marginBottom: '16px' }"
         >
-          Click here to login to {{ env.APP_NAME }}
+          Click here to login to {{ config.public.appName }}
         </Link>
         <Text :style="{ ...text, marginBottom: '14px' }">
           Or, copy and paste this temporary login code:
@@ -115,15 +115,15 @@ const code = {
             marginBottom: '38px',
           }"
         />
-        <Img :src="env.LOGO_URL" width="32" alt="Logo" />
+        <Img :src="config.public.logoUrl" width="32" alt="Logo" />
         <Text :style="footer">
           <Link
-            :href="env.BASE_URL"
+            :href="config.public.baseUrl"
             target="_blank"
             :style="{ ...link, color: '#898989' }"
           >
-            {{ env.APP_NAME }}
-          </Link>, {{ env.APP_DESCRIPTION }}
+            {{ config.public.appName }}
+          </Link>, {{ config.public.appDescription }}
         </Text>
       </Container>
     </Body>

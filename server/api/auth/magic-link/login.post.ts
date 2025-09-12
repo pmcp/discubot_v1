@@ -30,9 +30,10 @@ import {
 import { OneTimePasswordTypes } from '@@/constants'
 import EmailVerification from '@@/emails/magic-link.vue'
 import { render } from '@vue-email/render'
-import { env } from '@@/env'
+
 
 export default defineEventHandler(async (event) => {
+  const config = useRuntimeConfig();
   const data = await validateBody(event, emailSchema)
 
   const user = await findUserByEmail(data.email)
@@ -78,15 +79,15 @@ export default defineEventHandler(async (event) => {
     verificationCode: emailVerificationCode,
   })
 
-  if (env.MOCK_EMAIL) {
+  if (config.email.mock) {
     console.table({
       email: data.email,
-      verificationLink: `${env.BASE_URL}/api/auth/verify-account?token=${emailVerificationCode}`,
+      verificationLink: `${config.public.baseUrl}/api/auth/verify-account?token=${emailVerificationCode}`,
       oneTimePassword,
     })
   } else {
     await sendEmail({
-      subject: `Your login link for ${env.APP_NAME}`,
+      subject: `Your login link for ${config.public.appName}`,
       to: data.email,
       html: emailHtml,
     })
