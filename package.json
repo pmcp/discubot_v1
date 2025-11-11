@@ -41,7 +41,7 @@
     "zod": "^4.1.8"
   },
   "devDependencies": {
-    "@friendlyinternet/nuxt-crouton-collection-generator": "^1.4.0",
+    "@friendlyinternet/nuxt-crouton-collection-generator": "^1.4.1",
     "@tailwindcss/typography": "^0.5.16",
     "@vueuse/core": "^13.9.0",
     "@vueuse/nuxt": "13.3.0",

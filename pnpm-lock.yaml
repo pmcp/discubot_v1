@@ -82,8 +82,8 @@ importers:
         version: 4.1.8
     devDependencies:
       '@friendlyinternet/nuxt-crouton-collection-generator':
-        specifier: ^1.4.0
-        version: 1.4.0(@types/node@22.14.0)
+        specifier: ^1.4.1
+        version: 1.4.1(@types/node@22.14.0)
       '@tailwindcss/typography':
         specifier: ^0.5.16
         version: 0.5.16(tailwindcss@4.1.8)
@@ -1222,8 +1222,8 @@ packages:
   '@floating-ui/vue@1.1.6':
     resolution: {integrity: sha512-XFlUzGHGv12zbgHNk5FN2mUB7ROul3oG2ENdTpWdE+qMFxyNxWSRmsoyhiEnpmabNm6WnUvR1OvJfUfN4ojC1A==}
 
-  '@friendlyinternet/nuxt-crouton-collection-generator@1.4.0':
-    resolution: {integrity: sha512-wwvvc2RXDmPEfLIonSGegLI5m8vrubP8Zw+gAISMmBIGaW9EZ+1BMwJq413OT2AQCNpJFi09ZJWaU0KyD+iVzQ==}
+  '@friendlyinternet/nuxt-crouton-collection-generator@1.4.1':
+    resolution: {integrity: sha512-sYpwGTPSt7qPXfFutGZYfdalrvvqVysS1qlv1KLjIsS2zmz7HFlZv50Xckx8GEjZLh65nF6hlWPGBYoykmpWzQ==}
     engines: {node: '>=18.0.0'}
     hasBin: true
 
@@ -7537,7 +7537,7 @@ snapshots:
       - '@vue/composition-api'
       - vue
 
-  '@friendlyinternet/nuxt-crouton-collection-generator@1.4.0(@types/node@22.14.0)':
+  '@friendlyinternet/nuxt-crouton-collection-generator@1.4.1(@types/node@22.14.0)':
     dependencies:
       chalk: 5.6.2
       commander: 11.1.0
