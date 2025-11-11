@@ -9,6 +9,9 @@ export default defineNuxtConfig({
     'nuxthub-ratelimit',
     '@nuxt/eslint',
   ],
+  extends: [
+    '@friendlyinternet/nuxt-crouton',
+  ],
   devtools: { enabled: true },
   css: ['~/assets/css/main.css'],
   colorMode: {
