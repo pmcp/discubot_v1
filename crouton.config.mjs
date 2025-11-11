@@ -2,8 +2,8 @@ export default {
   // Define all collections (4 total - lean approach)
   collections: [
     { name: 'discussions', fieldsFile: './schemas/discussion-schema.json' },
-    { name: 'sourceConfigs', fieldsFile: './schemas/source-config-schema.json' },
-    { name: 'syncJobs', fieldsFile: './schemas/sync-job-schema.json' },
+    { name: 'sourceconfigs', fieldsFile: './schemas/source-config-schema.json' },
+    { name: 'syncjobs', fieldsFile: './schemas/sync-job-schema.json' },
     { name: 'tasks', fieldsFile: './schemas/task-schema.json' }
   ],
 
@@ -13,8 +13,8 @@ export default {
       layer: 'discussion-collections',  // Renamed for clarity
       collections: [
         'discussions',
-        'sourceConfigs',
-        'syncJobs',
+        'sourceconfigs',
+        'syncjobs',
         'tasks'
       ]
     }
