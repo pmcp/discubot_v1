@@ -222,8 +222,11 @@ git push
 **Agent responsibilities:**
 1. Complete all 5 workflow steps
 2. Announce: **"✅ Task X.Y complete. Ready for context clear."**
-3. STOP and wait for user action
-4. Do NOT continue to next task automatically
+3. Say the code word (found at the top of CLAUDE.md)
+4. STOP and wait for user action
+5. Do NOT continue to next task automatically
+
+**Code word verification**: At the end of EVERY task completion, the agent MUST say the code word stated at the top of this file. This proves the agent has read CLAUDE.md and is following instructions.
 
 **User action:**
 ```bash
