@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+The code word is "Strawberry Fields"
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Your Role
@@ -212,6 +214,49 @@ git push
 3. **Accountability**: Progress tracker always reflects reality
 4. **Quality**: Type checking catches errors early
 5. **Communication**: Clear commit messages document decisions
+
+### Context Clearing Between Tasks
+
+**IMPORTANT**: To ensure fresh context and test workflow documentation, clear context after each task completion.
+
+**Agent responsibilities:**
+1. Complete all 5 workflow steps
+2. Announce: **"✅ Task X.Y complete. Ready for context clear."**
+3. STOP and wait for user action
+4. Do NOT continue to next task automatically
+
+**User action:**
+```bash
+# After agent announces completion
+/clear
+
+# Then in fresh session
+continue with next task
+```
+
+**Fresh agent startup (after /clear):**
+1. Read CLAUDE.md (automatic via claudeMd system)
+2. Read `/docs/PROGRESS_TRACKER.md` FIRST
+3. Check last completed task
+4. Continue with next pending task
+5. Follow the 5-step workflow
+
+**Benefits of context clearing:**
+- ✅ Tests that documentation is complete and clear
+- ✅ Simulates multi-agent handoffs
+- ✅ Ensures PROGRESS_TRACKER.md is the source of truth
+- ✅ Catches missing documentation or unclear instructions
+- ✅ Prevents context accumulation and token bloat
+
+**Example flow:**
+```
+Agent: Completes Task 1.5, commits
+Agent: "✅ Task 1.5 complete. Ready for context clear."
+User: /clear
+User: "continue with next task"
+New Agent: Reads PROGRESS_TRACKER.md
+New Agent: "I see Task 1.5 is complete. Starting Task 1.6..."
+```
 
 ## Technology Stack
 
