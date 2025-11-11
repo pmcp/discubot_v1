@@ -12,7 +12,7 @@
   },
   "syncJobId": {
     "type": "string",
-    "refTarget": "syncJobs",
+    "refTarget": "syncjobs",
     "meta": {
       "required": true,
       "label": "Sync Job",

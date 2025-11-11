@@ -31,7 +31,7 @@
   },
   "sourceConfigId": {
     "type": "string",
-    "refTarget": "sourceConfigs",
+    "refTarget": "sourceconfigs",
     "meta": {
       "required": true,
       "label": "Source Configuration",
@@ -150,7 +150,7 @@
   },
   "syncJobId": {
     "type": "string",
-    "refTarget": "syncJobs",
+    "refTarget": "syncjobs",
     "meta": {
       "label": "Sync Job",
       "description": "Reference to processing job",

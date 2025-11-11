@@ -12,7 +12,7 @@
   },
   "sourceConfigId": {
     "type": "string",
-    "refTarget": "sourceConfigs",
+    "refTarget": "sourceconfigs",
     "meta": {
       "required": true,
       "label": "Source Config",
