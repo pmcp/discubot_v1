@@ -5,9 +5,11 @@ import {
 } from '@@/server/database/queries/admin'
 import { render } from '@vue-email/render'
 import FeedbackReply from '@@/emails/feedback-reply.vue'
-import { env } from '@@/env'
+
+
 
 export default defineEventHandler(async (event) => {
+  const config = useRuntimeConfig();
   const { user } = await requireUserSession(event)
   if (!user.superAdmin) {
     throw createError({
@@ -31,7 +33,7 @@ export default defineEventHandler(async (event) => {
     replyMessage: message,
   })
 
-  if (env.MOCK_EMAIL) {
+  if (config.email.mock) {
     console.table({
       email,
       name: feedback.user.name,

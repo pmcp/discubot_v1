@@ -10,7 +10,6 @@ import { render } from '@vue-email/render'
 import EmailVerification from '@@/emails/email-verification.vue'
 import { sendEmail } from '@@/server/services/email'
 import { sanitizeUser } from '@@/server/utils/auth'
-import { env } from '@@/env'
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -28,6 +27,7 @@ const schema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
+  const config = useRuntimeConfig();
   // Verify that the requester is a super admin
   const { user } = await requireUserSession(event)
   if (!user.superAdmin) {
@@ -76,15 +76,15 @@ export default defineEventHandler(async (event) => {
       verificationCode: emailVerificationCode,
     })
 
-    if (env.MOCK_EMAIL) {
+    if (config.email.mock) {
       console.table({
         email: data.email,
         name: data.name,
-        verificationLink: `${env.BASE_URL}/api/auth/verify-account?token=${emailVerificationCode}`,
+        verificationLink: `${config.public.baseUrl}/api/auth/verify-account?token=${emailVerificationCode}`,
       })
     } else {
       await sendEmail({
-        subject: `Welcome to ${env.APP_NAME}`,
+        subject: `Welcome to ${config.public.appName}`,
         to: data.email,
         html: htmlTemplate,
       })

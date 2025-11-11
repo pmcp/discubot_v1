@@ -10,7 +10,7 @@ import {
   Preview,
   Text,
 } from '@vue-email/components'
-import { env } from '@@/env'
+const config = useRuntimeConfig();
 
 interface LoginNotificationProps {
   userName?: string
@@ -80,7 +80,7 @@ const footer = {
         <Heading :style="h1">Login from a new location</Heading>
         <Text :style="text"> Hello {{ userName }}, </Text>
         <Text :style="text">
-          We noticed a login to your {{ env.APP_NAME }} account from a new
+          We noticed a login to your {{ config.public.appName }} account from a new
           location.
         </Text>
         <Text v-if="city && country" :style="text">
@@ -91,23 +91,23 @@ const footer = {
         </Text>
         <Text :style="text">
           If this wasn't you, you should immediately
-          <Link :href="`${env.BASE_URL}`" target="_blank" :style="link">
-            change your {{ env.APP_NAME }} account password
+          <Link :href="`${config.public.baseUrl}`" target="_blank" :style="link">
+            change your {{ config.public.appName }} account password
           </Link>
         </Text>
         <Text :style="text">
           Thanks,<br>
-          {{ env.APP_NAME }} team
+          {{ config.public.appName }} team
         </Text>
-        <Img :src="env.LOGO_URL" width="32" alt="Logo" />
+        <Img :src="config.public.logoUrl" width="32" alt="Logo" />
         <Text :style="footer">
           <Link
-            :href="env.BASE_URL"
+            :href="config.public.baseUrl"
             target="_blank"
             :style="{ ...link, color: '#898989' }"
           >
-            {{ env.APP_NAME }}
-          </Link>, {{ env.APP_DESCRIPTION }}
+              {{ config.public.appName }}
+          </Link>, {{ config.public.appDescription }}
         </Text>
       </Container>
     </Body>

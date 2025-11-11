@@ -1,9 +1,9 @@
 import { sendEmail } from '@@/server/services/email'
 import { render } from '@vue-email/render'
 import LoginNotification from '@@/emails/login-notification.vue'
-import { env } from '@@/env'
 
 export default defineEventHandler(async (event) => {
+  const config = useRuntimeConfig();
   // Get user data from the request body
   const { user } = await readBody(event)
   if (!user?.name || !user?.email) {
@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
       country,
     })
 
-    if (!env.MOCK_EMAIL) {
+    if (!config.email.mock) {
       await sendEmail({
         to: user.email,
         subject: 'Login from a new location',

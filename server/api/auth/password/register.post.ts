@@ -12,7 +12,7 @@
 
 import { registerUserSchema } from '@@/shared/validations/auth'
 import { sendEmail } from '@@/server/services/email'
-import { env } from '@@/env'
+
 import {
   findUserByEmail,
   createUserWithPassword,
@@ -33,6 +33,7 @@ import {
 } from '@@/server/database/queries/teams'
 
 export default defineEventHandler(async (event) => {
+  const config = useRuntimeConfig();
   // 1. Validate body
   const data = await validateBody(event, registerUserSchema)
 
@@ -109,15 +110,15 @@ export default defineEventHandler(async (event) => {
       verificationCode: emailVerificationCode,
     })
 
-    if (env.MOCK_EMAIL) {
+    if (config.email.mock) {
       console.table({
         email: data.email,
         name: data.name,
-        verificationLink: `${env.BASE_URL}/api/auth/verify-account?token=${emailVerificationCode}`,
+        verificationLink: `${config.public.baseUrl}/api/auth/verify-account?token=${emailVerificationCode}`,
       })
     } else {
       await sendEmail({
-        subject: `Welcome to the ${env.APP_NAME}`,
+        subject: `Welcome to the ${config.public.appName}`,
         to: data.email,
         html: htmlTemplate,
       })

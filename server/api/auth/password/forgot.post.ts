@@ -9,9 +9,9 @@ import { validateBody } from '@@/server/utils/bodyValidation'
 import { findUserByEmail } from '@@/server/database/queries/users'
 import { createPasswordResetToken } from '@@/server/database/queries/auth'
 import { sendEmail } from '@@/server/services/email'
-import { env } from '@@/env'
 
 export default defineEventHandler(async (event) => {
+  const config = useRuntimeConfig();
   // 1. Validate email
   const { email } = await validateBody(event, emailSchema)
 
@@ -27,16 +27,16 @@ export default defineEventHandler(async (event) => {
   const resetToken = await createPasswordResetToken(user.id)
 
   // 4. Send email with reset link
-  const resetUrl = `${env.BASE_URL}/auth/reset-password?token=${resetToken.code}`
+  const resetUrl = `${config.public.baseUrl}/auth/reset-password?token=${resetToken.code}`
 
-  if (env.MOCK_EMAIL) {
+  if (config.email.mock) {
     console.table({
       email: user.email,
       resetLink: resetUrl,
     })
   } else {
     await sendEmail({
-      subject: `Welcome to the ${env.APP_NAME}`,
+      subject: `Welcome to the ${config.public.appName}`,
       to: user.email,
       html: `Click <a href="${resetUrl}">here</a> to reset your password`,
     })

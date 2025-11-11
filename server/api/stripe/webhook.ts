@@ -1,5 +1,4 @@
 import Stripe from 'stripe'
-import { env } from '@@/env'
 import type { InsertSubscription } from '@@/types/database'
 import {
   createOrUpdateStripeProduct,
@@ -11,8 +10,9 @@ import { updateUser } from '@@/server/database/queries/users'
 import { stripeService } from '@@/server/services/stripe'
 
 export default defineEventHandler(async (event) => {
-  const webhookSecret = env.NUXT_STRIPE_WEBHOOK_SECRET
-  const stripeSecretKey = env.NUXT_STRIPE_SECRET_KEY
+  const config = useRuntimeConfig();
+  const webhookSecret = config.stripe.webhookSecret
+  const stripeSecretKey = config.stripe.secretKey
 
   const stripe = new Stripe(stripeSecretKey)
 

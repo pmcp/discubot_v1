@@ -1,13 +1,13 @@
 import { render } from '@vue-email/render'
 import TeamInvitation from '@@/emails/member-invite.vue'
 import { sendEmail } from '@@/server/services/email'
-import { env } from '@@/env'
 import {
   findTeamInvite,
   updateTeamInvite,
 } from '@@/server/database/queries/teams'
 
 export default defineEventHandler(async (event) => {
+  const config = useRuntimeConfig();
   const teamId = getRouterParam(event, 'id')
   const inviteId = getRouterParam(event, 'inviteId')
   if (!teamId || !inviteId) {
@@ -44,20 +44,20 @@ export default defineEventHandler(async (event) => {
   const htmlTemplate = await render(TeamInvitation, {
     organizationName: team.name,
     inviterName: user.name,
-    inviteLink: `${env.BASE_URL}/api/teams/verify-invite?token=${invitation.token}`,
+    inviteLink: `${config.public.baseUrl}/api/teams/verify-invite?token=${invitation.token}`,
   })
 
-  if (env.MOCK_EMAIL) {
+  if (config.email.mock) {
     console.table({
       email: invitation.email,
       teamName: team.name,
       inviterName: user.name,
-      inviteLink: `${env.BASE_URL}/api/teams/verify-invite?token=${invitation.token}`,
+      inviteLink: `${config.public.baseUrl}/api/teams/verify-invite?token=${invitation.token}`,
     })
   } else {
     await sendEmail({
       to: invitation.email,
-      subject: `Invitation to join ${team.name} on ${env.APP_NAME}`,
+      subject: `Invitation to join ${team.name} on ${config.public.appName}`,
       html: htmlTemplate,
     })
   }
