@@ -132,6 +132,9 @@ function getAnthropicClient(): Anthropic {
 
 /**
  * Generate a summary of a discussion thread
+ *
+ * Model: claude-sonnet-4-5-20250929 (active until at least Sept 29, 2026)
+ * See: https://docs.anthropic.com/en/docs/resources/model-deprecations
  */
 async function generateSummary(
   thread: DiscussionThread,
@@ -174,7 +177,7 @@ Respond in JSON format:
   const response = await retryWithBackoff(
     () =>
       client.messages.create({
-        model: 'claude-3-5-sonnet-20240620',
+        model: 'claude-sonnet-4-5-20250929',
         max_tokens: 1024,
         messages: [
           {
@@ -217,6 +220,9 @@ Respond in JSON format:
 
 /**
  * Detect actionable tasks from a discussion thread
+ *
+ * Model: claude-sonnet-4-5-20250929 (active until at least Sept 29, 2026)
+ * See: https://docs.anthropic.com/en/docs/resources/model-deprecations
  */
 async function detectTasks(
   thread: DiscussionThread,
@@ -271,7 +277,7 @@ Respond in JSON format:
   const response = await retryWithBackoff(
     () =>
       client.messages.create({
-        model: 'claude-3-5-sonnet-20240620',
+        model: 'claude-sonnet-4-5-20250929',
         max_tokens: 2048,
         messages: [
           {
