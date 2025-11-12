@@ -109,7 +109,6 @@
               </UButton>
             </div>
           </div>
-        </div>
       </UCard>
 
       <!-- Jobs List -->
