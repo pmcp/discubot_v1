@@ -27,7 +27,7 @@
         >
           <USelect
             v-model="state.sourceType"
-            :options="sourceTypeOptions"
+            :items="sourceTypeOptions"
             placeholder="Select a source type..."
             size="xl"
           />
@@ -138,10 +138,15 @@
         <UFormField
           label="Notion Integration Token"
           name="notionToken"
-          description="Internal integration token from Notion workspace settings"
           required
           class="not-last:pb-4"
         >
+          <template #description>
+            <div class="space-y-1">
+              <p>Create at <a href="https://www.notion.so/my-integrations" target="_blank" class="text-primary hover:underline">notion.so/my-integrations</a></p>
+              <p class="text-xs">Don't forget to share your database with the integration!</p>
+            </div>
+          </template>
           <UInput
             v-model="state.notionToken"
             type="password"
@@ -170,13 +175,15 @@
         <UFormField
           label="Notion Database ID"
           name="notionDatabaseId"
-          description="32-character database ID from Notion database URL"
           required
           class="not-last:pb-4"
         >
+          <template #description>
+            <p class="text-sm">Copy from your database URL: <code class="text-xs">notion.so/workspace/<span class="text-primary">abc123def456...</span>?v=...</code></p>
+          </template>
           <UInput
             v-model="state.notionDatabaseId"
-            placeholder="a1b2c3d4e5f6..."
+            placeholder="abc123def456789..."
             class="w-full font-mono"
             size="xl"
           />

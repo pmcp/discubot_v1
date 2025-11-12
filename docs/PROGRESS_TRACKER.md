@@ -97,7 +97,7 @@
 
 - [x] Task 5.1: Create Dashboard Page (4h) ✅
 - [x] Task 5.2: Create Source Config Form (6h) ✅
-- [ ] Task 5.3: Create Job Monitoring Dashboard (5h)
+- 🔄 Task 5.3: Create Job Monitoring Dashboard (5h)
 - [ ] Task 5.4: Create Job Details Modal (4h)
 - [ ] Task 5.5: Create Test Connection Endpoints (3h)
 - [ ] Task 5.6: Polish & Responsive Design (3h)
