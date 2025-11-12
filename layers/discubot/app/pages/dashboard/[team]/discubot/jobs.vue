@@ -77,9 +77,9 @@
 
       <!-- Filters and Actions -->
       <UCard>
-        <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+        <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
             <!-- Status Filter -->
-            <div class="flex flex-wrap gap-2">
+            <div class="flex flex-wrap gap-2" role="group" aria-label="Filter jobs by status">
               <UButton
                 v-for="filter in statusFilters"
                 :key="filter.value"
@@ -87,16 +87,19 @@
                 :variant="selectedFilter === filter.value ? 'solid' : 'outline'"
                 size="sm"
                 @click="selectedFilter = filter.value"
+                :aria-pressed="selectedFilter === filter.value"
+                :aria-label="`Filter by ${filter.label.toLowerCase()}`"
+                class="touch-manipulation"
               >
                 {{ filter.label }}
-                <span v-if="filter.count !== undefined" class="ml-1">
+                <span v-if="filter.count !== undefined" class="ml-1 opacity-75">
                   ({{ filter.count }})
                 </span>
               </UButton>
             </div>
 
             <!-- Action Buttons -->
-            <div class="flex gap-2">
+            <div class="flex gap-2 w-full sm:w-auto">
               <UButton
                 color="neutral"
                 variant="outline"
@@ -104,8 +107,11 @@
                 icon="i-lucide-refresh-cw"
                 @click="refreshJobs"
                 :disabled="pending"
+                :loading="pending"
+                aria-label="Refresh jobs list"
+                class="flex-1 sm:flex-none touch-manipulation"
               >
-                Refresh
+                <span class="hidden sm:inline">Refresh</span>
               </UButton>
             </div>
           </div>
@@ -139,15 +145,37 @@
           </div>
 
           <!-- Empty State -->
-          <div v-else-if="filteredJobs.length === 0" class="text-center py-12">
-            <UIcon name="i-lucide-inbox" class="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-            <p class="text-lg font-medium mb-2">No jobs found</p>
-            <p class="text-sm text-muted-foreground">
+          <div v-else-if="filteredJobs.length === 0" class="text-center py-12 px-4" role="status" aria-live="polite">
+            <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+              <UIcon name="i-lucide-inbox" class="w-8 h-8 sm:w-10 sm:h-10 text-muted-foreground" />
+            </div>
+            <h3 class="text-base sm:text-lg font-semibold mb-2">No jobs found</h3>
+            <p class="text-xs sm:text-sm text-muted-foreground max-w-md mx-auto mb-6">
               {{ selectedFilter === 'all'
-                ? 'No processing jobs yet. Jobs will appear here when discussions are processed.'
-                : `No ${selectedFilter} jobs at the moment.`
+                ? 'No processing jobs yet. Jobs will appear here when discussions are processed from Slack or Figma.'
+                : `No ${selectedFilter} jobs at the moment. Try selecting a different filter or check back later.`
               }}
             </p>
+            <div v-if="selectedFilter === 'all'" class="flex flex-col sm:flex-row gap-3 justify-center items-center">
+              <UButton
+                color="primary"
+                icon="i-lucide-settings"
+                :to="`/dashboard/${currentTeam?.slug}/discubot/configs`"
+                aria-label="Configure integrations"
+              >
+                Configure Integrations
+              </UButton>
+              <UButton
+                color="neutral"
+                variant="outline"
+                icon="i-lucide-book-open"
+                external
+                to="/docs/getting-started"
+                aria-label="View documentation"
+              >
+                View Documentation
+              </UButton>
+            </div>
           </div>
 
           <!-- Jobs List -->
@@ -155,21 +183,26 @@
             <div
               v-for="job in filteredJobs"
               :key="job.id"
-              class="border rounded-lg p-4 hover:border-primary/50 transition-all cursor-pointer"
+              class="border rounded-lg p-3 sm:p-4 hover:border-primary/50 transition-all cursor-pointer active:scale-[0.99] touch-manipulation"
               @click="openJobDetails(job)"
+              role="button"
+              tabindex="0"
+              @keydown.enter="openJobDetails(job)"
+              @keydown.space.prevent="openJobDetails(job)"
+              :aria-label="`View details for job ${job.stage || 'Processing'}`"
             >
-              <div class="flex items-start justify-between gap-4">
+              <div class="flex items-start justify-between gap-3 sm:gap-4">
                 <!-- Job Info -->
                 <div class="flex-1 min-w-0 space-y-2">
                   <!-- Stage and Status -->
                   <div class="flex items-center gap-2 flex-wrap">
-                    <h4 class="text-sm font-semibold">
+                    <h4 class="text-xs sm:text-sm font-semibold truncate">
                       {{ job.stage || 'Processing' }}
                     </h4>
                     <UBadge :color="getStatusColor(job.status)" size="sm">
                       {{ job.status }}
                     </UBadge>
-                    <span v-if="job.status === 'processing'" class="text-xs text-muted-foreground">
+                    <span v-if="job.status === 'processing'" class="text-xs text-muted-foreground hidden sm:inline">
                       Attempt {{ job.attempts }}/{{ job.maxAttempts }}
                     </span>
                   </div>

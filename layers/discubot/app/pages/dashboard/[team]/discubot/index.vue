@@ -81,45 +81,60 @@
           </div>
         </template>
 
-        <div class="flex flex-wrap gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3" role="navigation" aria-label="Quick actions">
           <UButton
             color="primary"
             icon="i-lucide-plus"
             @click="createNewConfig"
+            class="w-full justify-center sm:justify-start"
+            aria-label="Create new source configuration"
           >
-            New Source Config
+            <span class="hidden sm:inline">New Source Config</span>
+            <span class="sm:hidden">New Config</span>
           </UButton>
           <UButton
             color="neutral"
             variant="outline"
             icon="i-lucide-settings"
             :to="`/dashboard/${currentTeam?.slug}/discubot/configs`"
+            class="w-full justify-center sm:justify-start"
+            aria-label="View all source configurations"
           >
-            View All Configs
+            <span class="hidden lg:inline">View All Configs</span>
+            <span class="lg:hidden">Configs</span>
           </UButton>
           <UButton
             color="neutral"
             variant="outline"
             icon="i-lucide-activity"
             :to="`/dashboard/${currentTeam?.slug}/discubot/jobs`"
+            class="w-full justify-center sm:justify-start"
+            aria-label="View all processing jobs"
           >
-            View All Jobs
+            <span class="hidden lg:inline">View All Jobs</span>
+            <span class="lg:hidden">Jobs</span>
           </UButton>
           <UButton
             color="neutral"
             variant="outline"
             icon="i-lucide-message-square"
             :to="`/dashboard/${currentTeam?.slug}/discubot/discussions`"
+            class="w-full justify-center sm:justify-start"
+            aria-label="View all discussions"
           >
-            View Discussions
+            <span class="hidden lg:inline">View Discussions</span>
+            <span class="lg:hidden">Discussions</span>
           </UButton>
           <UButton
             color="neutral"
             variant="outline"
             icon="i-lucide-users"
             :to="`/dashboard/${currentTeam?.slug}/discubot/user-mappings`"
+            class="w-full justify-center sm:justify-start"
+            aria-label="Manage user mappings"
           >
-            User Mappings
+            <span class="hidden lg:inline">User Mappings</span>
+            <span class="lg:hidden">Users</span>
           </UButton>
         </div>
 
@@ -213,34 +228,49 @@
 
       <!-- Collection Links -->
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <UCard class="hover:shadow-lg transition-shadow cursor-pointer" @click="navigateTo(`/dashboard/${currentTeam?.slug}/discubot/configs`)">
-
-          <div class="flex items-center gap-4">
-            <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <UIcon name="i-lucide-settings" class="w-6 h-6 text-primary" />
+        <UCard
+          class="hover:shadow-lg transition-all cursor-pointer active:scale-[0.98]"
+          @click="navigateTo(`/dashboard/${currentTeam?.slug}/discubot/configs`)"
+          role="link"
+          tabindex="0"
+          @keydown.enter="navigateTo(`/dashboard/${currentTeam?.slug}/discubot/configs`)"
+          @keydown.space.prevent="navigateTo(`/dashboard/${currentTeam?.slug}/discubot/configs`)"
+          aria-label="Go to source configurations"
+        >
+          <div class="flex items-center gap-3 sm:gap-4">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <UIcon name="i-lucide-settings" class="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
             </div>
-            <div class="flex-1">
-              <h4 class="text-sm font-semibold">Source Configs</h4>
-              <p class="text-xs text-muted-foreground mt-1">
+            <div class="flex-1 min-w-0">
+              <h4 class="text-sm font-semibold truncate">Source Configs</h4>
+              <p class="text-xs text-muted-foreground mt-0.5 sm:mt-1 line-clamp-1 sm:line-clamp-none">
                 Manage Figma and Slack integrations
               </p>
             </div>
-            <UIcon name="i-lucide-chevron-right" class="w-5 h-5 text-muted-foreground flex-shrink-0" />
+            <UIcon name="i-lucide-chevron-right" class="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground flex-shrink-0" />
           </div>
         </UCard>
 
-        <UCard class="hover:shadow-lg transition-shadow cursor-pointer" @click="navigateTo(`/dashboard/${currentTeam?.slug}/discubot/jobs`)">
-          <div class="flex items-center gap-4">
-            <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <UIcon name="i-lucide-activity" class="w-6 h-6 text-primary" />
+        <UCard
+          class="hover:shadow-lg transition-all cursor-pointer active:scale-[0.98]"
+          @click="navigateTo(`/dashboard/${currentTeam?.slug}/discubot/jobs`)"
+          role="link"
+          tabindex="0"
+          @keydown.enter="navigateTo(`/dashboard/${currentTeam?.slug}/discubot/jobs`)"
+          @keydown.space.prevent="navigateTo(`/dashboard/${currentTeam?.slug}/discubot/jobs`)"
+          aria-label="Go to processing jobs"
+        >
+          <div class="flex items-center gap-3 sm:gap-4">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <UIcon name="i-lucide-activity" class="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
             </div>
-            <div class="flex-1">
-              <h4 class="text-sm font-semibold">Processing Jobs</h4>
-              <p class="text-xs text-muted-foreground mt-1">
+            <div class="flex-1 min-w-0">
+              <h4 class="text-sm font-semibold truncate">Processing Jobs</h4>
+              <p class="text-xs text-muted-foreground mt-0.5 sm:mt-1 line-clamp-1 sm:line-clamp-none">
                 Monitor discussion processing status
               </p>
             </div>
-            <UIcon name="i-lucide-chevron-right" class="w-5 h-5 text-muted-foreground flex-shrink-0" />
+            <UIcon name="i-lucide-chevron-right" class="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground flex-shrink-0" />
           </div>
         </UCard>
       </div>

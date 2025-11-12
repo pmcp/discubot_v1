@@ -50,8 +50,8 @@
       </div>
 
       <div v-show="(!tabs || activeSection === 'email') && isFigmaSource" class="flex flex-col gap-4 p-1">
-        <div class="mb-2 p-4 bg-muted/50 rounded-lg">
-          <p class="text-sm text-muted-foreground">
+        <div class="mb-2 p-3 sm:p-4 bg-muted/50 rounded-lg">
+          <p class="text-xs sm:text-sm text-muted-foreground">
             Figma uses email forwarding for comment notifications. Configure a unique email address for this project.
           </p>
         </div>
@@ -85,8 +85,8 @@
       </div>
 
       <div v-show="(!tabs || activeSection === 'webhook') && isSlackSource" class="flex flex-col gap-4 p-1">
-        <div class="mb-2 p-4 bg-muted/50 rounded-lg">
-          <p class="text-sm text-muted-foreground">
+        <div class="mb-2 p-3 sm:p-4 bg-muted/50 rounded-lg">
+          <p class="text-xs sm:text-sm text-muted-foreground">
             Configure Slack webhook integration. You'll receive this webhook URL after setting up your Slack app.
           </p>
         </div>

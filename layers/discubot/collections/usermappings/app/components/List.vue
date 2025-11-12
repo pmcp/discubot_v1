@@ -1,67 +1,93 @@
 <template>
   <div class="space-y-4">
     <!-- Filters -->
-    <div class="flex flex-wrap gap-3 items-center">
+    <div class="flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-center">
       <USelectMenu
         v-model="selectedSourceType"
         :options="sourceTypeOptions"
         placeholder="All Sources"
-        class="w-40"
+        class="w-full sm:w-40"
+        aria-label="Filter by source type"
       />
 
       <USelectMenu
         v-model="selectedMappingType"
         :options="mappingTypeOptions"
         placeholder="All Types"
-        class="w-40"
+        class="w-full sm:w-40"
+        aria-label="Filter by mapping type"
       />
 
-      <USwitch
-        v-model="showInactiveOnly"
-        label="Inactive Only"
-      />
+      <div class="flex items-center gap-2">
+        <USwitch
+          v-model="showInactiveOnly"
+          id="inactive-filter"
+          aria-label="Show inactive mappings only"
+        />
+        <label for="inactive-filter" class="text-sm text-muted-foreground cursor-pointer">
+          Inactive Only
+        </label>
+      </div>
 
-      <div class="flex-1" />
+      <div class="flex-1 hidden sm:block" />
 
-      <UButton
-        color="gray"
-        variant="ghost"
-        icon="i-lucide-refresh-cw"
-        @click="refresh"
-        :loading="pending"
-      >
-        Refresh
-      </UButton>
+      <div class="flex gap-2 w-full sm:w-auto">
+        <UButton
+          color="gray"
+          variant="ghost"
+          icon="i-lucide-refresh-cw"
+          @click="refresh"
+          :loading="pending"
+          :disabled="pending"
+          aria-label="Refresh user mappings"
+          class="flex-1 sm:flex-none"
+        >
+          <span class="hidden sm:inline">Refresh</span>
+        </UButton>
 
-      <UButton
-        color="gray"
-        variant="ghost"
-        icon="i-lucide-filter-x"
-        @click="clearFilters"
-        v-if="hasActiveFilters"
-      >
-        Clear Filters
-      </UButton>
+        <UButton
+          color="gray"
+          variant="ghost"
+          icon="i-lucide-filter-x"
+          @click="clearFilters"
+          v-if="hasActiveFilters"
+          aria-label="Clear all filters"
+          class="flex-1 sm:flex-none"
+        >
+          <span class="hidden sm:inline">Clear Filters</span>
+        </UButton>
+      </div>
     </div>
 
     <!-- Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div class="p-4 bg-muted/50 rounded-lg">
-        <div class="text-sm text-muted-foreground">Total Mappings</div>
-        <div class="text-2xl font-semibold">{{ stats.total }}</div>
-      </div>
-      <div class="p-4 bg-blue-500/10 rounded-lg">
-        <div class="text-sm text-blue-600 dark:text-blue-400">Slack</div>
-        <div class="text-2xl font-semibold text-blue-600 dark:text-blue-400">{{ stats.slack }}</div>
-      </div>
-      <div class="p-4 bg-purple-500/10 rounded-lg">
-        <div class="text-sm text-purple-600 dark:text-purple-400">Figma</div>
-        <div class="text-2xl font-semibold text-purple-600 dark:text-purple-400">{{ stats.figma }}</div>
-      </div>
-      <div class="p-4 bg-amber-500/10 rounded-lg">
-        <div class="text-sm text-amber-600 dark:text-amber-400">Inactive</div>
-        <div class="text-2xl font-semibold text-amber-600 dark:text-amber-400">{{ stats.inactive }}</div>
-      </div>
+    <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4" role="region" aria-label="User mapping statistics">
+      <!-- Loading Skeletons -->
+      <template v-if="pending">
+        <div v-for="i in 4" :key="i" class="p-4 bg-muted/50 rounded-lg animate-pulse">
+          <div class="h-4 bg-muted rounded w-24 mb-2"></div>
+          <div class="h-8 bg-muted rounded w-16"></div>
+        </div>
+      </template>
+
+      <!-- Stats Cards -->
+      <template v-else>
+        <div class="p-3 sm:p-4 bg-muted/50 rounded-lg transition-all hover:shadow-md">
+          <div class="text-xs sm:text-sm text-muted-foreground">Total Mappings</div>
+          <div class="text-xl sm:text-2xl font-semibold mt-1">{{ stats.total }}</div>
+        </div>
+        <div class="p-3 sm:p-4 bg-blue-500/10 rounded-lg transition-all hover:shadow-md">
+          <div class="text-xs sm:text-sm text-blue-600 dark:text-blue-400">Slack</div>
+          <div class="text-xl sm:text-2xl font-semibold text-blue-600 dark:text-blue-400 mt-1">{{ stats.slack }}</div>
+        </div>
+        <div class="p-3 sm:p-4 bg-purple-500/10 rounded-lg transition-all hover:shadow-md">
+          <div class="text-xs sm:text-sm text-purple-600 dark:text-purple-400">Figma</div>
+          <div class="text-xl sm:text-2xl font-semibold text-purple-600 dark:text-purple-400 mt-1">{{ stats.figma }}</div>
+        </div>
+        <div class="p-3 sm:p-4 bg-amber-500/10 rounded-lg transition-all hover:shadow-md">
+          <div class="text-xs sm:text-sm text-amber-600 dark:text-amber-400">Inactive</div>
+          <div class="text-xl sm:text-2xl font-semibold text-amber-600 dark:text-amber-400 mt-1">{{ stats.inactive }}</div>
+        </div>
+      </template>
     </div>
 
     <!-- Collection Table -->
@@ -93,29 +119,43 @@
     </CroutonCollection>
 
     <!-- Bulk Import Modal -->
-    <UModal v-model="showBulkImportModal">
+    <UModal v-model="showBulkImportModal" :ui="{ content: { base: 'overflow-y-auto max-h-[90vh]' } }">
       <template #content="{ close }">
-        <div class="p-6">
-          <h3 class="text-lg font-semibold mb-4">Bulk Import User Mappings</h3>
+        <div class="p-4 sm:p-6">
+          <div class="flex items-start justify-between mb-4">
+            <h3 class="text-base sm:text-lg font-semibold">Bulk Import User Mappings</h3>
+            <UButton
+              color="gray"
+              variant="ghost"
+              icon="i-lucide-x"
+              size="sm"
+              @click="closeBulkImportModal"
+              aria-label="Close modal"
+              class="sm:hidden"
+            />
+          </div>
 
           <div class="space-y-4">
             <div>
-              <p class="text-sm text-muted-foreground mb-3">
+              <p class="text-xs sm:text-sm text-muted-foreground mb-3">
                 Import multiple user mappings at once. Paste JSON array below.
               </p>
 
-              <div class="bg-muted/30 p-3 rounded text-xs font-mono mb-3">
-                <div class="text-muted-foreground mb-1">Example JSON format:</div>
-                <pre>{{ bulkImportExample }}</pre>
-              </div>
+              <details class="bg-muted/30 p-3 rounded mb-3">
+                <summary class="text-xs sm:text-sm font-medium cursor-pointer hover:text-primary transition-colors">
+                  Show example JSON format
+                </summary>
+                <pre class="text-xs font-mono mt-2 overflow-x-auto">{{ bulkImportExample }}</pre>
+              </details>
             </div>
 
             <UFormField label="Import Data" description="Paste JSON array of mappings">
               <UTextarea
                 v-model="bulkImportData"
-                :rows="12"
-                class="font-mono text-sm"
+                :rows="8"
+                class="font-mono text-xs sm:text-sm"
                 placeholder='[{"sourceType": "slack", "sourceUserId": "U123ABC", ...}]'
+                aria-label="JSON import data"
               />
             </UFormField>
 
