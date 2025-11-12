@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Discubot Admin - Job Details</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; }
+
+    /* Modal styles */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      z-index: 50;
+      animation: fadeIn 0.2s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .modal {
+      background: white;
+      border-radius: 1rem;
+      max-width: 56rem;
+      width: 100%;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+      animation: slideUp 0.3s ease;
+    }
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .modal-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .modal-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem;
+    }
+    .modal-footer {
+      padding: 1.5rem;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    /* Tab styles */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #e5e7eb;
+      margin-bottom: 1.5rem;
+      gap: 0.5rem;
+    }
+    .tab {
+      padding: 0.75rem 1rem;
+      border-bottom: 2px solid transparent;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #6b7280;
+      font-size: 0.875rem;
+    }
+    .tab:hover {
+      color: #374151;
+      background: #f9fafb;
+      border-radius: 0.5rem 0.5rem 0 0;
+    }
+    .tab.active {
+      color: rgb(99, 102, 241);
+      border-bottom-color: rgb(99, 102, 241);
+    }
+
+    /* Badge styles */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .badge-success { background: #d1fae5; color: #065f46; }
+    .badge-warning { background: #fed7aa; color: #92400e; }
+    .badge-error { background: #fee2e2; color: #991b1b; }
+    .badge-running { background: #e0e7ff; color: #3730a3; }
+
+    /* Button styles */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1.25rem;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+    }
+    .btn-primary {
+      background: rgb(99, 102, 241);
+      color: white;
+    }
+    .btn-primary:hover {
+      background: rgb(79, 70, 229);
+    }
+    .btn-secondary {
+      background: white;
+      color: #374151;
+      border: 1px solid #d1d5db;
+    }
+    .btn-secondary:hover {
+      background: #f9fafb;
+    }
+    .btn-ghost {
+      background: transparent;
+      color: #6b7280;
+    }
+    .btn-ghost:hover {
+      background: #f3f4f6;
+    }
+
+    /* Info grid */
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+    }
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+    }
+    .info-label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .info-value {
+      font-size: 0.875rem;
+      color: #111827;
+      font-weight: 500;
+    }
+
+    /* Log viewer */
+    .log-viewer {
+      background: #1f2937;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+      font-size: 0.8125rem;
+      line-height: 1.6;
+      color: #e5e7eb;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .log-line {
+      margin-bottom: 0.25rem;
+      white-space: pre-wrap;
+    }
+    .log-time {
+      color: #9ca3af;
+      margin-right: 0.75rem;
+    }
+    .log-level-info { color: #60a5fa; }
+    .log-level-warn { color: #fbbf24; }
+    .log-level-error { color: #f87171; }
+    .log-level-success { color: #34d399; }
+
+    /* Timeline */
+    .timeline {
+      position: relative;
+      padding-left: 2rem;
+    }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 0.5rem;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: #e5e7eb;
+    }
+    .timeline-item {
+      position: relative;
+      padding-bottom: 1.5rem;
+    }
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -1.5rem;
+      top: 0.375rem;
+      width: 0.75rem;
+      height: 0.75rem;
+      border-radius: 50%;
+      background: white;
+      border: 2px solid #d1d5db;
+    }
+    .timeline-item.success::before {
+      background: #10b981;
+      border-color: #10b981;
+    }
+    .timeline-item.error::before {
+      background: #ef4444;
+      border-color: #ef4444;
+    }
+    .timeline-item.running::before {
+      background: rgb(99, 102, 241);
+      border-color: rgb(99, 102, 241);
+      animation: pulse-ring 2s ease infinite;
+    }
+    @keyframes pulse-ring {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
+      }
+      50% {
+        box-shadow: 0 0 0 6px rgba(99, 102, 241, 0);
+      }
+    }
+
+    /* Metrics */
+    .metric-card {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+      padding: 1rem;
+    }
+    .metric-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #111827;
+    }
+    .metric-label {
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-top: 0.25rem;
+    }
+    .metric-change {
+      font-size: 0.75rem;
+      font-weight: 500;
+      margin-top: 0.5rem;
+    }
+    .metric-change.positive { color: #10b981; }
+    .metric-change.negative { color: #ef4444; }
+
+    /* Progress bar */
+    .progress-bar-bg {
+      background: #e5e7eb;
+      border-radius: 9999px;
+      height: 0.75rem;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 9999px;
+      transition: width 0.5s ease;
+      background: linear-gradient(90deg, rgb(99, 102, 241), rgb(139, 92, 246));
+    }
+
+    /* Scrollbar styles */
+    .log-viewer::-webkit-scrollbar,
+    .modal-body::-webkit-scrollbar {
+      width: 8px;
+    }
+    .log-viewer::-webkit-scrollbar-track {
+      background: #374151;
+      border-radius: 4px;
+    }
+    .log-viewer::-webkit-scrollbar-thumb {
+      background: #6b7280;
+      border-radius: 4px;
+    }
+    .log-viewer::-webkit-scrollbar-thumb:hover {
+      background: #9ca3af;
+    }
+  </style>
+</head>
+<body class="bg-gray-100">
+  <div id="app">
+    <!-- Modal Backdrop -->
+    <div class="modal-backdrop" @click.self="closeModal">
+      <div class="modal">
+        <!-- Modal Header -->
+        <div class="modal-header">
+          <div class="flex items-start justify-between">
+            <div class="flex-1">
+              <div class="flex items-center gap-3">
+                <h2 class="text-xl font-bold text-gray-900">Job #{{ job.id }}</h2>
+                <span :class="['badge', 'badge-' + job.status]">
+                  <span v-if="job.status === 'running'" class="w-2 h-2 bg-indigo-600 rounded-full animate-pulse"></span>
+                  <span v-else-if="job.status === 'success'" class="w-2 h-2 bg-green-600 rounded-full"></span>
+                  <span v-else-if="job.status === 'error'" class="w-2 h-2 bg-red-600 rounded-full"></span>
+                  {{ job.statusText }}
+                </span>
+              </div>
+              <p class="text-sm text-gray-500 mt-1">
+                {{ job.source === 'figma' ? 'Figma' : 'Slack' }} Discussion Sync
+              </p>
+            </div>
+            <button @click="closeModal" class="btn btn-ghost p-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="px-6 pt-4">
+          <div class="tabs">
+            <button
+              @click="activeTab = 'overview'"
+              :class="['tab', { active: activeTab === 'overview' }]"
+            >
+              Overview
+            </button>
+            <button
+              @click="activeTab = 'logs'"
+              :class="['tab', { active: activeTab === 'logs' }]"
+            >
+              Logs
+            </button>
+            <button
+              @click="activeTab = 'metrics'"
+              :class="['tab', { active: activeTab === 'metrics' }]"
+            >
+              Metrics
+            </button>
+            <button
+              @click="activeTab = 'actions'"
+              :class="['tab', { active: activeTab === 'actions' }]"
+            >
+              Actions
+            </button>
+          </div>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="modal-body">
+          <!-- Overview Tab -->
+          <div v-show="activeTab === 'overview'">
+            <!-- Job Info -->
+            <div class="info-grid mb-6">
+              <div class="info-item">
+                <span class="info-label">Job ID</span>
+                <span class="info-value font-mono">#{{ job.id }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Source Type</span>
+                <span class="info-value capitalize">{{ job.source }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Started At</span>
+                <span class="info-value">{{ job.startedAt }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Duration</span>
+                <span class="info-value">{{ job.duration }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Items Processed</span>
+                <span class="info-value">{{ job.itemsProcessed }} / {{ job.itemsTotal }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Tasks Created</span>
+                <span class="info-value">{{ job.tasksCreated }}</span>
+              </div>
+            </div>
+
+            <!-- Progress -->
+            <div v-if="job.status === 'running'" class="mb-6">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-gray-700">Processing Progress</span>
+                <span class="text-sm font-medium text-gray-900">{{ job.progress }}%</span>
+              </div>
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill" :style="{ width: job.progress + '%' }"></div>
+              </div>
+            </div>
+
+            <!-- Timeline -->
+            <div>
+              <h3 class="text-sm font-semibold text-gray-900 mb-4">Execution Timeline</h3>
+              <div class="timeline">
+                <div
+                  v-for="(step, index) in job.timeline"
+                  :key="index"
+                  :class="['timeline-item', step.status]"
+                >
+                  <div class="text-sm">
+                    <div class="flex items-start justify-between mb-1">
+                      <span class="font-medium text-gray-900">{{ step.title }}</span>
+                      <span class="text-xs text-gray-500">{{ step.time }}</span>
+                    </div>
+                    <p class="text-sm text-gray-600">{{ step.description }}</p>
+                    <p v-if="step.error" class="text-sm text-red-600 mt-1">{{ step.error }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Discussion Details -->
+            <div class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <h4 class="text-sm font-semibold text-gray-900 mb-3">Discussion Details</h4>
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Thread ID:</span>
+                  <span class="font-mono text-gray-900">{{ job.threadId }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Participants:</span>
+                  <span class="text-gray-900">{{ job.participants }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-gray-600">Comments:</span>
+                  <span class="text-gray-900">{{ job.commentCount }}</span>
+                </div>
+                <div v-if="job.notionUrl" class="flex justify-between">
+                  <span class="text-gray-600">Notion Task:</span>
+                  <a :href="job.notionUrl" class="text-indigo-600 hover:underline" target="_blank">
+                    View in Notion →
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Logs Tab -->
+          <div v-show="activeTab === 'logs'">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-sm font-semibold text-gray-900">Execution Logs</h3>
+              <button @click="downloadLogs" class="btn btn-secondary btn-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                Download
+              </button>
+            </div>
+            <div class="log-viewer">
+              <div v-for="(log, index) in logs" :key="index" class="log-line">
+                <span class="log-time">{{ log.time }}</span>
+                <span :class="'log-level-' + log.level">{{ log.level.toUpperCase() }}</span>
+                <span> {{ log.message }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Metrics Tab -->
+          <div v-show="activeTab === 'metrics'">
+            <h3 class="text-sm font-semibold text-gray-900 mb-4">Performance Metrics</h3>
+
+            <div class="grid grid-cols-2 gap-4 mb-6">
+              <div class="metric-card">
+                <div class="metric-value">{{ job.duration }}</div>
+                <div class="metric-label">Total Duration</div>
+                <div class="metric-change positive">
+                  <svg class="inline w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                  </svg>
+                  15% faster than average
+                </div>
+              </div>
+
+              <div class="metric-card">
+                <div class="metric-value">{{ job.itemsProcessed }}</div>
+                <div class="metric-label">Items Processed</div>
+                <div class="metric-change positive">
+                  <svg class="inline w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  100% success rate
+                </div>
+              </div>
+
+              <div class="metric-card">
+                <div class="metric-value">{{ job.tasksCreated }}</div>
+                <div class="metric-label">Tasks Created</div>
+                <div class="metric-change positive">
+                  <svg class="inline w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                  </svg>
+                  AI detected {{ job.tasksCreated }} actionable items
+                </div>
+              </div>
+
+              <div class="metric-card">
+                <div class="metric-value">{{ metrics.apiCalls }}</div>
+                <div class="metric-label">API Calls Made</div>
+                <div class="metric-change">
+                  {{ metrics.apiCalls }} to {{ job.source }}, {{ metrics.apiCalls / 2 }} to Notion
+                </div>
+              </div>
+            </div>
+
+            <!-- Breakdown -->
+            <div class="space-y-4">
+              <h4 class="text-sm font-semibold text-gray-900">Time Breakdown</h4>
+              <div v-for="phase in metrics.timeBreakdown" :key="phase.name" class="space-y-1">
+                <div class="flex items-center justify-between text-sm">
+                  <span class="text-gray-700">{{ phase.name }}</span>
+                  <span class="font-medium text-gray-900">{{ phase.duration }}</span>
+                </div>
+                <div class="progress-bar-bg" style="height: 0.5rem;">
+                  <div
+                    class="h-full rounded-full"
+                    :style="{ width: phase.percentage + '%', background: phase.color }"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions Tab -->
+          <div v-show="activeTab === 'actions'">
+            <h3 class="text-sm font-semibold text-gray-900 mb-4">Available Actions</h3>
+
+            <div class="space-y-3">
+              <button v-if="job.status === 'error'" @click="retryJob" class="w-full flex items-center gap-3 p-4 rounded-lg border-2 border-dashed border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-all text-left">
+                <div class="p-3 bg-indigo-100 rounded-lg">
+                  <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                  </svg>
+                </div>
+                <div>
+                  <p class="font-medium text-gray-900">Retry Job</p>
+                  <p class="text-sm text-gray-600">Attempt to run this job again with same parameters</p>
+                </div>
+              </button>
+
+              <button v-if="job.status === 'running'" @click="cancelJob" class="w-full flex items-center gap-3 p-4 rounded-lg border-2 border-dashed border-gray-200 hover:border-red-300 hover:bg-red-50 transition-all text-left">
+                <div class="p-3 bg-red-100 rounded-lg">
+                  <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </div>
+                <div>
+                  <p class="font-medium text-gray-900">Cancel Job</p>
+                  <p class="text-sm text-gray-600">Stop this job immediately</p>
+                </div>
+              </button>
+
+              <button @click="downloadLogs" class="w-full flex items-center gap-3 p-4 rounded-lg border-2 border-dashed border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all text-left">
+                <div class="p-3 bg-blue-100 rounded-lg">
+                  <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                  </svg>
+                </div>
+                <div>
+                  <p class="font-medium text-gray-900">Download Logs</p>
+                  <p class="text-sm text-gray-600">Export complete execution logs as text file</p>
+                </div>
+              </button>
+
+              <button v-if="job.notionUrl" @click="openNotion" class="w-full flex items-center gap-3 p-4 rounded-lg border-2 border-dashed border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all text-left">
+                <div class="p-3 bg-gray-100 rounded-lg">
+                  <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                  </svg>
+                </div>
+                <div>
+                  <p class="font-medium text-gray-900">View in Notion</p>
+                  <p class="text-sm text-gray-600">Open the created Notion task</p>
+                </div>
+              </button>
+
+              <button @click="duplicateJob" class="w-full flex items-center gap-3 p-4 rounded-lg border-2 border-dashed border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-all text-left">
+                <div class="p-3 bg-purple-100 rounded-lg">
+                  <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                  </svg>
+                </div>
+                <div>
+                  <p class="font-medium text-gray-900">Duplicate Configuration</p>
+                  <p class="text-sm text-gray-600">Create new job with same settings</p>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="modal-footer">
+          <div class="flex items-center justify-end gap-3">
+            <button @click="closeModal" class="btn btn-secondary">Close</button>
+            <button v-if="job.status === 'error'" @click="retryJob" class="btn btn-primary">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+              Retry Job
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Demo trigger button -->
+    <div class="p-8">
+      <button @click="showModal = true" class="btn btn-primary">
+        Open Job Details Modal
+      </button>
+      <p class="text-sm text-gray-500 mt-2">Click to see the job details modal in action</p>
+    </div>
+  </div>
+
+  <script>
+    const { createApp } = Vue;
+
+    createApp({
+      data() {
+        return {
+          showModal: true,
+          activeTab: 'overview',
+          job: {
+            id: 10042,
+            source: 'figma',
+            status: 'success',
+            statusText: 'Completed',
+            startedAt: 'Dec 12, 2:34 PM',
+            duration: '2m 47s',
+            progress: 100,
+            itemsProcessed: 47,
+            itemsTotal: 47,
+            tasksCreated: 3,
+            threadId: 'fig_123abc456def',
+            participants: 'Sarah, Alex, Jordan',
+            commentCount: 12,
+            notionUrl: 'https://notion.so/task/abc123',
+            timeline: [
+              {
+                status: 'success',
+                title: 'Job Started',
+                description: 'Received webhook from Figma comment notification',
+                time: '2:34 PM'
+              },
+              {
+                status: 'success',
+                title: 'Email Parsed',
+                description: 'Extracted file key and comment metadata from email',
+                time: '2:34 PM'
+              },
+              {
+                status: 'success',
+                title: 'Thread Fetched',
+                description: 'Retrieved 12 comments from Figma API',
+                time: '2:35 PM'
+              },
+              {
+                status: 'success',
+                title: 'AI Analysis',
+                description: 'Claude analyzed discussion and detected 3 action items',
+                time: '2:36 PM'
+              },
+              {
+                status: 'success',
+                title: 'Tasks Created',
+                description: 'Created 3 tasks in Notion database',
+                time: '2:37 PM'
+              },
+              {
+                status: 'success',
+                title: 'Job Completed',
+                description: 'Successfully processed discussion',
+                time: '2:37 PM'
+              }
+            ]
+          },
+          logs: [
+            { time: '14:34:12', level: 'info', message: '[Webhook] Received Figma comment notification' },
+            { time: '14:34:13', level: 'info', message: '[Parser] Parsing email body...' },
+            { time: '14:34:14', level: 'success', message: '[Parser] Extracted file key: aBc123XyZ' },
+            { time: '14:34:15', level: 'info', message: '[Figma] Fetching comment thread...' },
+            { time: '14:35:02', level: 'success', message: '[Figma] Retrieved 12 comments' },
+            { time: '14:35:03', level: 'info', message: '[AI] Analyzing discussion with Claude...' },
+            { time: '14:36:21', level: 'success', message: '[AI] Analysis complete: 3 action items detected' },
+            { time: '14:36:22', level: 'info', message: '[Notion] Creating task 1/3: "Update button hover states"' },
+            { time: '14:36:45', level: 'success', message: '[Notion] Task 1 created: notion.so/task/abc123' },
+            { time: '14:36:46', level: 'info', message: '[Notion] Creating task 2/3: "Add loading spinner animation"' },
+            { time: '14:37:08', level: 'success', message: '[Notion] Task 2 created: notion.so/task/def456' },
+            { time: '14:37:09', level: 'info', message: '[Notion] Creating task 3/3: "Fix mobile padding issues"' },
+            { time: '14:37:31', level: 'success', message: '[Notion] Task 3 created: notion.so/task/ghi789' },
+            { time: '14:37:32', level: 'success', message: '[Job] Completed successfully in 2m 47s' }
+          ],
+          metrics: {
+            apiCalls: 16,
+            timeBreakdown: [
+              { name: 'Email Parsing', duration: '2s', percentage: 1, color: '#3b82f6' },
+              { name: 'Figma API Fetch', duration: '47s', percentage: 28, color: '#8b5cf6' },
+              { name: 'AI Analysis', duration: '1m 18s', percentage: 47, color: '#6366f1' },
+              { name: 'Notion Task Creation', duration: '40s', percentage: 24, color: '#10b981' }
+            ]
+          }
+        }
+      },
+      methods: {
+        closeModal() {
+          this.showModal = false;
+          setTimeout(() => {
+            window.location.href = 'job-monitor.html';
+          }, 300);
+        },
+        retryJob() {
+          alert(`Retrying job #${this.job.id}`);
+        },
+        cancelJob() {
+          if (confirm('Cancel this job?')) {
+            alert('Job cancelled');
+            this.closeModal();
+          }
+        },
+        downloadLogs() {
+          alert('Downloading logs...');
+        },
+        openNotion() {
+          window.open(this.job.notionUrl, '_blank');
+        },
+        duplicateJob() {
+          alert('Creating new job with same configuration...');
+        }
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>

@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Discubot Admin - Source Configuration</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; }
+
+    /* Tab styles */
+    .tab {
+      padding: 0.75rem 1.5rem;
+      border-bottom: 2px solid transparent;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #6b7280;
+    }
+    .tab:hover { color: #4b5563; background: #f9fafb; }
+    .tab.active {
+      color: rgb(99, 102, 241);
+      border-bottom-color: rgb(99, 102, 241);
+      background: rgba(99, 102, 241, 0.05);
+    }
+
+    /* Input styles */
+    .input {
+      width: 100%;
+      padding: 0.625rem 0.875rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    .input:focus {
+      outline: none;
+      border-color: rgb(99, 102, 241);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+    .input.error {
+      border-color: #ef4444;
+    }
+    .input.success {
+      border-color: #10b981;
+    }
+
+    /* Button styles */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1.25rem;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+    }
+    .btn-primary {
+      background: rgb(99, 102, 241);
+      color: white;
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: rgb(79, 70, 229);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-secondary {
+      background: white;
+      color: #374151;
+      border: 1px solid #d1d5db;
+    }
+    .btn-secondary:hover {
+      background: #f9fafb;
+    }
+    .btn-ghost {
+      background: transparent;
+      color: #6b7280;
+    }
+    .btn-ghost:hover {
+      background: #f3f4f6;
+    }
+
+    /* Loading spinner */
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .spinner {
+      animation: spin 1s linear infinite;
+    }
+
+    /* Alert styles */
+    .alert {
+      padding: 1rem;
+      border-radius: 0.5rem;
+      display: flex;
+      gap: 0.75rem;
+      align-items: start;
+    }
+    .alert-success {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    .alert-error {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    .alert-info {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    /* Collapsible animation */
+    .collapsible {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+    .collapsible.open {
+      max-height: 1000px;
+    }
+
+    /* Field styles */
+    .field {
+      margin-bottom: 1.5rem;
+    }
+    .label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 0.5rem;
+    }
+    .help-text {
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-top: 0.375rem;
+    }
+    .error-text {
+      font-size: 0.75rem;
+      color: #ef4444;
+      margin-top: 0.375rem;
+    }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <div id="app">
+    <div class="min-h-screen flex flex-col">
+      <!-- Header -->
+      <header class="bg-white border-b border-gray-200 px-8 py-4">
+        <div class="flex items-center justify-between max-w-5xl mx-auto">
+          <div class="flex items-center gap-4">
+            <a href="index.html" class="text-gray-400 hover:text-gray-600">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+              </svg>
+            </a>
+            <div>
+              <h1 class="text-2xl font-bold text-gray-900">Source Configuration</h1>
+              <p class="text-sm text-gray-500 mt-1">Connect Figma and Slack to sync discussions</p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Content -->
+      <main class="flex-1 px-8 py-8">
+        <div class="max-w-3xl mx-auto">
+          <!-- Tabs -->
+          <div class="bg-white rounded-t-xl border border-gray-200 border-b-0">
+            <div class="flex border-b border-gray-200">
+              <button
+                @click="activeTab = 'figma'"
+                :class="['tab', { active: activeTab === 'figma' }]"
+              >
+                <div class="flex items-center gap-2">
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 24c2.208 0 4-1.792 4-4v-4H8c-2.208 0-4 1.792-4 4s1.792 4 4 4z"/>
+                    <path d="M4 12c0-2.208 1.792-4 4-4h4v8H8c-2.208 0-4-1.792-4-4z"/>
+                    <path d="M4 4c0-2.208 1.792-4 4-4h4v8H8C5.792 8 4 6.208 4 4z"/>
+                    <path d="M12 0h4c2.208 0 4 1.792 4 4s-1.792 4-4 4h-4V0z"/>
+                    <circle cx="16" cy="12" r="4"/>
+                  </svg>
+                  Figma
+                </div>
+              </button>
+              <button
+                @click="activeTab = 'slack'"
+                :class="['tab', { active: activeTab === 'slack' }]"
+              >
+                <div class="flex items-center gap-2">
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/>
+                  </svg>
+                  Slack
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Form Content -->
+          <div class="bg-white rounded-b-xl border border-gray-200 p-8">
+            <!-- Figma Form -->
+            <div v-show="activeTab === 'figma'">
+              <div v-if="testResult.figma" class="mb-6">
+                <div :class="['alert', testResult.figma.success ? 'alert-success' : 'alert-error']">
+                  <svg v-if="testResult.figma.success" class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  <svg v-else class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  <div>
+                    <p class="font-medium">{{ testResult.figma.message }}</p>
+                    <p v-if="testResult.figma.details" class="text-sm mt-1">{{ testResult.figma.details }}</p>
+                  </div>
+                </div>
+              </div>
+
+              <form @submit.prevent="saveFigmaConfig">
+                <div class="field">
+                  <label class="label">API Token *</label>
+                  <input
+                    v-model="figmaConfig.apiToken"
+                    type="password"
+                    :class="['input', { error: figmaErrors.apiToken, success: figmaConfig.apiToken && !figmaErrors.apiToken }]"
+                    placeholder="figd_••••••••••••••••••••••••••"
+                  >
+                  <p v-if="figmaErrors.apiToken" class="error-text">{{ figmaErrors.apiToken }}</p>
+                  <p v-else class="help-text">Your Figma personal access token. <a href="#" class="text-indigo-600 hover:underline">Get one here</a></p>
+                </div>
+
+                <div class="field">
+                  <label class="label">Team ID *</label>
+                  <input
+                    v-model="figmaConfig.teamId"
+                    type="text"
+                    :class="['input', { error: figmaErrors.teamId }]"
+                    placeholder="123456789"
+                  >
+                  <p v-if="figmaErrors.teamId" class="error-text">{{ figmaErrors.teamId }}</p>
+                  <p v-else class="help-text">Your Figma team ID (found in team URL)</p>
+                </div>
+
+                <div class="field">
+                  <label class="label">Webhook Email *</label>
+                  <div class="flex gap-2">
+                    <input
+                      v-model="figmaConfig.webhookEmail"
+                      type="email"
+                      :class="['input', { error: figmaErrors.webhookEmail }]"
+                      placeholder="discussions@discubot.app"
+                      readonly
+                    >
+                    <button type="button" @click="copyToClipboard(figmaConfig.webhookEmail)" class="btn btn-secondary">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                      </svg>
+                      Copy
+                    </button>
+                  </div>
+                  <p class="help-text">Add this email to receive Figma comment notifications</p>
+                </div>
+
+                <div class="field">
+                  <label class="label">Notion Database ID *</label>
+                  <input
+                    v-model="figmaConfig.notionDbId"
+                    type="text"
+                    :class="['input', { error: figmaErrors.notionDbId }]"
+                    placeholder="a1b2c3d4e5f6..."
+                  >
+                  <p v-if="figmaErrors.notionDbId" class="error-text">{{ figmaErrors.notionDbId }}</p>
+                  <p v-else class="help-text">The Notion database where tasks will be created</p>
+                </div>
+
+                <!-- Advanced Settings -->
+                <div class="border-t border-gray-200 pt-6 mt-6">
+                  <button
+                    type="button"
+                    @click="showAdvanced = !showAdvanced"
+                    class="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                  >
+                    <svg
+                      class="w-4 h-4 transition-transform"
+                      :class="{ 'rotate-90': showAdvanced }"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                    Advanced Settings
+                  </button>
+
+                  <div :class="['collapsible', { open: showAdvanced }]">
+                    <div class="mt-4 space-y-4 pl-6">
+                      <div class="field">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                          <input
+                            v-model="figmaConfig.skipAiAnalysis"
+                            type="checkbox"
+                            class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+                          >
+                          <div>
+                            <span class="text-sm font-medium text-gray-700">Skip AI Analysis</span>
+                            <p class="text-xs text-gray-500">Create tasks directly without AI summarization</p>
+                          </div>
+                        </label>
+                      </div>
+
+                      <div class="field">
+                        <label class="label">Rate Limit (requests/min)</label>
+                        <input
+                          v-model.number="figmaConfig.rateLimit"
+                          type="number"
+                          class="input"
+                          min="1"
+                          max="100"
+                        >
+                        <p class="help-text">Maximum API requests per minute (default: 60)</p>
+                      </div>
+
+                      <div class="field">
+                        <label class="label">Auto-Retry Count</label>
+                        <input
+                          v-model.number="figmaConfig.retryCount"
+                          type="number"
+                          class="input"
+                          min="0"
+                          max="5"
+                        >
+                        <p class="help-text">Number of automatic retries on failure (default: 3)</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex items-center gap-3 mt-8 pt-6 border-t border-gray-200">
+                  <button
+                    type="button"
+                    @click="testFigmaConnection"
+                    :disabled="testing"
+                    class="btn btn-secondary"
+                  >
+                    <svg v-if="!testing" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                    <svg v-else class="w-4 h-4 spinner" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    {{ testing ? 'Testing...' : 'Test Connection' }}
+                  </button>
+                  <button
+                    type="submit"
+                    :disabled="saving"
+                    class="btn btn-primary"
+                  >
+                    <svg v-if="!saving" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <svg v-else class="w-4 h-4 spinner" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    {{ saving ? 'Saving...' : 'Save Configuration' }}
+                  </button>
+                  <button type="button" class="btn btn-ghost ml-auto">Cancel</button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Slack Form -->
+            <div v-show="activeTab === 'slack'">
+              <div v-if="testResult.slack" class="mb-6">
+                <div :class="['alert', testResult.slack.success ? 'alert-success' : 'alert-error']">
+                  <svg v-if="testResult.slack.success" class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  <svg v-else class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  <div>
+                    <p class="font-medium">{{ testResult.slack.message }}</p>
+                    <p v-if="testResult.slack.details" class="text-sm mt-1">{{ testResult.slack.details }}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="alert alert-info mb-6">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <div class="text-sm">
+                  <p class="font-medium">OAuth Setup Required</p>
+                  <p class="mt-1">You'll need to authorize Discubot to access your Slack workspace. Click "Connect Slack" below to start the OAuth flow.</p>
+                </div>
+              </div>
+
+              <form @submit.prevent="saveSlackConfig">
+                <div class="field">
+                  <label class="label">Workspace Name</label>
+                  <input
+                    v-model="slackConfig.workspaceName"
+                    type="text"
+                    class="input"
+                    placeholder="My Awesome Team"
+                  >
+                  <p class="help-text">Friendly name for this Slack workspace</p>
+                </div>
+
+                <div class="field">
+                  <label class="label">Bot Token</label>
+                  <input
+                    v-model="slackConfig.botToken"
+                    type="password"
+                    class="input"
+                    placeholder="xoxb-••••••••••••••••••••••••••"
+                    :disabled="!slackConfig.authorized"
+                  >
+                  <p class="help-text">Automatically populated after OAuth authorization</p>
+                </div>
+
+                <div class="field">
+                  <label class="label">Notion Database ID *</label>
+                  <input
+                    v-model="slackConfig.notionDbId"
+                    type="text"
+                    class="input"
+                    placeholder="a1b2c3d4e5f6..."
+                  >
+                  <p class="help-text">The Notion database where Slack discussions will create tasks</p>
+                </div>
+
+                <div class="field">
+                  <label class="label">Monitored Channels</label>
+                  <div class="space-y-2">
+                    <div v-for="(channel, index) in slackConfig.channels" :key="index" class="flex gap-2">
+                      <input
+                        v-model="slackConfig.channels[index]"
+                        type="text"
+                        class="input"
+                        placeholder="#general, #design-feedback"
+                      >
+                      <button
+                        v-if="slackConfig.channels.length > 1"
+                        type="button"
+                        @click="slackConfig.channels.splice(index, 1)"
+                        class="btn btn-ghost"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                      </button>
+                    </div>
+                    <button type="button" @click="slackConfig.channels.push('')" class="btn btn-ghost text-sm">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                      </svg>
+                      Add Channel
+                    </button>
+                  </div>
+                  <p class="help-text">Channels to monitor for discussions (leave empty for all)</p>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex items-center gap-3 mt-8 pt-6 border-t border-gray-200">
+                  <button
+                    v-if="!slackConfig.authorized"
+                    type="button"
+                    @click="connectSlack"
+                    class="btn btn-primary"
+                    style="background: #4A154B;"
+                  >
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z"/>
+                    </svg>
+                    Connect Slack Workspace
+                  </button>
+                  <template v-else>
+                    <button
+                      type="button"
+                      @click="testSlackConnection"
+                      :disabled="testing"
+                      class="btn btn-secondary"
+                    >
+                      <svg v-if="!testing" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                      </svg>
+                      <svg v-else class="w-4 h-4 spinner" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                      </svg>
+                      {{ testing ? 'Testing...' : 'Test Connection' }}
+                    </button>
+                    <button
+                      type="submit"
+                      :disabled="saving"
+                      class="btn btn-primary"
+                    >
+                      <svg v-if="!saving" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                      </svg>
+                      <svg v-else class="w-4 h-4 spinner" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                      </svg>
+                      {{ saving ? 'Saving...' : 'Save Configuration' }}
+                    </button>
+                  </template>
+                  <button type="button" class="btn btn-ghost ml-auto">Cancel</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const { createApp } = Vue;
+
+    createApp({
+      data() {
+        return {
+          activeTab: 'figma',
+          showAdvanced: false,
+          testing: false,
+          saving: false,
+          figmaConfig: {
+            apiToken: '',
+            teamId: '',
+            webhookEmail: 'discussions@discubot.app',
+            notionDbId: '',
+            skipAiAnalysis: false,
+            rateLimit: 60,
+            retryCount: 3
+          },
+          figmaErrors: {},
+          slackConfig: {
+            authorized: false,
+            workspaceName: '',
+            botToken: '',
+            notionDbId: '',
+            channels: ['']
+          },
+          testResult: {
+            figma: null,
+            slack: null
+          }
+        }
+      },
+      methods: {
+        validateFigmaConfig() {
+          this.figmaErrors = {};
+          if (!this.figmaConfig.apiToken) {
+            this.figmaErrors.apiToken = 'API token is required';
+          }
+          if (!this.figmaConfig.teamId) {
+            this.figmaErrors.teamId = 'Team ID is required';
+          }
+          if (!this.figmaConfig.notionDbId) {
+            this.figmaErrors.notionDbId = 'Notion database ID is required';
+          }
+          return Object.keys(this.figmaErrors).length === 0;
+        },
+        async testFigmaConnection() {
+          if (!this.validateFigmaConfig()) return;
+
+          this.testing = true;
+          this.testResult.figma = null;
+
+          // Simulate API call
+          await new Promise(resolve => setTimeout(resolve, 2000));
+
+          // Mock result (would be real API call in production)
+          this.testResult.figma = {
+            success: Math.random() > 0.3,
+            message: Math.random() > 0.3 ? 'Connection successful!' : 'Connection failed',
+            details: Math.random() > 0.3 ? 'Successfully connected to Figma team "Acme Design"' : 'Invalid API token or team ID'
+          };
+
+          this.testing = false;
+        },
+        async saveFigmaConfig() {
+          if (!this.validateFigmaConfig()) return;
+
+          this.saving = true;
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          alert('Figma configuration saved successfully!');
+          this.saving = false;
+        },
+        async testSlackConnection() {
+          this.testing = true;
+          this.testResult.slack = null;
+
+          await new Promise(resolve => setTimeout(resolve, 2000));
+
+          this.testResult.slack = {
+            success: Math.random() > 0.3,
+            message: Math.random() > 0.3 ? 'Connection successful!' : 'Connection failed',
+            details: Math.random() > 0.3 ? 'Successfully connected to workspace "Acme Team"' : 'Invalid bot token or insufficient permissions'
+          };
+
+          this.testing = false;
+        },
+        async saveSlackConfig() {
+          this.saving = true;
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          alert('Slack configuration saved successfully!');
+          this.saving = false;
+        },
+        connectSlack() {
+          // In production, this would redirect to Slack OAuth
+          alert('Redirecting to Slack OAuth... (demo mode)');
+          setTimeout(() => {
+            this.slackConfig.authorized = true;
+            this.slackConfig.botToken = 'xoxb-' + Math.random().toString(36).substring(2);
+          }, 1000);
+        },
+        copyToClipboard(text) {
+          navigator.clipboard.writeText(text);
+          alert('Copied to clipboard!');
+        }
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>

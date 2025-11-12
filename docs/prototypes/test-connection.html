@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Discubot Admin - Test Connection</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; }
+
+    /* Button styles */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1.25rem;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+    }
+    .btn-primary {
+      background: rgb(99, 102, 241);
+      color: white;
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: rgb(79, 70, 229);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn-secondary {
+      background: white;
+      color: #374151;
+      border: 1px solid #d1d5db;
+    }
+    .btn-secondary:hover {
+      background: #f9fafb;
+    }
+
+    /* Select styles */
+    .select {
+      width: 100%;
+      padding: 0.625rem 2.5rem 0.625rem 0.875rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      background: white;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+      background-position: right 0.5rem center;
+      background-repeat: no-repeat;
+      background-size: 1.5em 1.5em;
+      transition: all 0.2s;
+    }
+    .select:focus {
+      outline: none;
+      border-color: rgb(99, 102, 241);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    /* Card styles */
+    .card {
+      background: white;
+      border-radius: 0.75rem;
+      border: 1px solid #e5e7eb;
+      padding: 1.5rem;
+    }
+
+    /* Alert styles */
+    .alert {
+      padding: 1rem;
+      border-radius: 0.5rem;
+      display: flex;
+      gap: 0.75rem;
+      align-items: start;
+      animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .alert-success {
+      background: #d1fae5;
+      border: 1px solid #6ee7b7;
+      color: #065f46;
+    }
+    .alert-error {
+      background: #fee2e2;
+      border: 1px solid #fca5a5;
+      color: #991b1b;
+    }
+    .alert-info {
+      background: #dbeafe;
+      border: 1px solid #93c5fd;
+      color: #1e40af;
+    }
+
+    /* Loading spinner */
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .spinner {
+      animation: spin 1s linear infinite;
+    }
+
+    /* Progress circle */
+    .progress-ring {
+      transform: rotate(-90deg);
+    }
+    .progress-ring-circle {
+      transition: stroke-dashoffset 0.5s ease;
+    }
+
+    /* Timeline */
+    .timeline {
+      position: relative;
+      padding-left: 2rem;
+    }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 0.5rem;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: #e5e7eb;
+    }
+    .timeline-item {
+      position: relative;
+      padding-bottom: 1.5rem;
+      opacity: 0;
+      animation: fadeInUp 0.4s ease forwards;
+    }
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -1.5rem;
+      top: 0.375rem;
+      width: 0.75rem;
+      height: 0.75rem;
+      border-radius: 50%;
+      background: white;
+      border: 2px solid #d1d5db;
+      transition: all 0.3s;
+    }
+    .timeline-item.success::before {
+      background: #10b981;
+      border-color: #10b981;
+      box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+    }
+    .timeline-item.error::before {
+      background: #ef4444;
+      border-color: #ef4444;
+      box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
+    }
+    .timeline-item.running::before {
+      background: rgb(99, 102, 241);
+      border-color: rgb(99, 102, 241);
+      animation: pulse-ring 2s ease infinite;
+    }
+    @keyframes pulse-ring {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
+      }
+      50% {
+        box-shadow: 0 0 0 8px rgba(99, 102, 241, 0);
+      }
+    }
+
+    /* Test result card */
+    .test-result {
+      border: 2px solid #e5e7eb;
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      transition: all 0.3s;
+    }
+    .test-result.success {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(16, 185, 129, 0.02) 100%);
+      border-color: #10b981;
+    }
+    .test-result.error {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, rgba(239, 68, 68, 0.02) 100%);
+      border-color: #ef4444;
+    }
+
+    /* Badge */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .badge-success { background: #d1fae5; color: #065f46; }
+    .badge-error { background: #fee2e2; color: #991b1b; }
+
+    /* Metric item */
+    .metric-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .metric-item:last-child {
+      border-bottom: none;
+    }
+
+    /* Pulse animation */
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .pulse-dot {
+      animation: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <div id="app">
+    <div class="min-h-screen flex flex-col">
+      <!-- Header -->
+      <header class="bg-white border-b border-gray-200 px-8 py-4">
+        <div class="flex items-center justify-between max-w-5xl mx-auto">
+          <div class="flex items-center gap-4">
+            <a href="index.html" class="text-gray-400 hover:text-gray-600">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+              </svg>
+            </a>
+            <div>
+              <h1 class="text-2xl font-bold text-gray-900">Test Connection</h1>
+              <p class="text-sm text-gray-500 mt-1">Verify your source configurations</p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Content -->
+      <main class="flex-1 px-8 py-8">
+        <div class="max-w-4xl mx-auto">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left Column: Test Controls -->
+            <div class="lg:col-span-1">
+              <div class="card sticky top-8">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Test Configuration</h3>
+
+                <div class="space-y-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Source Type</label>
+                    <select v-model="selectedSource" class="select" @change="resetTest">
+                      <option value="figma">Figma</option>
+                      <option value="slack">Slack</option>
+                    </select>
+                  </div>
+
+                  <div v-if="selectedSource === 'figma'">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Figma Configuration</label>
+                    <select v-model="selectedConfig" class="select">
+                      <option value="design-team">Design Team</option>
+                      <option value="product-team">Product Team</option>
+                      <option value="marketing-team">Marketing Team</option>
+                    </select>
+                  </div>
+
+                  <div v-else>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Slack Workspace</label>
+                    <select v-model="selectedConfig" class="select">
+                      <option value="engineering">Engineering Team</option>
+                      <option value="design">Design Team</option>
+                      <option value="general">General Workspace</option>
+                    </select>
+                  </div>
+
+                  <div class="pt-4">
+                    <button
+                      @click="runTest"
+                      :disabled="testing"
+                      class="btn btn-primary w-full justify-center"
+                    >
+                      <svg v-if="!testing" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                      </svg>
+                      <svg v-else class="w-5 h-5 spinner" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                      </svg>
+                      {{ testing ? 'Testing...' : 'Run Test' }}
+                    </button>
+                  </div>
+
+                  <!-- Test Options -->
+                  <div class="pt-4 border-t border-gray-200">
+                    <h4 class="text-sm font-medium text-gray-700 mb-3">Test Options</h4>
+                    <div class="space-y-2">
+                      <label class="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          v-model="testOptions.checkAuth"
+                          type="checkbox"
+                          class="w-4 h-4 text-indigo-600 rounded border-gray-300"
+                        >
+                        <span>Check authentication</span>
+                      </label>
+                      <label class="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          v-model="testOptions.checkPermissions"
+                          type="checkbox"
+                          class="w-4 h-4 text-indigo-600 rounded border-gray-300"
+                        >
+                        <span>Verify permissions</span>
+                      </label>
+                      <label class="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          v-model="testOptions.testWebhook"
+                          type="checkbox"
+                          class="w-4 h-4 text-indigo-600 rounded border-gray-300"
+                        >
+                        <span>Test webhook delivery</span>
+                      </label>
+                      <label class="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          v-model="testOptions.checkNotion"
+                          type="checkbox"
+                          class="w-4 h-4 text-indigo-600 rounded border-gray-300"
+                        >
+                        <span>Verify Notion connection</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column: Test Results -->
+            <div class="lg:col-span-2">
+              <!-- Current Test Status -->
+              <div v-if="testing" class="test-result mb-6">
+                <div class="flex items-center justify-between mb-4">
+                  <h3 class="text-lg font-semibold text-gray-900">Testing in Progress</h3>
+                  <div class="pulse-dot w-3 h-3 bg-indigo-500 rounded-full"></div>
+                </div>
+
+                <div class="timeline">
+                  <div
+                    v-for="(step, index) in currentTestSteps"
+                    :key="index"
+                    :class="['timeline-item', step.status]"
+                    :style="{ animationDelay: (index * 0.1) + 's' }"
+                  >
+                    <div class="text-sm">
+                      <div class="flex items-start justify-between mb-1">
+                        <span class="font-medium text-gray-900">{{ step.title }}</span>
+                        <span v-if="step.duration" class="text-xs text-gray-500">{{ step.duration }}</span>
+                      </div>
+                      <p class="text-sm text-gray-600">{{ step.description }}</p>
+                      <p v-if="step.error" class="text-sm text-red-600 mt-1">{{ step.error }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Latest Result -->
+              <div v-if="latestResult && !testing" :class="['test-result', latestResult.success ? 'success' : 'error']" class="mb-6">
+                <div class="flex items-start justify-between mb-4">
+                  <div class="flex items-center gap-3">
+                    <div v-if="latestResult.success" class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                      <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
+                    </div>
+                    <div v-else class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                      <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 class="text-lg font-semibold text-gray-900">{{ latestResult.title }}</h3>
+                      <p class="text-sm text-gray-600 mt-1">{{ latestResult.message }}</p>
+                    </div>
+                  </div>
+                  <span :class="['badge', latestResult.success ? 'badge-success' : 'badge-error']">
+                    {{ latestResult.success ? 'Passed' : 'Failed' }}
+                  </span>
+                </div>
+
+                <!-- Metrics -->
+                <div class="bg-white bg-opacity-50 rounded-lg p-4 mb-4">
+                  <h4 class="text-sm font-semibold text-gray-900 mb-3">Test Metrics</h4>
+                  <div>
+                    <div class="metric-item">
+                      <span class="text-sm text-gray-600">Total Duration</span>
+                      <span class="text-sm font-medium text-gray-900">{{ latestResult.metrics.duration }}</span>
+                    </div>
+                    <div class="metric-item">
+                      <span class="text-sm text-gray-600">Checks Passed</span>
+                      <span class="text-sm font-medium text-gray-900">{{ latestResult.metrics.passed }} / {{ latestResult.metrics.total }}</span>
+                    </div>
+                    <div class="metric-item">
+                      <span class="text-sm text-gray-600">Response Time</span>
+                      <span class="text-sm font-medium text-gray-900">{{ latestResult.metrics.responseTime }}</span>
+                    </div>
+                    <div v-if="latestResult.success" class="metric-item">
+                      <span class="text-sm text-gray-600">Workspace</span>
+                      <span class="text-sm font-medium text-gray-900">{{ latestResult.metrics.workspace }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Detailed Steps -->
+                <div class="timeline">
+                  <div
+                    v-for="(step, index) in latestResult.steps"
+                    :key="index"
+                    :class="['timeline-item', step.status]"
+                  >
+                    <div class="text-sm">
+                      <div class="flex items-start justify-between mb-1">
+                        <span class="font-medium text-gray-900">{{ step.title }}</span>
+                        <span class="text-xs text-gray-500">{{ step.duration }}</span>
+                      </div>
+                      <p class="text-sm text-gray-600">{{ step.description }}</p>
+                      <p v-if="step.error" class="text-sm text-red-600 mt-1">{{ step.error }}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Troubleshooting -->
+                <div v-if="!latestResult.success && latestResult.troubleshooting" class="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div class="flex gap-3">
+                    <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <div>
+                      <h5 class="text-sm font-semibold text-amber-900 mb-2">Troubleshooting Tips</h5>
+                      <ul class="text-sm text-amber-800 space-y-1 list-disc list-inside">
+                        <li v-for="(tip, index) in latestResult.troubleshooting" :key="index">{{ tip }}</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Empty State -->
+              <div v-if="!testing && !latestResult" class="card text-center py-12">
+                <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">No tests run yet</h3>
+                <p class="text-sm text-gray-500 mb-6">Select a source and configuration, then click "Run Test" to begin</p>
+              </div>
+
+              <!-- Test History -->
+              <div v-if="testHistory.length > 0" class="card">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Test History</h3>
+                <div class="space-y-3">
+                  <div
+                    v-for="(test, index) in testHistory"
+                    :key="index"
+                    class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                    @click="viewHistoryItem(test)"
+                  >
+                    <div class="flex items-center gap-3">
+                      <div v-if="test.success" class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                        <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                      </div>
+                      <div v-else class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                        <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                      </div>
+                      <div>
+                        <p class="text-sm font-medium text-gray-900 capitalize">{{ test.source }} - {{ test.config }}</p>
+                        <p class="text-xs text-gray-500">{{ test.timestamp }}</p>
+                      </div>
+                    </div>
+                    <span :class="['badge', test.success ? 'badge-success' : 'badge-error']">
+                      {{ test.success ? 'Passed' : 'Failed' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const { createApp } = Vue;
+
+    createApp({
+      data() {
+        return {
+          selectedSource: 'figma',
+          selectedConfig: 'design-team',
+          testing: false,
+          latestResult: null,
+          currentTestSteps: [],
+          testOptions: {
+            checkAuth: true,
+            checkPermissions: true,
+            testWebhook: true,
+            checkNotion: true
+          },
+          testHistory: []
+        }
+      },
+      methods: {
+        async runTest() {
+          this.testing = true;
+          this.currentTestSteps = [];
+          this.latestResult = null;
+
+          const steps = [];
+
+          // Step 1: Authentication
+          if (this.testOptions.checkAuth) {
+            await this.addStep({
+              title: 'Checking Authentication',
+              description: 'Validating API token...',
+              status: 'running'
+            });
+            await this.delay(800);
+
+            const authSuccess = Math.random() > 0.1;
+            this.updateLastStep({
+              status: authSuccess ? 'success' : 'error',
+              description: authSuccess ? 'API token is valid' : 'Invalid API token',
+              error: authSuccess ? null : 'Token may be expired or revoked',
+              duration: '847ms'
+            });
+            steps.push({ ...this.currentTestSteps[this.currentTestSteps.length - 1] });
+
+            if (!authSuccess) {
+              this.finishTest(false, steps, 'Authentication Failed', 'The API token is invalid or expired');
+              return;
+            }
+          }
+
+          // Step 2: Permissions
+          if (this.testOptions.checkPermissions) {
+            await this.addStep({
+              title: 'Verifying Permissions',
+              description: `Checking ${this.selectedSource === 'figma' ? 'file access' : 'channel access'} permissions...`,
+              status: 'running'
+            });
+            await this.delay(600);
+
+            const permSuccess = Math.random() > 0.15;
+            this.updateLastStep({
+              status: permSuccess ? 'success' : 'error',
+              description: permSuccess ? 'All required permissions granted' : 'Missing required permissions',
+              error: permSuccess ? null : `Bot needs ${this.selectedSource === 'figma' ? 'file:read' : 'channels:read'} permission`,
+              duration: '623ms'
+            });
+            steps.push({ ...this.currentTestSteps[this.currentTestSteps.length - 1] });
+
+            if (!permSuccess) {
+              this.finishTest(false, steps, 'Permission Error', 'Missing required permissions');
+              return;
+            }
+          }
+
+          // Step 3: Webhook
+          if (this.testOptions.testWebhook) {
+            await this.addStep({
+              title: 'Testing Webhook Delivery',
+              description: 'Sending test webhook...',
+              status: 'running'
+            });
+            await this.delay(1200);
+
+            const webhookSuccess = Math.random() > 0.2;
+            this.updateLastStep({
+              status: webhookSuccess ? 'success' : 'error',
+              description: webhookSuccess ? 'Webhook delivered successfully' : 'Webhook delivery failed',
+              error: webhookSuccess ? null : 'Endpoint may be unreachable or blocking requests',
+              duration: '1.24s'
+            });
+            steps.push({ ...this.currentTestSteps[this.currentTestSteps.length - 1] });
+
+            if (!webhookSuccess) {
+              this.finishTest(false, steps, 'Webhook Error', 'Failed to deliver test webhook');
+              return;
+            }
+          }
+
+          // Step 4: Notion
+          if (this.testOptions.checkNotion) {
+            await this.addStep({
+              title: 'Verifying Notion Connection',
+              description: 'Checking database access...',
+              status: 'running'
+            });
+            await this.delay(900);
+
+            const notionSuccess = Math.random() > 0.1;
+            this.updateLastStep({
+              status: notionSuccess ? 'success' : 'error',
+              description: notionSuccess ? 'Notion database accessible' : 'Cannot access Notion database',
+              error: notionSuccess ? null : 'Database may have been deleted or permissions revoked',
+              duration: '892ms'
+            });
+            steps.push({ ...this.currentTestSteps[this.currentTestSteps.length - 1] });
+
+            if (!notionSuccess) {
+              this.finishTest(false, steps, 'Notion Connection Error', 'Cannot access the configured Notion database');
+              return;
+            }
+          }
+
+          this.finishTest(true, steps, 'All Tests Passed', 'Connection is working correctly');
+        },
+
+        async addStep(step) {
+          this.currentTestSteps.push(step);
+        },
+
+        updateLastStep(updates) {
+          const lastIndex = this.currentTestSteps.length - 1;
+          if (lastIndex >= 0) {
+            this.currentTestSteps[lastIndex] = {
+              ...this.currentTestSteps[lastIndex],
+              ...updates
+            };
+          }
+        },
+
+        finishTest(success, steps, title, message) {
+          const totalChecks = steps.length;
+          const passedChecks = steps.filter(s => s.status === 'success').length;
+          const totalDuration = steps.reduce((sum, s) => {
+            const ms = parseFloat(s.duration);
+            return sum + (isNaN(ms) ? 0 : ms);
+          }, 0);
+
+          this.latestResult = {
+            success,
+            title,
+            message,
+            steps,
+            metrics: {
+              duration: totalDuration.toFixed(0) + 'ms',
+              passed: passedChecks,
+              total: totalChecks,
+              responseTime: (totalDuration / totalChecks).toFixed(0) + 'ms',
+              workspace: this.selectedSource === 'figma' ? 'Acme Design Team' : 'Engineering Team'
+            },
+            troubleshooting: success ? null : [
+              'Verify your API token is still valid',
+              'Check that the integration has the required permissions',
+              'Ensure webhook URLs are accessible from the internet',
+              'Confirm the Notion database still exists and is shared with the integration'
+            ]
+          };
+
+          // Add to history
+          this.testHistory.unshift({
+            source: this.selectedSource,
+            config: this.selectedConfig,
+            success,
+            timestamp: new Date().toLocaleString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            })
+          });
+
+          if (this.testHistory.length > 10) {
+            this.testHistory.pop();
+          }
+
+          this.testing = false;
+        },
+
+        delay(ms) {
+          return new Promise(resolve => setTimeout(resolve, ms));
+        },
+
+        resetTest() {
+          this.latestResult = null;
+          this.currentTestSteps = [];
+        },
+
+        viewHistoryItem(test) {
+          alert(`Viewing test from ${test.timestamp}\nSource: ${test.source}\nConfig: ${test.config}\nResult: ${test.success ? 'Passed' : 'Failed'}`);
+        }
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
