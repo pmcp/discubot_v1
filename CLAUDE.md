@@ -38,7 +38,7 @@ When improving code, use multiple focused passes:
 
 **CRITICAL**: Every agent working on this project MUST follow this exact workflow for every task. No exceptions.
 
-### The 6-Step Task Flow
+### The 5-Step Task Flow
 
 For **every single task** in `/docs/PROGRESS_TRACKER.md`:
 
@@ -46,7 +46,7 @@ For **every single task** in `/docs/PROGRESS_TRACKER.md`:
 Step 1: Mark Task In Progress
 ├─ Edit PROGRESS_TRACKER.md
 ├─ Change [ ] to 🔄 for current task
-└─ Use TodoWrite tool to track the 6 steps
+└─ Use TodoWrite tool to track the 5 steps
 
 Step 2: Do The Work
 ├─ Complete the actual task requirements
@@ -65,14 +65,7 @@ Step 4: Update Progress Tracker
 ├─ Update phase progress percentage
 └─ Add notes/learnings in Daily Log section
 
-Step 5: Create Decision Log (MANDATORY)
-├─ Create file: docs/decision_log/X.Y-task-name-YYYYMMDD.md
-├─ Document all decisions made during the task
-├─ Include: what was decided, why, and alternatives considered
-├─ If no decisions deviated from original brief, state that explicitly
-└─ See decision log format below
-
-Step 6: Git Commit (MANDATORY)
+Step 5: Git Commit (MANDATORY)
 ├─ Stage all changes: git add .
 ├─ Commit with conventional format
 ├─ Push if appropriate
@@ -121,95 +114,17 @@ git commit -m "feat: complete Phase 1 foundation (Tasks 1.5-1.6)
 Generated collections and ran migrations"
 ```
 
-### Decision Log Format
-
-**MANDATORY**: After completing each task, create a decision log at:
-`docs/decision_log/X.Y-task-name-YYYYMMDD.md`
-
-**Naming convention**: Start with task number (e.g., `1.5-generate-collections-20251112.md`)
-
-Use this template:
-
-```markdown
-# Decision Log: Task X.Y - [Task Title]
-
-**Date**: YYYY-MM-DD
-**Task**: [Link to PROGRESS_TRACKER.md section]
-**Author**: Claude Code Agent
-
-## Summary
-
-Brief description of what was accomplished in this task.
-
-## Decisions Made
-
-### Decision 1: [Title]
-- **What**: Describe the decision
-- **Why**: Rationale behind the decision
-- **Alternatives Considered**: Other options and why they weren't chosen
-- **Impact**: Potential consequences or benefits
-
-### Decision 2: [Title]
-- **What**: Describe the decision
-- **Why**: Rationale behind the decision
-- **Alternatives Considered**: Other options and why they weren't chosen
-- **Impact**: Potential consequences or benefits
-
-## Adherence to Original Brief
-
-<!-- Choose one: -->
-
-✅ **All decisions aligned with original brief** - No deviations from the planned approach.
-
-OR
-
-⚠️ **Deviations from original brief**:
-1. [Describe deviation and why it was necessary]
-2. [Describe deviation and why it was necessary]
-
-## Technical Notes
-
-Any additional technical context, gotchas, or lessons learned.
-
-## Related Files
-
-List of files created, modified, or deleted during this task.
-```
-
-**If no significant decisions were made**, use this simplified template:
-
-```markdown
-# Decision Log: Task X.Y - [Task Title]
-
-**Date**: YYYY-MM-DD
-**Task**: [Link to PROGRESS_TRACKER.md section]
-**Author**: Claude Code Agent
-
-## Summary
-
-Brief description of what was accomplished.
-
-## Decisions Made
-
-✅ **No significant decisions** - This task followed the original brief exactly with no architectural or implementation decisions requiring documentation.
-
-## Related Files
-
-List of files created, modified, or deleted.
-```
-
 ### Using TodoWrite During Tasks
 
-**ALWAYS use TodoWrite** to track the 6-step flow:
+**ALWAYS use TodoWrite** to track the 5-step flow:
 
 ```typescript
 TodoWrite([
-  { content: "Mark Task X.Y in progress in PROGRESS_TRACKER.md", status: "in_progress", activeForm: "Marking Task X.Y in progress" },
-  { content: "Complete Task X.Y work", status: "pending", activeForm: "Completing Task X.Y work" },
-  { content: "Run npx nuxt typecheck", status: "pending", activeForm: "Running npx nuxt typecheck" },
-  { content: "Update PROGRESS_TRACKER.md with completion", status: "pending", activeForm: "Updating PROGRESS_TRACKER.md" },
-  { content: "Create decision log for Task X.Y", status: "pending", activeForm: "Creating decision log" },
-  { content: "Commit: feat: [description] (Task X.Y)", status: "pending", activeForm: "Committing changes" }
+  { content: "Mark Task X.Y in progress in PROGRESS_TRACKER.md", status: "in_progress" },
+  { content: "Complete Task X.Y work", status: "pending" },
+  { content: "Run npx nuxt typecheck", status: "pending" },
+  { content: "Update PROGRESS_TRACKER.md with completion", status: "pending" },
+  { content: "Commit: feat: [description] (Task X.Y)", status: "pending" }
 ])
 ```
 
@@ -249,10 +164,7 @@ npx nuxt typecheck
 # Step 4: Update tracker
 # (Edit PROGRESS_TRACKER.md - mark complete, update stats)
 
-# Step 5: Create decision log
-# (Create docs/decision_log/1.5-generate-collections-20251112.md)
-
-# Step 6: Commit
+# Step 5: Commit
 git add .
 git commit -m "feat: generate discussion layer (Task 1.5)
 
@@ -275,7 +187,7 @@ git push
 2. Check which tasks are complete vs in progress
 3. Read the Daily Log for context
 4. Continue from the next pending task
-5. Follow the same 6-step workflow
+5. Follow the same 5-step workflow
 
 **When resuming work:**
 
@@ -288,14 +200,12 @@ git push
 ### Critical Reminders
 
 - ✅ **NEVER skip the commit step** - Every task = One commit
-- ✅ **NEVER skip the decision log** - Every task = One decision log
 - ✅ **ALWAYS run typecheck** after code changes
-- ✅ **ALWAYS update PROGRESS_TRACKER.md** before decision log
-- ✅ **ALWAYS create decision log** before committing
-- ✅ **ALWAYS use TodoWrite** to track the 6 steps
+- ✅ **ALWAYS update PROGRESS_TRACKER.md** before committing
+- ✅ **ALWAYS use TodoWrite** to track the 5 steps
 - ✅ **ALWAYS read PROGRESS_TRACKER.md** when starting
 - ❌ **NEVER batch multiple tasks** in one commit (unless explicitly told)
-- ❌ **NEVER commit without decision log** first
+- ❌ **NEVER commit without updating tracker** first
 
 ### Why This Workflow?
 
@@ -304,14 +214,13 @@ git push
 3. **Accountability**: Progress tracker always reflects reality
 4. **Quality**: Type checking catches errors early
 5. **Communication**: Clear commit messages document decisions
-6. **Decision Documentation**: Decision logs create a paper trail of architectural choices
 
 ### Context Clearing Between Tasks
 
 **IMPORTANT**: To ensure fresh context and test workflow documentation, clear context after each task completion.
 
 **Agent responsibilities:**
-1. Complete all 6 workflow steps
+1. Complete all 5 workflow steps
 2. Announce: **"✅ Task X.Y complete. Ready for context clear."**
 3. Say the code word (found at the top of CLAUDE.md)
 4. STOP and wait for user action
@@ -333,7 +242,7 @@ continue with next task
 2. Read `/docs/PROGRESS_TRACKER.md` FIRST
 3. Check last completed task
 4. Continue with next pending task
-5. Follow the 6-step workflow
+5. Follow the 5-step workflow
 
 **Benefits of context clearing:**
 - ✅ Tests that documentation is complete and clear
