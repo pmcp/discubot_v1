@@ -24,6 +24,7 @@
     "@friendlyinternet/nuxt-crouton": "^1.4.1",
     "@friendlyinternet/nuxt-crouton-connector": "^0.2.0",
     "@iconify-json/lucide": "^1.2.73",
+    "@notionhq/client": "^5.4.0",
     "@nuxt/eslint": "^1.10.0",
     "@nuxt/ui": "^4.1.0",
     "@nuxthub/core": "^0.9.0",

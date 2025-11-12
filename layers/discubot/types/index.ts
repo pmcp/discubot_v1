@@ -121,3 +121,29 @@ export interface ServiceError extends Error {
   retryable?: boolean
   retryAfter?: number
 }
+
+/**
+ * Configuration for Notion task creation
+ */
+export interface NotionTaskConfig {
+  /** Notion database ID (without dashes) */
+  databaseId: string
+  /** Optional API key override (uses runtime config if not provided) */
+  apiKey?: string
+  /** Source type for metadata (e.g., 'Figma', 'Slack') */
+  sourceType: string
+  /** Deep link URL back to source discussion */
+  sourceUrl: string
+}
+
+/**
+ * Result of Notion task creation
+ */
+export interface NotionTaskResult {
+  /** Notion page ID */
+  id: string
+  /** Public URL to the Notion page */
+  url: string
+  /** Creation timestamp */
+  createdAt: Date
+}

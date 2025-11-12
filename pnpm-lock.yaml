@@ -20,6 +20,9 @@ importers:
       '@iconify-json/lucide':
         specifier: ^1.2.73
         version: 1.2.73
+      '@notionhq/client':
+        specifier: ^5.4.0
+        version: 5.4.0
       '@nuxt/eslint':
         specifier: ^1.10.0
         version: 1.10.0(@typescript-eslint/utils@8.46.4(eslint@9.24.0(jiti@2.6.1))(typescript@5.9.3))(@vue/compiler-sfc@3.5.24)(eslint-import-resolver-node@0.3.9)(eslint@9.24.0(jiti@2.6.1))(magicast@0.5.1)(typescript@5.9.3)(vite@7.2.2(@types/node@22.14.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.1))
@@ -1221,6 +1224,10 @@ packages:
   '@nodelib/fs.walk@3.0.1':
     resolution: {integrity: sha512-nIh/M6Kh3ZtOmlY00DaUYB4xeeV6F3/ts1l29iwl3/cfyY/OuCfUx+v08zgx8TKPTifXRcjjqVQ4KB2zOYSbyw==}
     engines: {node: '>=18.18.0'}
+
+  '@notionhq/client@5.4.0':
+    resolution: {integrity: sha512-SJsprS26S0Wi9CoTQp4vC8/nPpAIo1gMB4H7aJ2E/k0fWnNGIEAg984KwtzK6h9ZGaPcEaryVRSz1VVClJcVUw==}
+    engines: {node: '>=18'}
 
   '@nuxt/cli@3.30.0':
     resolution: {integrity: sha512-nBNEkvOwqzxgvfTBUKPX0zN4h85dWjjkW+kP4OFnVaN3C3kdsbScNtYPIZyp0+ArabL5t4RT93Gyx0IZMRNzAQ==}
@@ -7388,6 +7395,8 @@ snapshots:
     dependencies:
       '@nodelib/fs.scandir': 4.0.1
       fastq: 1.19.1
+
+  '@notionhq/client@5.4.0': {}
 
   '@nuxt/cli@3.30.0(magicast@0.5.1)':
     dependencies:
