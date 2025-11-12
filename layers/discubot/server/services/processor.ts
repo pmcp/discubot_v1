@@ -408,6 +408,7 @@ export async function processDiscussion(
       })
 
       // Update the discussion record with the correct URL and threadId
+      const db = useDB()
       await db
         .update(discubotDiscussions)
         .set({
