@@ -8,24 +8,29 @@ export default defineNuxtConfig({
     'nuxt-auth-utils',
     'nuxthub-ratelimit',
     '@nuxt/eslint',
+    '@nuxtjs/ngrok',
   ],
   extends: [
     '@friendlyinternet/nuxt-crouton',
     './layers/discubot'
   ],
-  devServer: {
-    host: '0.0.0.0', // Listen on all network interfaces for ngrok
+  ngrok: {
+    authtoken_from_env: true, // Uses NGROK_AUTHTOKEN from .env
+  },
+  hooks: {
+    'vite:extendConfig': (config) => {
+      if (config.server) {
+        config.server.host = '0.0.0.0'
+        // @ts-ignore - Disable host checking
+        config.server.allowedHosts = ['all']
+      }
+    },
   },
   vite: {
     server: {
-      allowedHosts: [
-        '529bf927b137.ngrok-free.app',  // Current ngrok URL
-        '.ngrok-free.app',  // Any ngrok free URL
-        '.ngrok.io',        // Alternative ngrok domain
-        'localhost',        // Always allow localhost
-      ],
-      hmr: {
-        clientPort: 443,    // For ngrok HTTPS
+      host: '0.0.0.0',
+      fs: {
+        strict: false,
       },
     },
   },

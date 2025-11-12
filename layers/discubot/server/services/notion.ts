@@ -41,7 +41,7 @@ function getNotionClient(apiKey?: string): Client {
   if (!key) {
     try {
       const config = useRuntimeConfig()
-      key = config.notionApiKey
+      key = config.notionApiKey as string | undefined
     }
     catch {
       // useRuntimeConfig not available (standalone testing)
@@ -311,11 +311,10 @@ export async function createNotionTask(
         parent: { database_id: config.databaseId },
         properties,
         children,
-      }),
+      }) as Promise<any>,
     {
       maxAttempts: 3,
       baseDelay: 1000,
-      maxDelay: 10000,
     },
   )
 
@@ -357,6 +356,7 @@ export async function createNotionTasks(
 
   for (let i = 0; i < tasks.length; i++) {
     const task = tasks[i]
+    if (!task) continue
 
     try {
       const result = await createNotionTask(task, thread, aiSummary, config)
@@ -373,7 +373,7 @@ export async function createNotionTasks(
     }
     catch (error) {
       console.error(
-        `[Notion Service] Failed to create task "${task.title}":`,
+        `[Notion Service] Failed to create task "${task?.title}":`,
         error,
       )
       throw error // Fail fast on errors
@@ -390,34 +390,76 @@ export async function createNotionTasks(
 }
 
 /**
+ * Result of Notion connection test
+ */
+export interface NotionConnectionTestResult {
+  connected: boolean
+  details?: {
+    databaseId: string
+    title: string
+    url: string
+  }
+  error?: string
+}
+
+/**
  * Test Notion connection and database access
  *
- * Useful for Admin UI validation in Phase 5.
+ * Enhanced version for Admin UI validation (Phase 5.5).
  * Verifies:
  * - API key is valid
  * - Database exists and is accessible
+ * - Returns database details (title, URL) on success
+ *
+ * @param config - Configuration with API key and database ID
+ * @returns Test result with connection status and details/error
  */
-export async function testNotionConnection(
-  databaseId: string,
-  apiKey: string,
-): Promise<boolean> {
+export async function testNotionConnection(config: {
+  apiKey: string
+  databaseId: string
+}): Promise<NotionConnectionTestResult> {
   try {
-    const notion = getNotionClient(apiKey)
+    const notion = getNotionClient(config.apiKey)
 
-    await retryWithBackoff(
-      () => notion.databases.retrieve({ database_id: databaseId }),
+    const database: any = await retryWithBackoff(
+      () => notion.databases.retrieve({ database_id: config.databaseId }) as Promise<any>,
       {
         maxAttempts: 2,
         baseDelay: 500,
       },
     )
 
-    console.log('[Notion Service] Connection test successful')
-    return true
+    // Extract database title (can be in different formats)
+    let title = 'Untitled Database'
+    if (database.title && Array.isArray(database.title) && database.title.length > 0) {
+      title = database.title[0]?.plain_text || title
+    }
+
+    console.log('[Notion Service] Connection test successful', {
+      databaseId: config.databaseId,
+      title,
+    })
+
+    return {
+      connected: true,
+      details: {
+        databaseId: config.databaseId,
+        title,
+        url: database.url || `https://notion.so/${config.databaseId.replace(/-/g, '')}`,
+      },
+    }
   }
   catch (error) {
     console.error('[Notion Service] Connection test failed:', error)
-    return false
+
+    const errorMessage = (error as any).body?.message
+      || (error as Error).message
+      || 'Unknown error'
+
+    return {
+      connected: false,
+      error: errorMessage,
+    }
   }
 }
 
