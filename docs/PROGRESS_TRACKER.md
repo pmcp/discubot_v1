@@ -3,7 +3,7 @@
 **Project Start Date**: 2025-11-11
 **Expected Completion**: 2025-12-16 (5 weeks)
 **Current Phase**: Phase 5 - Admin UI
-**Overall Progress**: 82% (28/34 tasks complete)
+**Overall Progress**: 76% (28/37 tasks complete)
 
 ---
 
@@ -11,8 +11,8 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 28 / 34 |
-| Hours Logged | 83.75 / 112 |
+| Tasks Completed | 28 / 37 |
+| Hours Logged | 83.75 / 119 |
 | Current Phase | Phase 5 |
 | Days Elapsed | 2 / 21 |
 | Blockers | 0 |
@@ -91,8 +91,8 @@
 
 ### Phase 5: Admin UI 🔄
 **Status**: In Progress
-**Progress**: 5/6 tasks (83%)
-**Time**: 22h / 25h estimated
+**Progress**: 5/9 tasks (56%)
+**Time**: 22h / 32h estimated
 **Target**: Week 4-5, Days 16-20
 
 - [x] Task 5.1: Create Dashboard Page (4h) ✅
@@ -100,9 +100,22 @@
 - [x] Task 5.3: Create Job Monitoring Dashboard (5h) ✅
 - [x] Task 5.4: Create Job Details Modal (4h) ✅
 - [x] Task 5.5: Create Test Connection Endpoints (3h) ✅
-- [ ] Task 5.6: Polish & Responsive Design (3h)
+- [ ] Task 5.6A: User Mapping Infrastructure (4h)
+  - Create userMappings Crouton schema
+  - Create user mapping service (getOrCreateUserMapping, sync from Slack/Figma, resolveToNotionUser)
+  - Enhance Slack adapter (add users:read.email scope, fetchSlackUserInfo helper, mention detection)
+  - Enhance Notion service (buildTaskContent with mention rich_text objects)
+- [ ] Task 5.6B: User Mapping Admin UI (3h)
+  - User mapping list page with filters
+  - User mapping form (manual + bulk import)
+  - Notion user dropdown (fetch from Notion API)
+- [ ] Task 5.6C: Polish & Responsive Design (3h)
+  - Mobile-first responsive breakpoints
+  - Loading states and skeletons
+  - Empty states with CTAs
+  - Accessibility improvements
 
-**Checkpoint**: ✅ Full admin UI functional, teams can self-serve
+**Checkpoint**: ✅ Full admin UI functional with user mapping, teams can self-serve, proper @mentions in Notion
 
 ---
 

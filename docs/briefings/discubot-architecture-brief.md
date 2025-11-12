@@ -4,8 +4,8 @@
 **Date**: 2025-11-11
 **Status**: Design Phase (Revised - Lean Architecture)
 **Framework**: Nuxt 4 + Nuxt-Crouton + SuperSaaS
-**Version**: 2.0 (rebuild from figno proof-of-concept)
-**Architecture**: Lean MVP approach - 4 collections, 2 layers
+**Version**: 2.1 (rebuild from figno proof-of-concept)
+**Architecture**: Lean MVP approach - 5 collections, 2 layers
 
 ---
 
@@ -271,11 +271,12 @@ fignoEmailConfigs
 └───────────────────────┬──────────────────────────────────────┘
                         ↓
 ┌─────────────────────────────────────────────────────────────┐
-│           CROUTON-GENERATED COLLECTIONS (4 Total)            │
+│           CROUTON-GENERATED COLLECTIONS (5 Total)            │
 │  - discussions: Raw discussion + embedded thread data        │
 │  - configs: Team-specific source settings             │
 │  - jobs: Job queue and status tracking                  │
 │  - tasks: Created Notion tasks (audit trail + backup)       │
+│  - userMappings: Source user → Notion user mappings         │
 │                                                              │
 │  Removed for simplicity (MVP):                              │
 │  - threads: Embedded as JSON in discussions.threadData      │
@@ -507,6 +508,196 @@ export class SlackAdapter implements DiscussionSourceAdapter {
 3. **Extensibility**: New sources = new adapter class, no core changes
 4. **Consistency**: All sources produce same output format
 5. **Flexibility**: Adapters can have source-specific optimizations
+
+---
+
+## User Mapping & Mention Resolution
+
+### The Problem
+
+When discussions from Slack or Figma mention users (e.g., `<@U123ABC456>` in Slack or `@user@example.com` in Figma), we need to properly @mention those users in the created Notion tasks. However, user IDs differ across platforms:
+- **Slack**: User IDs like `U123ABC456`
+- **Figma**: Email handles like `user@example.com`
+- **Notion**: UUIDs like `b2e19928-b427-4aad-9a9d-fde65479b1d9`
+
+### The Solution: User Mapping Collection
+
+A dedicated `userMappings` collection maps external user identities to Notion users:
+
+```typescript
+interface UserMapping {
+  sourceType: 'slack' | 'figma'
+  sourceUserId: string           // U123ABC456 or user@example.com
+  sourceTeamId: string            // T123ABC456 or file key
+  notionUserId: string            // Notion UUID
+  displayName: string             // Cached name
+  email: string                   // For matching
+  sourceProfile: json             // Full profile cache
+  lastSyncedAt: Date
+  active: boolean
+}
+```
+
+### Mention Resolution Workflow
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  STAGE 1: DETECT MENTIONS                                   │
+│  Slack message: "Hey <@U123ABC456>, can you review this?"  │
+│  Regex: /<@(U[A-Z0-9]+)>/g                                 │
+│  Extracted: ["U123ABC456"]                                  │
+└──────────────────┬──────────────────────────────────────────┘
+                   │
+                   ↓
+┌─────────────────────────────────────────────────────────────┐
+│  STAGE 2: RESOLVE TO NOTION USER                            │
+│  Look up userMappings:                                      │
+│    sourceType="slack"                                       │
+│    sourceUserId="U123ABC456"                                │
+│    sourceTeamId="T123ABC456"                                │
+│  Result: notionUserId="b2e19928-..."                       │
+└──────────────────┬──────────────────────────────────────────┘
+                   │
+                   ↓
+┌─────────────────────────────────────────────────────────────┐
+│  STAGE 3: CREATE NOTION MENTION OBJECT                      │
+│  {                                                          │
+│    type: "mention",                                         │
+│    mention: {                                               │
+│      type: "user",                                          │
+│      user: { id: "b2e19928-..." }                         │
+│    },                                                       │
+│    plain_text: "@John Doe"                                 │
+│  }                                                          │
+└──────────────────┬──────────────────────────────────────────┘
+                   │
+                   ↓
+┌─────────────────────────────────────────────────────────────┐
+│  STAGE 4: INSERT INTO NOTION TASK                           │
+│  Notion page rich_text:                                     │
+│  [                                                          │
+│    { type: "text", text: { content: "Hey " } },           │
+│    { type: "mention", ... },  ← Proper @mention           │
+│    { type: "text", text: { content: ", can you..." } }    │
+│  ]                                                          │
+│  Result: User gets notified in Notion! 🔔                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Slack OAuth Scope Enhancement
+
+To fetch user information from Slack, we need the `users:read.email` scope:
+
+```typescript
+// server/api/oauth/slack/install.get.ts
+const SLACK_SCOPES = [
+  'channels:history',
+  'chat:write',
+  'reactions:write',
+  'app_mentions:read',
+  'im:history',
+  'mpim:history',
+  'users:read',        // Read basic user info
+  'users:read.email'   // NEW: Required to fetch email for matching
+]
+```
+
+### User Info Caching
+
+The system caches user profile data to avoid repeated API calls:
+
+```typescript
+// server/services/userMapping.ts
+export async function getOrCreateUserMapping(
+  slackUserId: string,
+  slackTeamId: string,
+  config: SourceConfig
+): Promise<UserMapping> {
+  // 1. Check if mapping exists in database
+  let mapping = await db.query.userMappings.findFirst({
+    where: and(
+      eq(userMappings.sourceType, 'slack'),
+      eq(userMappings.sourceUserId, slackUserId),
+      eq(userMappings.sourceTeamId, slackTeamId)
+    )
+  })
+
+  // 2. If found and fresh (< 24 hours), return cached
+  if (mapping && isRecent(mapping.lastSyncedAt, 24 * 60 * 60 * 1000)) {
+    return mapping
+  }
+
+  // 3. Otherwise, fetch from Slack API
+  const userInfo = await fetchSlackUserInfo(slackUserId, config.apiToken)
+
+  // 4. Attempt to match Notion user by email
+  const notionUserId = await matchNotionUserByEmail(
+    userInfo.profile.email,
+    config.notionToken
+  )
+
+  // 5. Create or update mapping
+  if (!mapping && notionUserId) {
+    mapping = await db.insert(userMappings).values({
+      sourceType: 'slack',
+      sourceUserId: slackUserId,
+      sourceTeamId: slackTeamId,
+      notionUserId,
+      displayName: userInfo.real_name,
+      email: userInfo.profile.email,
+      sourceProfile: userInfo,
+      lastSyncedAt: new Date(),
+      active: true
+    }).returning()
+  } else if (mapping) {
+    // Update existing
+    await db.update(userMappings)
+      .set({
+        displayName: userInfo.real_name,
+        email: userInfo.profile.email,
+        sourceProfile: userInfo,
+        lastSyncedAt: new Date()
+      })
+      .where(eq(userMappings.id, mapping.id))
+  }
+
+  return mapping
+}
+```
+
+### Fallback Strategy
+
+If no user mapping is found:
+1. Show plain text username instead: `@username` (not a Notion mention)
+2. Log warning for admin to create mapping
+3. Task is still created successfully (graceful degradation)
+4. No notification sent to Notion user
+
+### Manual vs Automatic Mapping
+
+**Automatic (Preferred):**
+- Match by email address automatically
+- Happens on first mention detection
+- Requires `users:read.email` scope (Slack) or email in comments (Figma)
+
+**Manual (Fallback):**
+- Admin creates mappings in Admin UI
+- Useful when emails don't match
+- Supports multiple source workspaces → same Notion user
+
+### Admin UI for User Mappings
+
+**List Page** (`/dashboard/[team]/discubot/user-mappings.vue`):
+- Show all user mappings with filters
+- Display: source type, source user, display name, Notion user, last synced
+- Actions: Edit, Sync now, Delete
+
+**Form** (Crouton-generated + enhanced):
+- Select source type (Slack/Figma)
+- Input source user ID or select from fetched list
+- Select Notion user from dropdown (fetched via `users.list` API)
+- Auto-sync profile data button
+- Bulk import: Fetch all workspace users, attempt email matching
 
 ---
 
@@ -1531,7 +1722,7 @@ Docker (for local D1 emulation)
 Discubot v2 represents a complete architectural evolution from the figno proof-of-concept, built with a **lean, pragmatic approach**:
 
 **From:** Figma-specific monolith with 10+ tables and tight coupling
-**To:** Generic adapter-based system with **4 collections** and clear separation
+**To:** Generic adapter-based system with **5 collections** and clear separation
 
 **From:** Manual CRUD code for every entity
 **To:** Crouton-generated collections with auto-generated forms, tables, APIs
@@ -1577,8 +1768,8 @@ We're building for **current needs** (2 sources, 0 users) not **imagined future 
 
 ---
 
-**Document Version**: 2.0 (Revised - Lean Architecture)
-**Last Updated**: 2025-11-11
+**Document Version**: 2.1 (Revised - Lean Architecture + User Mappings)
+**Last Updated**: 2025-11-12
 **Author**: Architecture Planning for Discubot v2
-**Changes**: Simplified from 6 collections to 4, from 4 layers to 2, deferred advanced features
-**Next Review**: After Phase 1 completion
+**Changes**: Added userMappings collection for Notion @mentions, documented mention resolution workflow
+**Next Review**: After Phase 5 completion

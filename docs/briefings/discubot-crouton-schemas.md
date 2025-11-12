@@ -4,7 +4,7 @@
 **Date**: 2025-11-11 (Revised - Lean Architecture)
 **Purpose**: Complete specifications for generating Discubot collections
 **Generator Version**: nuxt-crouton-collection-generator v1.2.0+
-**Collections**: 4 (reduced from 6 for simplicity)
+**Collections**: 5 (discussions, configs, jobs, tasks, userMappings)
 
 ---
 
@@ -17,6 +17,7 @@
    - [Source Configs](#source-configs-collection)
    - [Sync Jobs](#sync-jobs-collection)
    - [Tasks](#tasks-collection)
+   - [User Mappings](#user-mappings-collection)
 4. [Generation Commands](#generation-commands)
 5. [Post-Generation Steps](#post-generation-steps)
 
@@ -26,7 +27,7 @@
 
 ## Overview
 
-Discubot uses **4 core collections** managed by Nuxt-Crouton (reduced from 6 for simplicity). This document provides the complete configuration and schema definitions needed to generate these collections.
+Discubot uses **5 core collections** managed by Nuxt-Crouton. This document provides the complete configuration and schema definitions needed to generate these collections.
 
 ### Collections Summary
 
@@ -36,6 +37,7 @@ Discubot uses **4 core collections** managed by Nuxt-Crouton (reduced from 6 for
 | **configs** | Team-specific source settings | ~10-50/team | No |
 | **jobs** | Job queue and status tracking | ~100-1000/month | Yes |
 | **tasks** | Created Notion tasks (audit trail) | ~100-2000/month | Yes |
+| **userMappings** | Source user → Notion user mappings | ~10-100/team | No |
 
 ### Removed Collections (Simplified)
 
@@ -62,12 +64,13 @@ Place this file in your project root.
 
 ```javascript
 export default {
-  // Define all collections (4 total - lean approach)
+  // Define all collections (5 total)
   collections: [
     { name: 'discussions', fieldsFile: './schemas/discussion-schema.json' },
     { name: 'configs', fieldsFile: './schemas/config-schema.json' },
     { name: 'jobs', fieldsFile: './schemas/job-schema.json' },
-    { name: 'tasks', fieldsFile: './schemas/task-schema.json' }
+    { name: 'tasks', fieldsFile: './schemas/task-schema.json' },
+    { name: 'userMappings', fieldsFile: './schemas/user-mapping-schema.json' }
   ],
 
   // Organize into layers
@@ -78,7 +81,8 @@ export default {
         'discussions',
         'configs',
         'jobs',
-        'tasks'
+        'tasks',
+        'userMappings'
       ]
     }
   ],
@@ -950,6 +954,158 @@ Local cache of created Notion tasks. Stores essential task data for quick lookup
 
 ---
 
+## User Mappings Collection
+
+### Purpose
+Maps external users (Slack/Figma) to Notion users for proper @mentions in created tasks. This is a Discubot-specific mapping table completely separate from Nuxt app authentication users.
+
+### File: `schemas/user-mapping-schema.json`
+
+```json
+{
+  "sourceType": {
+    "type": "string",
+    "meta": {
+      "required": true,
+      "label": "Source Type",
+      "description": "slack, figma, etc.",
+      "area": "main",
+      "group": "source"
+    }
+  },
+  "sourceUserId": {
+    "type": "string",
+    "meta": {
+      "required": true,
+      "label": "Source User ID",
+      "description": "User ID in source system (e.g., U123ABC456 for Slack, user@example.com for Figma)",
+      "area": "main",
+      "group": "source"
+    }
+  },
+  "sourceTeamId": {
+    "type": "string",
+    "meta": {
+      "required": true,
+      "label": "Source Team ID",
+      "description": "Workspace/team ID in source system (e.g., T123ABC456 for Slack, file key for Figma)",
+      "area": "sidebar",
+      "group": "source"
+    }
+  },
+  "notionUserId": {
+    "type": "string",
+    "meta": {
+      "required": true,
+      "label": "Notion User ID",
+      "description": "Notion user UUID for @mentions",
+      "area": "main",
+      "group": "notion"
+    }
+  },
+  "displayName": {
+    "type": "string",
+    "meta": {
+      "required": true,
+      "label": "Display Name",
+      "description": "Cached user display name",
+      "area": "main",
+      "group": "cache"
+    }
+  },
+  "email": {
+    "type": "string",
+    "meta": {
+      "label": "Email",
+      "description": "User email for matching/lookup",
+      "area": "main",
+      "group": "contact"
+    }
+  },
+  "sourceProfile": {
+    "type": "json",
+    "meta": {
+      "label": "Source Profile",
+      "description": "Full cached profile data from source (real_name, avatar, etc.)",
+      "area": "sidebar",
+      "group": "cache"
+    }
+  },
+  "sourceConfigId": {
+    "type": "string",
+    "refTarget": "configs",
+    "meta": {
+      "label": "Source Config",
+      "description": "Associated source configuration",
+      "area": "sidebar",
+      "group": "relations"
+    }
+  },
+  "lastSyncedAt": {
+    "type": "date",
+    "meta": {
+      "label": "Last Synced",
+      "description": "When user data was last fetched from source",
+      "area": "sidebar",
+      "group": "metadata"
+    }
+  },
+  "active": {
+    "type": "boolean",
+    "meta": {
+      "required": true,
+      "default": true,
+      "label": "Active",
+      "description": "Is this mapping active?",
+      "area": "sidebar",
+      "group": "status"
+    }
+  }
+}
+```
+
+### Field Notes
+
+- **sourceType**: "slack", "figma", etc. - allows single table for all sources
+- **sourceUserId**: Format varies by source:
+  - Slack: User ID (e.g., `U123ABC456`)
+  - Figma: Email handle (e.g., `user@example.com`)
+- **sourceTeamId**: Workspace/scope identifier:
+  - Slack: Workspace ID (e.g., `T123ABC456`)
+  - Figma: File key or team ID
+- **notionUserId**: Notion user UUID required for creating mention objects
+- **displayName**: Cached for UI display (avoids repeated API calls)
+- **email**: Used for automatic matching between source and Notion users
+- **sourceProfile**: JSON cache of full profile data from source API
+- **Composite unique key**: `sourceType` + `sourceUserId` + `sourceTeamId` (enforced via database index)
+
+### Usage Example
+
+When Slack message contains `<@U123ABC456>`:
+1. Look up mapping for `sourceType="slack"`, `sourceUserId="U123ABC456"`, `sourceTeamId="T123ABC456"`
+2. Get `notionUserId` from mapping
+3. Create Notion mention object:
+```typescript
+{
+  type: "mention",
+  mention: {
+    type: "user",
+    user: { id: notionUserId }
+  }
+}
+```
+4. Insert into Notion task rich_text content
+5. Result: Proper @mention in Notion that notifies the user
+
+### Fallback Strategy
+
+If no mapping found:
+- Show plain text username instead of mention (e.g., `@username`)
+- Log warning for admin to create mapping
+- Task still created successfully (graceful degradation)
+
+---
+
 ## Generation Commands
 
 ### 1. Create Directory Structure
@@ -969,7 +1125,8 @@ crouton/schemas/
 ├── discussion-schema.json
 ├── config-schema.json
 ├── job-schema.json
-└── task-schema.json
+├── task-schema.json
+└── user-mapping-schema.json
 ```
 
 ### 3. Create Crouton Config
@@ -1035,7 +1192,7 @@ layers/discubot/
 └── nuxt.config.ts
 ```
 
-**Total files**: ~100 (4 collections × ~25 files each)
+**Total files**: ~125 (5 collections × ~25 files each)
 
 ### 6. Run Typecheck
 
@@ -1153,14 +1310,15 @@ Cannot find module '@friendlyinternet/nuxt-crouton-connector'
 
 ## Summary
 
-This document provides complete, ready-to-use configuration for generating Discubot's 4 core collections with Nuxt-Crouton:
+This document provides complete, ready-to-use configuration for generating Discubot's 5 core collections with Nuxt-Crouton:
 
 ✅ **Crouton Config**: `crouton.config.mjs` with all settings
-✅ **4 Schemas**: Complete JSON schemas for all collections
+✅ **5 Schemas**: Complete JSON schemas for all collections
 ✅ **SuperSaaS Integration**: Team-based multi-tenancy enabled
 ✅ **Auto Fields**: `teamId`, `userId`, timestamps handled automatically
 ✅ **Relations**: Reference fields between collections
 ✅ **Security**: Encryption notes for sensitive fields
+✅ **User Mappings**: Source users → Notion users for @mentions
 
 **Next Steps**:
 1. Create schema files in `crouton/schemas/` directory
@@ -1173,7 +1331,7 @@ See `discubot-implementation-roadmap.md` for detailed phase-by-phase implementat
 
 ---
 
-**Document Version**: 2.0
-**Last Updated**: 2025-11-12 (Updated for new naming convention)
-**Generated Files**: ~100
+**Document Version**: 2.1
+**Last Updated**: 2025-11-12 (Added userMappings collection for Notion @mentions)
+**Generated Files**: ~125
 **Estimated Generation Time**: 2-3 minutes
