@@ -3,7 +3,7 @@
     <div class="space-y-6">
       <!-- Quick Stats Cards -->
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <UDashboardCard>
+        <UCard>
           <template #header>
             <div class="flex items-center justify-between">
               <h3 class="text-sm font-medium text-muted-foreground">Total Configs</h3>
@@ -19,9 +19,9 @@
               {{ stats.activeConfigs }} active
             </p>
           </template>
-        </UDashboardCard>
+        </UCard>
 
-        <UDashboardCard>
+        <UCard>
           <template #header>
             <div class="flex items-center justify-between">
               <h3 class="text-sm font-medium text-muted-foreground">Active Jobs</h3>
@@ -37,9 +37,9 @@
               Currently processing
             </p>
           </template>
-        </UDashboardCard>
+        </UCard>
 
-        <UDashboardCard>
+        <UCard>
           <template #header>
             <div class="flex items-center justify-between">
               <h3 class="text-sm font-medium text-muted-foreground">Completed (24h)</h3>
@@ -55,9 +55,9 @@
               Last 24 hours
             </p>
           </template>
-        </UDashboardCard>
+        </UCard>
 
-        <UDashboardCard>
+        <UCard>
           <template #header>
             <div class="flex items-center justify-between">
               <h3 class="text-sm font-medium text-muted-foreground">Recent Tasks</h3>
@@ -73,11 +73,11 @@
               Created this week
             </p>
           </template>
-        </UDashboardCard>
+        </UCard>
       </div>
 
       <!-- Quick Actions -->
-      <UDashboardCard>
+      <UCard>
         <template #header>
           <div class="flex items-center justify-between">
             <h3 class="text-base font-semibold">Quick Actions</h3>
@@ -118,10 +118,10 @@
             </UButton>
           </div>
         </template>
-      </UDashboardCard>
+      </UCard>
 
       <!-- Recent Activity Feed -->
-      <UDashboardCard>
+      <UCard>
         <template #header>
           <div class="flex items-center justify-between">
             <h3 class="text-base font-semibold">Recent Activity</h3>
@@ -206,11 +206,11 @@
             </div>
           </div>
         </template>
-      </UDashboardCard>
+      </UCard>
 
       <!-- Collection Links -->
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <UDashboardCard class="hover:shadow-lg transition-shadow cursor-pointer" @click="navigateTo(`/dashboard/${currentTeam?.slug}/discubot/configs`)">
+        <UCard class="hover:shadow-lg transition-shadow cursor-pointer" @click="navigateTo(`/dashboard/${currentTeam?.slug}/discubot/configs`)">
           <template #body>
             <div class="flex items-center gap-4">
               <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -225,9 +225,9 @@
               <UIcon name="i-lucide-chevron-right" class="w-5 h-5 text-muted-foreground flex-shrink-0" />
             </div>
           </template>
-        </UDashboardCard>
+        </UCard>
 
-        <UDashboardCard class="hover:shadow-lg transition-shadow cursor-pointer" @click="navigateTo(`/dashboard/${currentTeam?.slug}/discubot/jobs`)">
+        <UCard class="hover:shadow-lg transition-shadow cursor-pointer" @click="navigateTo(`/dashboard/${currentTeam?.slug}/discubot/jobs`)">
           <template #body>
             <div class="flex items-center gap-4">
               <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -242,7 +242,7 @@
               <UIcon name="i-lucide-chevron-right" class="w-5 h-5 text-muted-foreground flex-shrink-0" />
             </div>
           </template>
-        </UDashboardCard>
+        </UCard>
       </div>
     </div>
   </AppContainer>

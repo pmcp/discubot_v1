@@ -14,7 +14,7 @@
     <div class="space-y-6">
       <!-- Job Statistics -->
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <UDashboardCard>
+        <UCard>
           <template #body>
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
@@ -40,9 +40,9 @@
               </div>
             </div>
           </template>
-        </UDashboardCard>
+        </UCard>
 
-        <UDashboardCard>
+        <UCard>
           <template #body>
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center flex-shrink-0">
@@ -54,9 +54,9 @@
               </div>
             </div>
           </template>
-        </UDashboardCard>
+        </UCard>
 
-        <UDashboardCard>
+        <UCard>
           <template #body>
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center flex-shrink-0">
@@ -68,9 +68,9 @@
               </div>
             </div>
           </template>
-        </UDashboardCard>
+        </UCard>
 
-        <UDashboardCard>
+        <UCard>
           <template #body>
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
@@ -82,11 +82,11 @@
               </div>
             </div>
           </template>
-        </UDashboardCard>
+        </UCard>
       </div>
 
       <!-- Filters and Actions -->
-      <UDashboardCard>
+      <UCard>
         <template #body>
           <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
             <!-- Status Filter -->
@@ -121,10 +121,10 @@
             </div>
           </div>
         </template>
-      </UDashboardCard>
+      </UCard>
 
       <!-- Jobs List -->
-      <UDashboardCard>
+      <UCard>
         <template #header>
           <div class="flex items-center justify-between">
             <h3 class="text-base font-semibold">
@@ -254,7 +254,7 @@
             </div>
           </div>
         </template>
-      </UDashboardCard>
+      </UCard>
     </div>
   </AppContainer>
 </template>
