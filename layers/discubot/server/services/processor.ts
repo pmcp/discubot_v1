@@ -417,6 +417,17 @@ export async function processDiscussion(
           sourceThreadId: parsed.sourceThreadId,
         })
         .where(eq(discubotDiscussions.id, discussionId))
+
+      // Now that we have the comment ID, add the "eyes" emoji reaction
+      try {
+        const { getAdapter } = await import('../adapters')
+        const adapter = getAdapter(parsed.sourceType)
+        await adapter.updateStatus(parsed.sourceThreadId, 'pending', config)
+        console.log('[Processor] Added eyes emoji to Figma comment:', thread.id)
+      } catch (error) {
+        console.error('[Processor] Failed to add eyes emoji to Figma comment:', error)
+        // Don't fail the whole process for emoji failures
+      }
     }
 
     // ============================================================================

@@ -350,6 +350,67 @@ export class FigmaAdapter implements DiscussionSourceAdapter {
   }
 
   /**
+   * Remove a reaction emoji from a Figma comment
+   *
+   * Uses DELETE /v1/files/:file_key/comments/:comment_id/reactions
+   * to remove emoji reactions.
+   *
+   * @param threadId - Format: "fileKey:commentId"
+   * @param emoji - Emoji to remove (e.g., "eyes", without colons)
+   * @param config - Source configuration with API token
+   */
+  async removeReaction(
+    threadId: string,
+    emoji: string,
+    config: SourceConfig,
+  ): Promise<boolean> {
+    try {
+      const [fileKey, commentId] = threadId.split(':')
+
+      if (!commentId) {
+        console.warn('No commentId provided, cannot remove reaction')
+        return false
+      }
+
+      // Map common emoji names to Figma format (with colons)
+      const emojiMap: Record<string, string> = {
+        'eyes': ':eyes:',
+        'hourglass': ':hourglass:',
+        'robot': ':robot:',
+        'white_check_mark': ':white_check_mark:',
+        'x': ':x:',
+        'arrows_counterclockwise': ':arrows_counterclockwise:',
+      }
+
+      const figmaEmoji = emojiMap[emoji] || (emoji.startsWith(':') ? emoji : `:${emoji}:`)
+
+      const url = `${FIGMA_API_BASE}/files/${fileKey}/comments/${commentId}/reactions?emoji=${encodeURIComponent(figmaEmoji)}`
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+          'X-Figma-Token': config.apiToken,
+        },
+      })
+
+      if (!response.ok) {
+        // Don't treat 404 as an error (reaction might not exist)
+        if (response.status === 404) {
+          console.log('Reaction not found (already removed or never added)')
+          return true
+        }
+        const error = await this.handleApiError(response)
+        console.error('Failed to remove Figma reaction:', error.message)
+        return false
+      }
+
+      return true
+    } catch (error) {
+      console.error('Failed to remove Figma reaction:', error)
+      return false
+    }
+  }
+
+  /**
    * Validate Figma source configuration
    *
    * Checks:
