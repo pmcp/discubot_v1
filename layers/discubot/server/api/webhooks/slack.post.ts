@@ -53,6 +53,38 @@ import { getAdapter } from '../../adapters'
 import { processDiscussion } from '../../services/processor'
 
 /**
+ * In-memory cache to deduplicate events
+ * Slack sends both 'message' and 'app_mention' for @mentions
+ * We process only one per unique sourceThreadId
+ */
+const processedThreads = new Map<string, number>()
+const DEDUP_WINDOW_MS = 10000 // 10 seconds
+
+/**
+ * Check if a thread was recently processed
+ */
+function isDuplicate(sourceThreadId: string): boolean {
+  const now = Date.now()
+  const lastProcessed = processedThreads.get(sourceThreadId)
+
+  if (lastProcessed && (now - lastProcessed) < DEDUP_WINDOW_MS) {
+    return true
+  }
+
+  // Mark as processed
+  processedThreads.set(sourceThreadId, now)
+
+  // Clean up old entries
+  for (const [threadId, timestamp] of processedThreads.entries()) {
+    if (now - timestamp > DEDUP_WINDOW_MS) {
+      processedThreads.delete(threadId)
+    }
+  }
+
+  return false
+}
+
+/**
  * Slack webhook payload structure (event_callback type)
  */
 interface SlackEventPayload {
@@ -99,13 +131,14 @@ function validateSlackEvent(payload: SlackEventPayload): void {
   if (!payload.event) {
     errors.push('Missing required field: event')
   } else {
-    // Check event type
-    if (payload.event.type !== 'message') {
-      errors.push(`Unsupported event type: ${payload.event.type} (only "message" is supported)`)
+    // Check event type - support both message and app_mention
+    if (payload.event.type !== 'message' && payload.event.type !== 'app_mention') {
+      errors.push(`Unsupported event type: ${payload.event.type} (only "message" and "app_mention" are supported)`)
     }
 
     // Ignore bot messages and message subtypes (edits, deletes, etc.)
-    if (payload.event.subtype) {
+    // Note: app_mention events don't have subtypes
+    if (payload.event.type === 'message' && payload.event.subtype) {
       errors.push(`Message subtype not supported: ${payload.event.subtype}`)
     }
 
@@ -186,6 +219,22 @@ export default defineEventHandler(async (event) => {
           error: (error as Error).message,
         },
       })
+    }
+
+    // 4.5. Check for duplicates (Slack sends both message and app_mention for @mentions)
+    if (isDuplicate(parsed.sourceThreadId)) {
+      console.log('[Slack Webhook] Duplicate event detected, skipping:', {
+        sourceThreadId: parsed.sourceThreadId,
+      })
+
+      // Return success to acknowledge receipt (prevent Slack retries)
+      return {
+        success: true,
+        data: {
+          skipped: true,
+          reason: 'duplicate_event',
+        },
+      }
     }
 
     // 5. Process the discussion through the pipeline

@@ -37,6 +37,7 @@ import type {
 import { analyzeDiscussion } from './ai'
 import { createNotionTask, createNotionTasks } from './notion'
 import { retryWithBackoff } from '../utils/retry'
+import { eq, and } from 'drizzle-orm'
 
 /**
  * Processing result returned after successful processing
@@ -98,43 +99,64 @@ function validateParsedDiscussion(parsed: ParsedDiscussion): void {
 /**
  * Load source configuration from database
  *
- * This is a placeholder for Phase 2. In Phase 3+, this will query
- * the configs collection by teamId and sourceType.
+ * Queries the configs collection by teamId and sourceType.
+ * Returns the first active config found.
  */
 async function loadSourceConfig(
   teamId: string,
   sourceType: string,
 ): Promise<SourceConfig> {
-  // TODO Phase 3: Query configs collection
-  // For now, throw error with helpful message
-  throw new ProcessingError(
-    'Config loading not yet implemented. This will be added in Phase 3.',
-    'config_loading',
-    { teamId, sourceType },
-    false,
-  )
+  const db = useDB()
 
-  // Future implementation:
-  // const config = await useDB()
-  //   .select()
-  //   .from(configs)
-  //   .where(and(
-  //     eq(configs.teamId, teamId),
-  //     eq(configs.sourceType, sourceType),
-  //     eq(configs.active, true)
-  //   ))
-  //   .limit(1)
-  //
-  // if (!config) {
-  //   throw new ProcessingError(
-  //     `No active config found for team ${teamId} and source ${sourceType}`,
-  //     'config_loading',
-  //     { teamId, sourceType },
-  //     false
-  //   )
-  // }
-  //
-  // return config
+  // Import the schema table
+  const { discubotConfigs } = await import('#layers/discubot-configs/server/database/schema')
+
+  // Query by sourceMetadata.slackTeamId (for Slack) or teamId (for other sources)
+  // The teamId passed here is the Slack workspace team ID from the webhook
+  const configs = await db
+    .select()
+    .from(discubotConfigs)
+    .where(and(
+      eq(discubotConfigs.sourceType, sourceType),
+      eq(discubotConfigs.active, true),
+    ))
+    .all()
+
+  // Filter by slackTeamId in sourceMetadata (stored as JSON)
+  const matchingConfig = configs.find(config => {
+    if (sourceType === 'slack' && config.sourceMetadata) {
+      return (config.sourceMetadata as any).slackTeamId === teamId
+    }
+    // For other sources, match by teamId directly
+    return config.teamId === teamId
+  })
+
+  if (!matchingConfig) {
+    throw new ProcessingError(
+      `No active config found for team ${teamId} and source ${sourceType}`,
+      'config_loading',
+      { teamId, sourceType, availableConfigs: configs.length },
+      false,
+    )
+  }
+
+  const config = matchingConfig
+
+  // Map database config to SourceConfig type
+  return {
+    id: config.id,
+    teamId: config.teamId,
+    sourceType: config.sourceType as 'slack' | 'figma',
+    webhookUrl: config.webhookUrl || '',
+    apiToken: config.apiToken || '',
+    notionToken: config.notionToken,
+    notionDatabaseId: config.notionDatabaseId,
+    notionFieldMapping: config.notionFieldMapping || {},
+    anthropicApiKey: config.anthropicApiKey || undefined,
+    aiEnabled: config.aiEnabled || false,
+    aiSummaryPrompt: config.aiSummaryPrompt || undefined,
+    aiTaskPrompt: config.aiTaskPrompt || undefined,
+  }
 }
 
 /**
@@ -244,31 +266,25 @@ async function updateDiscussionResults(
 /**
  * Build discussion thread
  *
- * For Phase 2, we accept thread directly as input.
- * In Phase 3+, this will use the adapter to fetch from source.
+ * Fetches the complete thread from the source using the adapter.
+ * For testing, you can also provide a thread directly.
  */
 async function buildThread(
   parsed: ParsedDiscussion,
   config: SourceConfig,
   threadInput?: DiscussionThread,
 ): Promise<DiscussionThread> {
-  // If thread provided directly, use it (for testing in Phase 2)
+  // If thread provided directly, use it (for testing)
   if (threadInput) {
     console.log('[Processor] Using provided thread input')
     return threadInput
   }
 
-  // Future Phase 3+ implementation with adapter:
-  // const adapter = getAdapter(parsed.sourceType)
-  // const thread = await adapter.fetchThread(parsed.sourceThreadId, config)
-  // return thread
-
-  throw new ProcessingError(
-    'Thread building requires either direct thread input or adapter (Phase 3+)',
-    'thread_building',
-    { sourceType: parsed.sourceType },
-    false,
-  )
+  // Fetch thread from source using adapter
+  const { getAdapter } = await import('../adapters')
+  const adapter = getAdapter(parsed.sourceType)
+  const thread = await adapter.fetchThread(parsed.sourceThreadId, config)
+  return thread
 }
 
 /**

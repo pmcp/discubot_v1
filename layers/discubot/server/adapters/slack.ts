@@ -148,9 +148,18 @@ export class SlackAdapter implements DiscussionSourceAdapter {
 
       const event = payload.event
 
-      // Only process message events (not message_changed, message_deleted, etc.)
-      if (event.type !== 'message' || event.subtype) {
-        throw new AdapterError(`Unsupported event type: ${event.type} ${event.subtype || ''}`, {
+      // Only process message and app_mention events
+      if (event.type !== 'message' && event.type !== 'app_mention') {
+        throw new AdapterError(`Unsupported event type: ${event.type}`, {
+          sourceType: this.sourceType,
+          retryable: false,
+        })
+      }
+
+      // Ignore message subtypes (edits, deletes, etc.)
+      // Note: app_mention events never have subtypes
+      if (event.type === 'message' && event.subtype) {
+        throw new AdapterError(`Message subtype not supported: ${event.subtype}`, {
           sourceType: this.sourceType,
           retryable: false,
         })
@@ -178,18 +187,20 @@ export class SlackAdapter implements DiscussionSourceAdapter {
         })
       }
 
-      // Resolve team ID from payload
-      const teamId = payload.team_id || 'default'
+      // Extract Slack workspace team ID from payload
+      const slackTeamId = payload.team_id || 'default'
 
       // Build source thread ID (format: channel:thread_ts or channel:ts)
       // If this is a threaded reply, use thread_ts; otherwise use ts (this is the root)
       const threadTimestamp = event.thread_ts || event.ts
       const sourceThreadId = `${event.channel}:${threadTimestamp}`
 
-      // Build source URL (deep link to Slack message)
+      // Build source URL (HTTPS link to Slack message for web access)
       // Format: https://[workspace].slack.com/archives/[channel]/p[timestamp_without_dot]
+      // Note: We use a generic slack.com link since we don't know the workspace subdomain
+      // The team parameter allows Slack to redirect to the correct workspace
       const messageTs = event.ts.replace('.', '')
-      const sourceUrl = `slack://channel?team=${teamId}&id=${event.channel}&message=${messageTs}`
+      const sourceUrl = `https://slack.com/app_redirect?team=${slackTeamId}&channel=${event.channel}&message_ts=${event.ts}`
 
       // Extract participants (for now, just the message author)
       // Will be enriched when we fetch the full thread
@@ -199,13 +210,14 @@ export class SlackAdapter implements DiscussionSourceAdapter {
         sourceType: this.sourceType,
         sourceThreadId,
         sourceUrl,
-        teamId,
+        teamId: slackTeamId, // For now, use Slack team ID (will be mapped to internal team in processor)
         authorHandle: event.user,
         title: this.extractTitle(event.text),
         content: event.text,
         participants,
         timestamp: new Date(parseFloat(event.ts) * 1000),
         metadata: {
+          slackTeamId, // Store Slack workspace team ID for config lookup
           channelId: event.channel,
           messageTs: event.ts,
           threadTs: event.thread_ts,
