@@ -102,7 +102,7 @@ Each task below can be directly created in Vibekanban with:
 
 **Deliverables**:
 - Project repository created
-- 4 Crouton collections generated (discussions, sourceConfigs, syncJobs, tasks)
+- 4 Crouton collections generated (discussions, configs, jobs, tasks)
 - Database schema created
 - TypeScript types working
 - SuperSaaS integration configured
@@ -160,10 +160,10 @@ pnpm add @friendlyinternet/nuxt-crouton-connector
 mkdir -p schemas
 
 # Create 4 schema files from discubot-crouton-schemas.md
-schemas/
+crouton/schemas/
 ├── discussion-schema.json       (with embedded threadData - see briefing)
-├── source-config-schema.json   (copy from briefing)
-├── sync-job-schema.json        (copy from briefing)
+├── config-schema.json   (copy from briefing)
+├── job-schema.json        (copy from briefing)
 └── task-schema.json            (copy from briefing)
 
 # Note: threads and sources collections removed (lean architecture)
@@ -187,8 +187,8 @@ touch crouton.config.mjs
 
 # Verification
 - [ ] File is valid JavaScript
-- [ ] All 4 collections listed (discussions, sourceConfigs, syncJobs, tasks)
-- [ ] target layer: 'discussion' (renamed from discussion-sync)
+- [ ] All 4 collections listed (discussions, configs, jobs, tasks)
+- [ ] target layer: 'discussion' (renamed from discubot)
 - [ ] useTeamUtility: true
 - [ ] SuperSaaS connector configured
 ```
@@ -202,11 +202,11 @@ touch crouton.config.mjs
 npx crouton-generate --config ./crouton.config.mjs
 
 # Expected output
-layers/discussion/
+layers/discubot/
   collections/
     discussions/     # With embedded threadData
-    sourceConfigs/
-    syncJobs/
+    configs/
+    jobs/
     tasks/
 
 # Verification
@@ -223,7 +223,7 @@ layers/discussion/
 ```markdown
 # Update nuxt.config.ts
 extends: [
-  './layers/discussion'  # Renamed from discussion-sync
+  './layers/discubot'  # Renamed from discubot
 ]
 
 # Generate database migration
@@ -237,7 +237,7 @@ npx nuxt typecheck
 
 # Verification
 - [ ] No TypeScript errors
-- [ ] 4 database tables created (discussions, sourceConfigs, syncJobs, tasks)
+- [ ] 4 database tables created (discussions, configs, jobs, tasks)
 - [ ] Can start dev server
 - [ ] Generated APIs respond (test with curl)
 ```
@@ -280,15 +280,15 @@ npx nuxt typecheck
 
 ```markdown
 # Create directories (single layer for all manual code)
-mkdir -p layers/discussion/{server/{services,adapters,api,utils},types,components}
+mkdir -p layers/discubot/{server/{services,adapters,api,utils},types,components}
 
 # Create layer config
-touch layers/discussion/nuxt.config.ts
+touch layers/discubot/nuxt.config.ts
 
 # Update main config
 extends: [
-  './layers/discussion',  # Generated
-  './layers/discussion'               # Manual
+  './layers/discubot',  # Generated
+  './layers/discubot'               # Manual
 ]
 
 # Verification
@@ -303,7 +303,7 @@ extends: [
 
 ```markdown
 # Create file
-layers/discussion/server/utils/retry.ts
+layers/discubot/server/utils/retry.ts
 
 # Implement simple exponential backoff
 async function retryWithBackoff<T>(
@@ -336,7 +336,7 @@ tests/utils/retry.test.ts
 ```markdown
 # Copy from figno
 cp /path/to/figno/server/services/ai.ts \
-   layers/discussion/server/services/
+   layers/discubot/server/services/
 
 # Adapt
 - Remove Figma-specific prompts
@@ -366,7 +366,7 @@ tests/services/ai.test.ts
 ```markdown
 # Copy from figno
 cp /path/to/figno/server/services/notion.ts \
-   layers/discussion/server/services/
+   layers/discubot/server/services/
 
 # Adapt
 - Make field mapping configurable
@@ -392,7 +392,7 @@ tests/services/notion.test.ts
 
 ```markdown
 # Create file
-layers/discussion/server/adapters/base.ts
+layers/discubot/server/adapters/base.ts
 
 # Define interfaces
 - DiscussionSourceAdapter (main interface)
@@ -417,7 +417,7 @@ layers/discussion/server/adapters/base.ts
 
 ```markdown
 # Create file
-layers/discussion/server/services/processor.ts
+layers/discubot/server/services/processor.ts
 
 # Implement 7-stage pipeline (kept per user preference)
 1. Ingestion (handled by webhook)
@@ -479,16 +479,16 @@ tests/services/processor.test.ts
 
 ```markdown
 # Create directories
-mkdir -p layers/discussion-figma/{server/{adapters,api/webhook,utils},types}
+mkdir -p layers/discubot-figma/{server/{adapters,api/webhook,utils},types}
 
 # Create layer config
-touch layers/discussion-figma/nuxt.config.ts
+touch layers/discubot-figma/nuxt.config.ts
 
 # Update main config
 extends: [
-  './layers/discussion-core',
-  './layers/discussion-figma',
-  './layers/discussion-sync'
+  './layers/discubot-core',
+  './layers/discubot-figma',
+  './layers/discubot'
 ]
 
 # Verification
@@ -503,7 +503,7 @@ extends: [
 ```markdown
 # Copy from figno
 cp /path/to/figno/server/utils/emailParser.ts \
-   layers/discussion-figma/server/utils/
+   layers/discubot-figma/server/utils/
 
 # Review and clean up
 - Keep HTML parsing logic (cheerio)
@@ -527,7 +527,7 @@ tests/figma/emailParser.test.ts
 
 ```markdown
 # Create file
-layers/discussion-figma/server/adapters/figma.ts
+layers/discubot-figma/server/adapters/figma.ts
 
 # Implement DiscussionSourceAdapter interface
 - parseIncoming(mailPayload) → ParsedDiscussion
@@ -558,7 +558,7 @@ tests/figma/adapter.test.ts
 
 ```markdown
 # Create file
-layers/discussion-figma/server/api/webhook/figma.post.ts
+layers/discubot-figma/server/api/webhook/figma.post.ts
 
 # Implement
 - Signature verification (HMAC-SHA256)
@@ -586,7 +586,7 @@ tests/figma/webhook.test.ts
 
 ```markdown
 # Create file
-layers/discussion-core/server/api/internal/process-discussion.post.ts
+layers/discubot-core/server/api/internal/process-discussion.post.ts
 
 # Implement
 - Accept { discussionId, syncJobId }
@@ -642,7 +642,7 @@ tests/core/internal-processor.test.ts
 
 ```markdown
 # Create docs
-layers/discussion/README.md (Figma section)
+layers/discubot/README.md (Figma section)
 
 # Document
 - Figma adapter setup instructions
@@ -690,17 +690,17 @@ layers/discussion/README.md (Figma section)
 
 ```markdown
 # Create directories
-mkdir -p layers/discussion-slack/{server/{adapters,api/{webhook,oauth}},types}
+mkdir -p layers/discubot-slack/{server/{adapters,api/{webhook,oauth}},types}
 
 # Create layer config
-touch layers/discussion-slack/nuxt.config.ts
+touch layers/discubot-slack/nuxt.config.ts
 
 # Update main config
 extends: [
-  './layers/discussion-core',
-  './layers/discussion-figma',
-  './layers/discussion-slack',
-  './layers/discussion-sync'
+  './layers/discubot-core',
+  './layers/discubot-figma',
+  './layers/discubot-slack',
+  './layers/discubot'
 ]
 
 # Verification
@@ -714,7 +714,7 @@ extends: [
 
 ```markdown
 # Create file
-layers/discussion-slack/server/adapters/slack.ts
+layers/discubot-slack/server/adapters/slack.ts
 
 # Implement DiscussionSourceAdapter interface
 - parseIncoming(slackPayload) → ParsedDiscussion
@@ -745,7 +745,7 @@ tests/slack/adapter.test.ts
 
 ```markdown
 # Create file
-layers/discussion-slack/server/api/webhook/slack.post.ts
+layers/discubot-slack/server/api/webhook/slack.post.ts
 
 # Implement
 - Signature verification (HMAC-SHA256 with timestamp)
@@ -774,8 +774,8 @@ tests/slack/webhook.test.ts
 
 ```markdown
 # Create files
-layers/discussion-slack/server/api/oauth/install.get.ts
-layers/discussion-slack/server/api/oauth/callback.get.ts
+layers/discubot-slack/server/api/oauth/install.get.ts
+layers/discubot-slack/server/api/oauth/callback.get.ts
 
 # install.get.ts
 - Generate secure state token
@@ -785,7 +785,7 @@ layers/discussion-slack/server/api/oauth/callback.get.ts
 # callback.get.ts
 - Verify state parameter
 - Exchange code for access_token
-- Store in sourceConfigs (encrypted!)
+- Store in configs (encrypted!)
 - Delete state
 - Redirect to settings page
 
@@ -835,7 +835,7 @@ tests/slack/oauth.test.ts
 
 ```markdown
 # Create docs
-layers/discussion/README.md (Slack section)
+layers/discubot/README.md (Slack section)
 
 # Document
 - Slack adapter setup
@@ -923,7 +923,7 @@ app/components/integrations/SlackConfigForm.vue
 - "Test Connection" buttons
 
 # Use Crouton components
-- Leverage generated sourceConfigs form
+- Leverage generated configs form
 - Customize for each source
 
 # Verification
@@ -951,7 +951,7 @@ app/pages/dashboard/[team]/integrations/jobs.vue
 - Row click → job details modal
 
 # Use Crouton components
-- Leverage generated syncJobs table
+- Leverage generated jobs table
 - Customize columns and filters
 
 # Verification

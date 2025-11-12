@@ -58,8 +58,8 @@ Original design had 6 collections:
 - discussions
 - threads
 - sources
-- sourceConfigs
-- syncJobs
+- configs
+- jobs
 - tasks
 
 **Decision:** Remove `threads` and `sources`, keep 4 collections
@@ -98,7 +98,7 @@ Original design had 6 collections:
 
 **Example Hardcoded Sources:**
 ```typescript
-// layers/discussion/server/constants/sources.ts
+// layers/discubot/server/constants/sources.ts
 export const SOURCE_TYPES = {
   FIGMA: {
     id: 'figma',
@@ -126,7 +126,7 @@ Original design had 4 separate layers:
 - discussion-core/ (shared services)
 - discussion-figma/ (Figma adapter)
 - discussion-slack/ (Slack adapter)
-- discussion-sync/ (Crouton collections)
+- discubot/ (Crouton collections)
 
 **Decision:** Consolidate to 2 layers
 - discussion/ (Crouton-generated, never edit)
@@ -157,8 +157,8 @@ layers/
 ├── discussion/   # Generated (100 files)
 │   ├── collections/
 │   │   ├── discussions/
-│   │   ├── sourceConfigs/
-│   │   ├── syncJobs/
+│   │   ├── configs/
+│   │   ├── jobs/
 │   │   └── tasks/
 │   └── nuxt.config.ts
 │

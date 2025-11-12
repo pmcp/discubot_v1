@@ -65,19 +65,19 @@ export default {
   // Define all collections (4 total - lean approach)
   collections: [
     { name: 'discussions', fieldsFile: './schemas/discussion-schema.json' },
-    { name: 'sourceConfigs', fieldsFile: './schemas/source-config-schema.json' },
-    { name: 'syncJobs', fieldsFile: './schemas/sync-job-schema.json' },
+    { name: 'configs', fieldsFile: './schemas/config-schema.json' },
+    { name: 'jobs', fieldsFile: './schemas/job-schema.json' },
     { name: 'tasks', fieldsFile: './schemas/task-schema.json' }
   ],
 
   // Organize into layers
   targets: [
     {
-      layer: 'discussion',  // Renamed for clarity
+      layer: 'discubot',
       collections: [
         'discussions',
-        'sourceConfigs',
-        'syncJobs',
+        'configs',
+        'jobs',
         'tasks'
       ]
     }
@@ -119,7 +119,7 @@ Defines all collections to generate. Each entry:
 - `fieldsFile`: Path to JSON schema file
 
 #### Targets Array
-Organizes collections into Nuxt layers. All 6 collections go into `discussion-sync` layer.
+Organizes collections into Nuxt layers. All 4 collections go into `discubot` layer.
 
 #### Connectors Object
 **CRITICAL**: Configures SuperSaaS integration for team-based multi-tenancy.
@@ -138,6 +138,8 @@ Organizes collections into Nuxt layers. All 6 collections go into `discussion-sy
 **Optional Flags:**
 - `noTranslations: true`: Set if you don't need i18n (faster generation)
 - `force: true`: DANGER - Overwrites existing files (use carefully)
+
+---
 
 ---
 
@@ -203,7 +205,7 @@ Store raw incoming discussions from any source (Figma, Slack, etc.) **with embed
   },
   "sourceConfigId": {
     "type": "string",
-    "refTarget": "sourceConfigs",
+    "refTarget": "configs",
     "meta": {
       "required": true,
       "label": "Source Configuration",
@@ -322,7 +324,7 @@ Store raw incoming discussions from any source (Figma, Slack, etc.) **with embed
   },
   "syncJobId": {
     "type": "string",
-    "refTarget": "syncJobs",
+    "refTarget": "jobs",
     "meta": {
       "label": "Sync Job",
       "description": "Reference to processing job",
@@ -409,363 +411,21 @@ Store raw incoming discussions from any source (Figma, Slack, etc.) **with embed
 
 ---
 
-## Threads Collection
-
-### Purpose
-Store built comment threads with full message history and AI analysis results.
-
-### File: `schemas/thread-schema.json`
-
-```json
-{
-  "discussionId": {
-    "type": "string",
-    "refTarget": "discussions",
-    "meta": {
-      "required": true,
-      "label": "Discussion",
-      "description": "Reference to source discussion",
-      "area": "sidebar",
-      "group": "relations"
-    }
-  },
-  "sourceType": {
-    "type": "string",
-    "meta": {
-      "required": true,
-      "label": "Source Type",
-      "description": "figma, slack, etc.",
-      "area": "sidebar",
-      "group": "source"
-    }
-  },
-  "rootMessage": {
-    "type": "json",
-    "meta": {
-      "required": true,
-      "label": "Root Message",
-      "description": "Initial message/comment object",
-      "area": "main",
-      "group": "thread"
-    }
-  },
-  "replies": {
-    "type": "json",
-    "meta": {
-      "label": "Replies",
-      "description": "Array of reply message objects",
-      "area": "main",
-      "group": "thread"
-    }
-  },
-  "totalMessages": {
-    "type": "number",
-    "meta": {
-      "required": true,
-      "default": 1,
-      "label": "Total Messages",
-      "description": "Count of messages in thread",
-      "area": "sidebar",
-      "group": "stats"
-    }
-  },
-  "participants": {
-    "type": "array",
-    "meta": {
-      "label": "Participants",
-      "description": "Array of participant handles",
-      "area": "sidebar",
-      "group": "metadata"
-    }
-  },
-  "aiSummary": {
-    "type": "text",
-    "meta": {
-      "label": "AI Summary",
-      "description": "Claude-generated summary",
-      "area": "main",
-      "group": "ai"
-    }
-  },
-  "aiKeyPoints": {
-    "type": "array",
-    "meta": {
-      "label": "AI Key Points",
-      "description": "Array of key discussion points",
-      "area": "main",
-      "group": "ai"
-    }
-  },
-  "aiContext": {
-    "type": "text",
-    "meta": {
-      "label": "AI Context",
-      "description": "Overall context for multi-task detection",
-      "area": "main",
-      "group": "ai"
-    }
-  },
-  "isMultiTask": {
-    "type": "boolean",
-    "meta": {
-      "required": true,
-      "default": false,
-      "label": "Is Multi-Task",
-      "description": "Whether AI detected multiple tasks",
-      "area": "sidebar",
-      "group": "ai"
-    }
-  },
-  "detectedTasks": {
-    "type": "json",
-    "meta": {
-      "label": "Detected Tasks",
-      "description": "Array of AI-detected task objects",
-      "area": "main",
-      "group": "ai"
-    }
-  },
-  "status": {
-    "type": "string",
-    "meta": {
-      "required": true,
-      "default": "pending",
-      "label": "Status",
-      "description": "pending, analyzed, tasks_created, notified",
-      "area": "sidebar",
-      "group": "status",
-      "displayAs": "badge"
-    }
-  },
-  "metadata": {
-    "type": "json",
-    "meta": {
-      "label": "Metadata",
-      "description": "Additional metadata",
-      "area": "sidebar",
-      "group": "debug"
-    }
-  }
-}
-```
-
-### Field Notes
-
-- **rootMessage**: JSON object `{ id, authorHandle, content, timestamp, attachments? }`
-- **replies**: Array of message objects
-- **aiKeyPoints**: Array of strings
-- **detectedTasks**: Array of `{ title, description, priority, assignee? }`
-- **status**: State machine tracking processing stages
-
----
-
-## Sources Collection
-
-### Purpose
-Master list of available discussion source types (Figma, Slack, Linear, etc.). This is essentially seed data.
-
-### File: `schemas/source-schema.json`
-
-```json
-{
-  "sourceType": {
-    "type": "string",
-    "meta": {
-      "required": true,
-      "unique": true,
-      "label": "Source Type",
-      "description": "figma, slack, linear, github, etc.",
-      "area": "main",
-      "group": "basic"
-    }
-  },
-  "name": {
-    "type": "string",
-    "meta": {
-      "required": true,
-      "maxLength": 100,
-      "label": "Name",
-      "description": "Display name (e.g., Figma, Slack)",
-      "area": "main",
-      "group": "basic"
-    }
-  },
-  "description": {
-    "type": "text",
-    "meta": {
-      "label": "Description",
-      "description": "What this source does",
-      "area": "main",
-      "group": "basic"
-    }
-  },
-  "adapterClass": {
-    "type": "string",
-    "meta": {
-      "required": true,
-      "label": "Adapter Class",
-      "description": "FigmaAdapter, SlackAdapter, etc.",
-      "area": "main",
-      "group": "technical"
-    }
-  },
-  "icon": {
-    "type": "string",
-    "meta": {
-      "label": "Icon",
-      "description": "Icon identifier or emoji",
-      "area": "main",
-      "group": "display"
-    }
-  },
-  "configSchema": {
-    "type": "json",
-    "meta": {
-      "label": "Config Schema",
-      "description": "JSON schema for source configuration",
-      "area": "main",
-      "group": "technical"
-    }
-  },
-  "webhookPath": {
-    "type": "string",
-    "meta": {
-      "label": "Webhook Path",
-      "description": "API path for webhooks (e.g., /api/webhook/figma)",
-      "area": "main",
-      "group": "technical"
-    }
-  },
-  "requiresEmail": {
-    "type": "boolean",
-    "meta": {
-      "required": true,
-      "default": false,
-      "label": "Requires Email",
-      "description": "Email-based ingestion (like Figma)",
-      "area": "sidebar",
-      "group": "requirements"
-    }
-  },
-  "requiresWebhook": {
-    "type": "boolean",
-    "meta": {
-      "required": true,
-      "default": false,
-      "label": "Requires Webhook",
-      "description": "Webhook-based ingestion (like Slack)",
-      "area": "sidebar",
-      "group": "requirements"
-    }
-  },
-  "requiresApiToken": {
-    "type": "boolean",
-    "meta": {
-      "required": true,
-      "default": true,
-      "label": "Requires API Token",
-      "description": "Needs API token for source",
-      "area": "sidebar",
-      "group": "requirements"
-    }
-  },
-  "active": {
-    "type": "boolean",
-    "meta": {
-      "required": true,
-      "default": true,
-      "label": "Active",
-      "description": "Is this source available?",
-      "area": "sidebar",
-      "group": "status"
-    }
-  },
-  "metadata": {
-    "type": "json",
-    "meta": {
-      "label": "Metadata",
-      "description": "Additional source data",
-      "area": "sidebar",
-      "group": "debug"
-    }
-  }
-}
-```
-
-### Seed Data
-
-After generation, seed the sources collection:
-
-```typescript
-// server/database/seeds/sources.ts
-const sources = [
-  {
-    id: nanoid(),
-    sourceType: 'figma',
-    name: 'Figma',
-    description: 'Design collaboration platform with commenting',
-    adapterClass: 'FigmaAdapter',
-    icon: '🎨',
-    webhookPath: '/api/webhook/figma',
-    requiresEmail: true,
-    requiresWebhook: false,
-    requiresApiToken: true,
-    active: true,
-    configSchema: {
-      type: 'object',
-      required: ['emailAddress', 'apiToken', 'notionToken', 'notionDatabaseId'],
-      properties: {
-        emailAddress: { type: 'string', format: 'email' },
-        apiToken: { type: 'string' },
-        notionToken: { type: 'string' },
-        notionDatabaseId: { type: 'string' }
-      }
-    }
-  },
-  {
-    id: nanoid(),
-    sourceType: 'slack',
-    name: 'Slack',
-    description: 'Team communication platform with threads',
-    adapterClass: 'SlackAdapter',
-    icon: '💬',
-    webhookPath: '/api/webhook/slack',
-    requiresEmail: false,
-    requiresWebhook: true,
-    requiresApiToken: true,
-    active: true,
-    configSchema: {
-      type: 'object',
-      required: ['slackBotToken', 'notionToken', 'notionDatabaseId'],
-      properties: {
-        slackBotToken: { type: 'string' },
-        slackWorkspaceId: { type: 'string' },
-        notionToken: { type: 'string' },
-        notionDatabaseId: { type: 'string' }
-      }
-    }
-  }
-]
-```
-
----
-
-## Source Configs Collection
+## Configs Collection
 
 ### Purpose
 Team-specific configuration for each source. Each team can have multiple source configs (e.g., different Figma projects, Slack workspaces).
 
-### File: `schemas/source-config-schema.json`
+### File: `schemas/config-schema.json`
 
 ```json
 {
-  "sourceId": {
+  "sourceType": {
     "type": "string",
-    "refTarget": "sources",
     "meta": {
       "required": true,
-      "label": "Source",
-      "description": "Which source type (Figma, Slack, etc.)",
+      "label": "Source Type",
+      "description": "figma, slack, linear, etc. (hardcoded in adapters)",
       "area": "main",
       "group": "basic"
     }
@@ -966,12 +626,12 @@ const notionToken = await decryptToken(config.notionToken)
 
 ---
 
-## Sync Jobs Collection
+## Jobs Collection
 
 ### Purpose
 Job queue and processing status tracking. Each discussion gets a sync job that tracks progress through the 7-stage pipeline.
 
-### File: `schemas/sync-job-schema.json`
+### File: `schemas/job-schema.json`
 
 ```json
 {
@@ -988,7 +648,7 @@ Job queue and processing status tracking. Each discussion gets a sync job that t
   },
   "sourceConfigId": {
     "type": "string",
-    "refTarget": "sourceConfigs",
+    "refTarget": "configs",
     "meta": {
       "required": true,
       "label": "Source Config",
@@ -1147,19 +807,9 @@ Local cache of created Notion tasks. Stores essential task data for quick lookup
       "group": "relations"
     }
   },
-  "threadId": {
-    "type": "string",
-    "refTarget": "threads",
-    "meta": {
-      "label": "Thread",
-      "description": "Built thread with AI analysis",
-      "area": "sidebar",
-      "group": "relations"
-    }
-  },
   "syncJobId": {
     "type": "string",
-    "refTarget": "syncJobs",
+    "refTarget": "jobs",
     "meta": {
       "required": true,
       "label": "Sync Job",
@@ -1306,21 +956,19 @@ Local cache of created Notion tasks. Stores essential task data for quick lookup
 
 ```bash
 # From project root
-mkdir -p schemas
-mkdir -p layers/discussion-sync
+mkdir -p crouton/schemas
+mkdir -p layers/discubot
 ```
 
 ### 2. Create Schema Files
 
-Save each collection schema JSON to `schemas/` directory:
+Save each collection schema JSON to `crouton/schemas/` directory:
 
 ```bash
-schemas/
+crouton/schemas/
 ├── discussion-schema.json
-├── thread-schema.json
-├── source-schema.json
-├── source-config-schema.json
-├── sync-job-schema.json
+├── config-schema.json
+├── job-schema.json
 └── task-schema.json
 ```
 
@@ -1351,7 +999,7 @@ npx crouton-generate \
 Generator should create:
 
 ```
-layers/discussion-sync/
+layers/discubot/
 ├── collections/
 │   ├── discussions/
 │   │   ├── app/
@@ -1378,20 +1026,16 @@ layers/discussion-sync/
 │   │   │       └── schema.ts
 │   │   └── types/
 │   │       └── index.ts
-│   ├── threads/
+│   ├── configs/
 │   │   └── (... same structure)
-│   ├── sources/
-│   │   └── (... same structure)
-│   ├── sourceConfigs/
-│   │   └── (... same structure)
-│   ├── syncJobs/
+│   ├── jobs/
 │   │   └── (... same structure)
 │   └── tasks/
 │       └── (... same structure)
 └── nuxt.config.ts
 ```
 
-**Total files**: ~150 (6 collections × ~25 files each)
+**Total files**: ~100 (4 collections × ~25 files each)
 
 ### 6. Run Typecheck
 
@@ -1411,7 +1055,7 @@ Should pass with no errors. If you see "duplicate key" errors, you likely manual
 // nuxt.config.ts
 export default defineNuxtConfig({
   extends: [
-    './layers/discussion-sync'  // Add this line
+    './layers/discubot'  // Add this line
   ],
 
   // ... rest of config
@@ -1509,28 +1153,27 @@ Cannot find module '@friendlyinternet/nuxt-crouton-connector'
 
 ## Summary
 
-This document provides complete, ready-to-use configuration for generating Discubot's 6 core collections with Nuxt-Crouton:
+This document provides complete, ready-to-use configuration for generating Discubot's 4 core collections with Nuxt-Crouton:
 
 ✅ **Crouton Config**: `crouton.config.mjs` with all settings
-✅ **6 Schemas**: Complete JSON schemas for all collections
+✅ **4 Schemas**: Complete JSON schemas for all collections
 ✅ **SuperSaaS Integration**: Team-based multi-tenancy enabled
 ✅ **Auto Fields**: `teamId`, `userId`, timestamps handled automatically
 ✅ **Relations**: Reference fields between collections
 ✅ **Security**: Encryption notes for sensitive fields
 
 **Next Steps**:
-1. Create schema files in `schemas/` directory
-2. Create `crouton.config.mjs` in project root
-3. Run `npx crouton-generate --config ./crouton.config.mjs`
+1. Create schema files in `crouton/schemas/` directory
+2. Create `crouton.config.mjs` in `crouton/` directory
+3. Run `pnpm crouton generate` from the crouton directory
 4. Verify with `npx nuxt typecheck`
-5. Seed sources collection
-6. Begin implementing manual adapters and services
+5. Begin implementing manual adapters and services
 
 See `discubot-implementation-roadmap.md` for detailed phase-by-phase implementation plan.
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2025-11-11
-**Generated Files**: ~150
+**Document Version**: 2.0
+**Last Updated**: 2025-11-12 (Updated for new naming convention)
+**Generated Files**: ~100
 **Estimated Generation Time**: 2-3 minutes
