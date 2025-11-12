@@ -105,6 +105,7 @@ function validateParsedDiscussion(parsed: ParsedDiscussion): void {
 async function loadSourceConfig(
   teamId: string,
   sourceType: string,
+  metadata?: Record<string, any>,
 ): Promise<SourceConfig> {
   const db = useDB()
 
@@ -127,7 +128,16 @@ async function loadSourceConfig(
     if (sourceType === 'slack' && config.sourceMetadata) {
       return (config.sourceMetadata as any).slackTeamId === teamId
     }
-    // For other sources, match by teamId directly
+
+    // For Figma, match by emailSlug
+    if (sourceType === 'figma' && metadata?.emailSlug) {
+      // Try to match by emailSlug first
+      if (config.emailSlug === metadata.emailSlug) {
+        return true
+      }
+    }
+
+    // Fallback: match by teamId directly
     return config.teamId === teamId
   })
 
@@ -135,7 +145,7 @@ async function loadSourceConfig(
     throw new ProcessingError(
       `No active config found for team ${teamId} and source ${sourceType}`,
       'config_loading',
-      { teamId, sourceType, availableConfigs: configs.length },
+      { teamId, sourceType, emailSlug: metadata?.emailSlug, availableConfigs: configs.length },
       false,
     )
   }
@@ -343,7 +353,7 @@ export async function processDiscussion(
 
       // Get a minimal config for the initial reaction (we'll load full config next)
       // For now, we need to load config first to get the API token
-      const tempConfig = options.config || await loadSourceConfig(parsed.teamId, parsed.sourceType)
+      const tempConfig = options.config || await loadSourceConfig(parsed.teamId, parsed.sourceType, parsed.metadata)
 
       await adapter.updateStatus(parsed.sourceThreadId, 'pending', tempConfig)
 
@@ -366,7 +376,7 @@ export async function processDiscussion(
     }
     else {
       // Load from database (Phase 3+)
-      config = await loadSourceConfig(parsed.teamId, parsed.sourceType)
+      config = await loadSourceConfig(parsed.teamId, parsed.sourceType, parsed.metadata)
     }
 
     // Save discussion record

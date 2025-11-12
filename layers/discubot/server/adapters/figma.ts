@@ -112,6 +112,9 @@ export class FigmaAdapter implements DiscussionSourceAdapter {
       // Format expected: <team-slug>@discubot.yourdomain.com
       const teamId = this.extractTeamIdFromRecipient(payload.recipient)
 
+      // Extract email slug for config matching (the part before @)
+      const emailSlug = this.extractTeamIdFromRecipient(payload.recipient)
+
       // Build source thread ID (format: fileKey:commentId)
       // Note: commentId might not be available from email, will be resolved during fetchThread
       const sourceThreadId = parsed.fileKey
@@ -137,6 +140,8 @@ export class FigmaAdapter implements DiscussionSourceAdapter {
           emailType: parsed.emailType,
           fileName: parsed.fileName,
           links: parsed.links,
+          emailSlug,  // Add email slug for config matching
+          recipientEmail: payload.recipient,  // Store full recipient email
         },
       }
     } catch (error) {
