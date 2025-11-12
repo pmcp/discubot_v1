@@ -91,8 +91,13 @@ export default defineNuxtConfig({
     },
   },
   future: { compatibilityVersion: 4 },
-  compatibilityDate: '2024-07-30',
+  compatibilityDate: "2024-09-19",
   nitro: {
+    preset: "cloudflare_module",
+    cloudflare: {
+      deployConfig: true,
+      nodeCompat: true
+    },
     rollupConfig: {
       plugins: [vue()],
     },
@@ -104,6 +109,7 @@ export default defineNuxtConfig({
     database: true,
     blob: true,
     kv: true,
+    workers: true
   },
   auth: {
     webAuthn: true,
