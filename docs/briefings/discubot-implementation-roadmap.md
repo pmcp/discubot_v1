@@ -188,7 +188,7 @@ touch crouton.config.mjs
 # Verification
 - [ ] File is valid JavaScript
 - [ ] All 4 collections listed (discussions, sourceConfigs, syncJobs, tasks)
-- [ ] target layer: 'discussion-collections' (renamed from discussion-sync)
+- [ ] target layer: 'discussion' (renamed from discussion-sync)
 - [ ] useTeamUtility: true
 - [ ] SuperSaaS connector configured
 ```
@@ -202,7 +202,7 @@ touch crouton.config.mjs
 npx crouton-generate --config ./crouton.config.mjs
 
 # Expected output
-layers/discussion-collections/
+layers/discussion/
   collections/
     discussions/     # With embedded threadData
     sourceConfigs/
@@ -223,7 +223,7 @@ layers/discussion-collections/
 ```markdown
 # Update nuxt.config.ts
 extends: [
-  './layers/discussion-collections'  # Renamed from discussion-sync
+  './layers/discussion'  # Renamed from discussion-sync
 ]
 
 # Generate database migration
@@ -287,7 +287,7 @@ touch layers/discussion/nuxt.config.ts
 
 # Update main config
 extends: [
-  './layers/discussion-collections',  # Generated
+  './layers/discussion',  # Generated
   './layers/discussion'               # Manual
 ]
 

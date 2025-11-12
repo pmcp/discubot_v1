@@ -33,8 +33,8 @@ Discubot uses **4 core collections** managed by Nuxt-Crouton (reduced from 6 for
 | Collection | Purpose | Records | Auto-Generated |
 |------------|---------|---------|----------------|
 | **discussions** | Raw discussion data + embedded thread | ~100-1000/month | Yes |
-| **sourceConfigs** | Team-specific source settings | ~10-50/team | No |
-| **syncJobs** | Job queue and status tracking | ~100-1000/month | Yes |
+| **configs** | Team-specific source settings | ~10-50/team | No |
+| **jobs** | Job queue and status tracking | ~100-1000/month | Yes |
 | **tasks** | Created Notion tasks (audit trail) | ~100-2000/month | Yes |
 
 ### Removed Collections (Simplified)
@@ -73,7 +73,7 @@ export default {
   // Organize into layers
   targets: [
     {
-      layer: 'discussion-collections',  // Renamed for clarity
+      layer: 'discussion',  // Renamed for clarity
       collections: [
         'discussions',
         'sourceConfigs',

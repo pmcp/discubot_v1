@@ -129,7 +129,7 @@ Original design had 4 separate layers:
 - discussion-sync/ (Crouton collections)
 
 **Decision:** Consolidate to 2 layers
-- discussion-collections/ (Crouton-generated, never edit)
+- discussion/ (Crouton-generated, never edit)
 - discussion/ (all manual code)
 
 **Rationale:**
@@ -154,7 +154,7 @@ Original design had 4 separate layers:
 **Structure:**
 ```
 layers/
-├── discussion-collections/   # Generated (100 files)
+├── discussion/   # Generated (100 files)
 │   ├── collections/
 │   │   ├── discussions/
 │   │   ├── sourceConfigs/
