@@ -148,22 +148,16 @@ export class SlackAdapter implements DiscussionSourceAdapter {
 
       const event = payload.event
 
-      // Only process message and app_mention events
-      if (event.type !== 'message' && event.type !== 'app_mention') {
-        throw new AdapterError(`Unsupported event type: ${event.type}`, {
+      // ONLY process app_mention events (when bot is explicitly @mentioned)
+      // Regular message events would trigger for ALL messages in channels, which we don't want
+      if (event.type !== 'app_mention') {
+        throw new AdapterError(`Unsupported event type: ${event.type} (only "app_mention" is supported)`, {
           sourceType: this.sourceType,
           retryable: false,
         })
       }
 
-      // Ignore message subtypes (edits, deletes, etc.)
-      // Note: app_mention events never have subtypes
-      if (event.type === 'message' && event.subtype) {
-        throw new AdapterError(`Message subtype not supported: ${event.subtype}`, {
-          sourceType: this.sourceType,
-          retryable: false,
-        })
-      }
+      // app_mention events don't have subtypes, so no need to check
 
       // Validate required fields
       if (!event.text || event.text.trim() === '') {

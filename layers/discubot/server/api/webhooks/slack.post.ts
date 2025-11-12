@@ -131,16 +131,13 @@ function validateSlackEvent(payload: SlackEventPayload): void {
   if (!payload.event) {
     errors.push('Missing required field: event')
   } else {
-    // Check event type - support both message and app_mention
-    if (payload.event.type !== 'message' && payload.event.type !== 'app_mention') {
-      errors.push(`Unsupported event type: ${payload.event.type} (only "message" and "app_mention" are supported)`)
+    // ONLY process app_mention events (when bot is explicitly @mentioned)
+    // Regular message events would trigger for ALL messages in channels, which we don't want
+    if (payload.event.type !== 'app_mention') {
+      errors.push(`Unsupported event type: ${payload.event.type} (only "app_mention" is supported - bot must be @mentioned)`)
     }
 
-    // Ignore bot messages and message subtypes (edits, deletes, etc.)
-    // Note: app_mention events don't have subtypes
-    if (payload.event.type === 'message' && payload.event.subtype) {
-      errors.push(`Message subtype not supported: ${payload.event.subtype}`)
-    }
+    // app_mention events don't have subtypes, so no need to check for them
 
     // Check essential message fields
     if (!payload.event.text || payload.event.text.trim() === '') {
