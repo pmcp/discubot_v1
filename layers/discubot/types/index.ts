@@ -147,3 +147,91 @@ export interface NotionTaskResult {
   /** Creation timestamp */
   createdAt: Date
 }
+
+// ============================================================================
+// ADAPTER TYPES
+// ============================================================================
+
+/**
+ * Parsed discussion from incoming webhook/email
+ * This is the standardized format that all adapters output
+ */
+export interface ParsedDiscussion {
+  /** Source type (e.g., 'figma', 'slack', 'linear') */
+  sourceType: string
+  /** Unique thread ID in source system */
+  sourceThreadId: string
+  /** Deep link URL to discussion in source */
+  sourceUrl: string
+  /** Resolved team ID */
+  teamId: string
+  /** User handle who created the discussion */
+  authorHandle: string
+  /** Discussion title or subject */
+  title: string
+  /** Main content/body */
+  content: string
+  /** List of participant handles */
+  participants: string[]
+  /** Creation timestamp */
+  timestamp: Date
+  /** Source-specific metadata */
+  metadata: Record<string, any>
+}
+
+/**
+ * Source configuration from the configs collection
+ * Contains API keys and settings for a specific source
+ */
+export interface SourceConfig {
+  /** Config record ID */
+  id: string
+  /** Team ID this config belongs to */
+  teamId: string
+  /** Source type (e.g., 'figma', 'slack') */
+  sourceType: string
+  /** Display name for this configuration */
+  name: string
+  /** Source API token/key */
+  apiToken: string
+  /** Notion API token */
+  notionToken: string
+  /** Notion database ID (without dashes) */
+  notionDatabaseId: string
+  /** Optional Anthropic API key override */
+  anthropicApiKey?: string
+  /** Whether AI analysis is enabled */
+  aiEnabled: boolean
+  /** Whether auto-sync is enabled */
+  autoSync: boolean
+  /** Source-specific settings (e.g., Slack workspace ID) */
+  settings: Record<string, any>
+  /** Whether this config is active */
+  active: boolean
+}
+
+/**
+ * Result of configuration validation
+ */
+export interface ValidationResult {
+  /** Whether validation passed */
+  valid: boolean
+  /** Validation errors (if any) */
+  errors: string[]
+  /** Validation warnings (if any) */
+  warnings: string[]
+}
+
+/**
+ * Retry options for operations
+ */
+export interface RetryOptions {
+  /** Maximum number of retry attempts */
+  maxAttempts?: number
+  /** Initial delay in milliseconds */
+  initialDelay?: number
+  /** Maximum delay in milliseconds */
+  maxDelay?: number
+  /** Backoff multiplier (default: 2 for exponential) */
+  backoffMultiplier?: number
+}
