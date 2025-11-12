@@ -15,80 +15,69 @@
       <!-- Job Statistics -->
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <UCard>
-          <template #body>
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                <UIcon name="i-lucide-activity" class="w-5 h-5 text-blue-500" />
-              </div>
-              <div>
-                <p class="text-2xl font-bold">{{ jobStats.total }}</p>
-                <p class="text-xs text-muted-foreground">Total Jobs</p>
-              </div>
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+              <UIcon name="i-lucide-activity" class="w-5 h-5 text-blue-500" />
             </div>
-          </template>
+            <div>
+              <p class="text-2xl font-bold">{{ jobStats.total }}</p>
+              <p class="text-xs text-muted-foreground">Total Jobs</p>
+            </div>
+          </div>
         </UCard>
 
         <UCard>
-          <template #body>
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
-                <UIcon name="i-lucide-loader-2" class="w-5 h-5 text-amber-500 animate-spin" />
-              </div>
-              <div>
-                <p class="text-2xl font-bold">{{ jobStats.processing }}</p>
-                <p class="text-xs text-muted-foreground">Processing</p>
-              </div>
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+              <UIcon name="i-lucide-loader-2" class="w-5 h-5 text-amber-500 animate-spin" />
             </div>
-          </template>
+            <div>
+              <p class="text-2xl font-bold">{{ jobStats.processing }}</p>
+              <p class="text-xs text-muted-foreground">Processing</p>
+            </div>
+          </div>
         </UCard>
 
         <UCard>
-          <template #body>
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center flex-shrink-0">
-                <UIcon name="i-lucide-check-circle" class="w-5 h-5 text-green-500" />
-              </div>
-              <div>
-                <p class="text-2xl font-bold">{{ jobStats.completed }}</p>
-                <p class="text-xs text-muted-foreground">Completed</p>
-              </div>
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center flex-shrink-0">
+              <UIcon name="i-lucide-check-circle" class="w-5 h-5 text-green-500" />
             </div>
-          </template>
+            <div>
+              <p class="text-2xl font-bold">{{ jobStats.completed }}</p>
+              <p class="text-xs text-muted-foreground">Completed</p>
+            </div>
+          </div>
         </UCard>
 
         <UCard>
-          <template #body>
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center flex-shrink-0">
-                <UIcon name="i-lucide-x-circle" class="w-5 h-5 text-red-500" />
-              </div>
-              <div>
-                <p class="text-2xl font-bold">{{ jobStats.failed }}</p>
-                <p class="text-xs text-muted-foreground">Failed</p>
-              </div>
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center flex-shrink-0">
+              <UIcon name="i-lucide-x-circle" class="w-5 h-5 text-red-500" />
             </div>
-          </template>
+            <div>
+              <p class="text-2xl font-bold">{{ jobStats.failed }}</p>
+              <p class="text-xs text-muted-foreground">Failed</p>
+            </div>
+          </div>
         </UCard>
 
         <UCard>
-          <template #body>
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
-                <UIcon name="i-lucide-rotate-cw" class="w-5 h-5 text-purple-500" />
-              </div>
-              <div>
-                <p class="text-2xl font-bold">{{ jobStats.retrying }}</p>
-                <p class="text-xs text-muted-foreground">Retrying</p>
-              </div>
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+              <UIcon name="i-lucide-rotate-cw" class="w-5 h-5 text-purple-500" />
             </div>
-          </template>
+            <div>
+              <p class="text-2xl font-bold">{{ jobStats.retrying }}</p>
+              <p class="text-xs text-muted-foreground">Retrying</p>
+            </div>
+          </div>
         </UCard>
       </div>
 
       <!-- Filters and Actions -->
       <UCard>
-        <template #body>
-          <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+        <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
             <!-- Status Filter -->
             <div class="flex flex-wrap gap-2">
               <UButton
@@ -120,7 +109,7 @@
               </UButton>
             </div>
           </div>
-        </template>
+        </div>
       </UCard>
 
       <!-- Jobs List -->

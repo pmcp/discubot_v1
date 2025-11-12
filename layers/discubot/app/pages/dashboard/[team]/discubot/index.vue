@@ -4,7 +4,6 @@
       <!-- Quick Stats Cards -->
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <UCard>
-          <template #header>
             <div class="flex items-center justify-between">
               <h3 class="text-sm font-medium text-muted-foreground">Total Configs</h3>
               <UIcon name="i-lucide-settings" class="w-4 h-4 text-muted-foreground" />
