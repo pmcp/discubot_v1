@@ -15,6 +15,13 @@ declare module 'vue' {
     HelloWorld: typeof import('./src/components/HelloWorld.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    UApp: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/App.vue')['default']
+    UBadge: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Badge.vue')['default']
+    UButton: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Button.vue')['default']
+    UCard: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Card.vue')['default']
+    UColorModeButton: typeof import('./node_modules/@nuxt/ui/dist/runtime/vue/components/color-mode/ColorModeButton.vue')['default']
+    UIcon: typeof import('./node_modules/@nuxt/ui/dist/runtime/vue/components/Icon.vue')['default']
+    UProgress: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Progress.vue')['default']
   }
 }
 
@@ -23,4 +30,11 @@ declare global {
   const HelloWorld: typeof import('./src/components/HelloWorld.vue')['default']
   const RouterLink: typeof import('vue-router')['RouterLink']
   const RouterView: typeof import('vue-router')['RouterView']
+  const UApp: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/App.vue')['default']
+  const UBadge: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Badge.vue')['default']
+  const UButton: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Button.vue')['default']
+  const UCard: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Card.vue')['default']
+  const UColorModeButton: typeof import('./node_modules/@nuxt/ui/dist/runtime/vue/components/color-mode/ColorModeButton.vue')['default']
+  const UIcon: typeof import('./node_modules/@nuxt/ui/dist/runtime/vue/components/Icon.vue')['default']
+  const UProgress: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Progress.vue')['default']
 }
