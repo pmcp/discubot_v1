@@ -395,6 +395,64 @@ export class SlackAdapter implements DiscussionSourceAdapter {
   }
 
   /**
+   * Remove a reaction emoji from a message
+   *
+   * Uses reactions.remove endpoint to remove emoji reactions.
+   *
+   * @param threadId - Format: "channel:thread_ts"
+   * @param emoji - Emoji name without colons (e.g., "eyes", "white_check_mark")
+   * @param config - Source configuration with API token
+   */
+  async removeReaction(
+    threadId: string,
+    emoji: string,
+    config: SourceConfig,
+  ): Promise<boolean> {
+    try {
+      const [channelId, threadTs] = threadId.split(':')
+
+      if (!channelId || !threadTs) {
+        console.warn('Invalid thread ID format, cannot remove reaction')
+        return false
+      }
+
+      const url = `${SLACK_API_BASE}/reactions.remove`
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${config.apiToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          channel: channelId,
+          timestamp: threadTs,
+          name: emoji,
+        }),
+      })
+
+      if (!response.ok) {
+        console.error(`Failed to remove Slack reaction: ${response.status} ${response.statusText}`)
+        return false
+      }
+
+      const data = await response.json() as SlackReactionResponse
+
+      if (!data.ok) {
+        // Don't log error if reaction doesn't exist
+        if (data.error !== 'no_reaction') {
+          console.error(`Failed to remove Slack reaction: ${data.error || 'Unknown error'}`)
+        }
+        return data.error === 'no_reaction' // Consider no_reaction as success
+      }
+
+      return true
+    } catch (error) {
+      console.error('Failed to remove Slack reaction:', error)
+      return false
+    }
+  }
+
+  /**
    * Update status by adding a reaction emoji to the message
    *
    * Uses reactions.add endpoint to add emoji reactions as status indicators.

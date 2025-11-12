@@ -336,6 +336,23 @@ export async function processDiscussion(
     console.log('[Processor] Stage 1: Validation')
     validateParsedDiscussion(parsed)
 
+    // Add initial "eyes" reaction to show bot is processing
+    try {
+      const { getAdapter } = await import('../adapters')
+      const adapter = getAdapter(parsed.sourceType)
+
+      // Get a minimal config for the initial reaction (we'll load full config next)
+      // For now, we need to load config first to get the API token
+      const tempConfig = options.config || await loadSourceConfig(parsed.teamId, parsed.sourceType)
+
+      await adapter.updateStatus(parsed.sourceThreadId, 'pending', tempConfig)
+
+      console.log('[Processor] Initial status reaction added (eyes)')
+    } catch (error) {
+      // Don't fail if initial reaction fails
+      console.error('[Processor] Failed to add initial status reaction:', error)
+    }
+
     // ============================================================================
     // STAGE 2: Config Loading
     // ============================================================================
@@ -477,9 +494,34 @@ export async function processDiscussion(
     // Mark as completed
     await updateDiscussionStatus(discussionId, 'completed')
 
-    // Future: Send notification back to source
-    // await adapter.postReply(thread.id, buildConfirmationMessage(notionTasks), config)
-    // await adapter.updateStatus(thread.id, 'completed', config)
+    // Send notification back to source
+    try {
+      const { getAdapter } = await import('../adapters')
+      const adapter = getAdapter(parsed.sourceType)
+
+      // Remove the initial "eyes" reaction
+      if ('removeReaction' in adapter && typeof adapter.removeReaction === 'function') {
+        await adapter.removeReaction(parsed.sourceThreadId, 'eyes', config)
+      }
+
+      // Build confirmation message with Notion task URLs
+      const confirmationMessage = buildConfirmationMessage(notionTasks)
+
+      // Post reply to the thread
+      await adapter.postReply(parsed.sourceThreadId, confirmationMessage, config)
+
+      // Update status with completed emoji/reaction
+      await adapter.updateStatus(parsed.sourceThreadId, 'completed', config)
+
+      console.log('[Processor] Notification sent to source:', {
+        sourceType: parsed.sourceType,
+        sourceThreadId: parsed.sourceThreadId,
+        taskCount: notionTasks.length,
+      })
+    } catch (error) {
+      // Don't fail the entire process if notification fails
+      console.error('[Processor] Failed to send notification to source:', error)
+    }
 
     const processingTime = Date.now() - startTime
 
