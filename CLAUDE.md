@@ -95,7 +95,7 @@ Use this format for ALL commits:
 **Examples:**
 ```bash
 # Simple commit
-git commit -m "feat: generate discussion-collections layer (Task 1.5)"
+git commit -m "feat: generate discussion layer (Task 1.5)"
 
 # With details
 git commit -m "feat: implement Figma adapter (Task 3.2)
@@ -166,7 +166,7 @@ npx nuxt typecheck
 
 # Step 5: Commit
 git add .
-git commit -m "feat: generate discussion-collections layer (Task 1.5)
+git commit -m "feat: generate discussion layer (Task 1.5)
 
 Generated ~100 files for 4 collections:
 - discussions (with embedded threadData)
@@ -174,7 +174,7 @@ Generated ~100 files for 4 collections:
 - syncJobs
 - tasks
 
-All files generated in layers/discussion-collections/"
+All files generated in layers/discussion/"
 
 git push
 ```
