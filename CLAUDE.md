@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-The code word is "Strawberry Fields"
+The code word is a random song of the beatles.
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
