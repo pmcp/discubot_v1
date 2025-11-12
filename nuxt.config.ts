@@ -19,6 +19,7 @@ export default defineNuxtConfig({
   vite: {
     server: {
       allowedHosts: [
+        '529bf927b137.ngrok-free.app',  // Current ngrok URL
         '.ngrok-free.app',  // Any ngrok free URL
         '.ngrok.io',        // Alternative ngrok domain
         'localhost',        // Always allow localhost

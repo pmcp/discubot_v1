@@ -3,7 +3,7 @@
 **Project Start Date**: 2025-11-11
 **Expected Completion**: 2025-12-16 (5 weeks)
 **Current Phase**: Phase 5 - Admin UI
-**Overall Progress**: 76% (26/34 tasks complete)
+**Overall Progress**: 79% (27/34 tasks complete)
 
 ---
 
@@ -11,8 +11,8 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 26 / 34 |
-| Hours Logged | 76.75 / 112 |
+| Tasks Completed | 27 / 34 |
+| Hours Logged | 80.75 / 112 |
 | Current Phase | Phase 5 |
 | Days Elapsed | 2 / 21 |
 | Blockers | 0 |
@@ -91,14 +91,14 @@
 
 ### Phase 5: Admin UI 🔄
 **Status**: In Progress
-**Progress**: 3/6 tasks (50%)
-**Time**: 15h / 25h estimated
+**Progress**: 4/6 tasks (67%)
+**Time**: 19h / 25h estimated
 **Target**: Week 4-5, Days 16-20
 
 - [x] Task 5.1: Create Dashboard Page (4h) ✅
 - [x] Task 5.2: Create Source Config Form (6h) ✅
 - [x] Task 5.3: Create Job Monitoring Dashboard (5h) ✅
-- [ ] Task 5.4: Create Job Details Modal (4h)
+- [x] Task 5.4: Create Job Details Modal (4h) ✅
 - [ ] Task 5.5: Create Test Connection Endpoints (3h)
 - [ ] Task 5.6: Polish & Responsive Design (3h)
 
