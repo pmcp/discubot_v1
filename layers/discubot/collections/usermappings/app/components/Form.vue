@@ -18,58 +18,142 @@
     <CroutonFormLayout :tabs="tabs" :navigation-items="navigationItems" :tab-errors="tabErrorCounts" v-model="activeSection">
       <template #main="{ activeSection }">
       <div v-show="!tabs || activeSection === 'basic'" class="flex flex-col gap-4 p-1">
-        <UFormField label="SourceType" name="sourceType" class="not-last:pb-4">
-          <UInput v-model="state.sourceType" class="w-full" size="xl" />
+        <UFormField label="Source Type" name="sourceType" description="Select the source system" class="not-last:pb-4">
+          <USelectMenu
+            v-model="state.sourceType"
+            :options="sourceTypeOptions"
+            placeholder="Select source type"
+            class="w-full"
+          />
         </UFormField>
-        <UFormField label="SourceUserId" name="sourceUserId" class="not-last:pb-4">
-          <UInput v-model="state.sourceUserId" class="w-full" size="xl" />
+        <UFormField label="Source User ID" name="sourceUserId" description="User ID from the source system (Slack user ID, Figma email, etc.)" class="not-last:pb-4">
+          <UInput v-model="state.sourceUserId" class="w-full" size="xl" placeholder="U123ABC456 (Slack) or user@example.com (Figma)" />
         </UFormField>
-        <UFormField label="SourceUserEmail" name="sourceUserEmail" class="not-last:pb-4">
-          <UInput v-model="state.sourceUserEmail" class="w-full" size="xl" />
+        <UFormField label="Source User Email" name="sourceUserEmail" description="Email address from source system (if available)" class="not-last:pb-4">
+          <UInput v-model="state.sourceUserEmail" type="email" class="w-full" size="xl" placeholder="user@example.com" />
         </UFormField>
-        <UFormField label="SourceUserName" name="sourceUserName" class="not-last:pb-4">
-          <UInput v-model="state.sourceUserName" class="w-full" size="xl" />
+        <UFormField label="Source User Name" name="sourceUserName" description="Display name from source system" class="not-last:pb-4">
+          <UInput v-model="state.sourceUserName" class="w-full" size="xl" placeholder="John Doe" />
         </UFormField>
       </div>
 
       <div v-show="!tabs || activeSection === 'notion'" class="flex flex-col gap-4 p-1">
-        <UFormField label="NotionUserId" name="notionUserId" class="not-last:pb-4">
-          <UInput v-model="state.notionUserId" class="w-full" size="xl" />
+        <!-- Notion Token Field (for fetching users) -->
+        <UFormField
+          v-if="!notionUsers.length"
+          label="Notion Integration Token"
+          description="Enter your Notion token to fetch available users"
+          class="not-last:pb-4"
+        >
+          <div class="flex gap-2">
+            <UInput
+              v-model="notionToken"
+              type="password"
+              class="flex-1"
+              size="xl"
+              placeholder="secret_..."
+            />
+            <UButton
+              @click="fetchNotionUsers"
+              :loading="loadingNotionUsers"
+              icon="i-lucide-download"
+            >
+              Fetch Users
+            </UButton>
+          </div>
         </UFormField>
-        <UFormField label="NotionUserName" name="notionUserName" class="not-last:pb-4">
-          <UInput v-model="state.notionUserName" class="w-full" size="xl" />
+
+        <!-- Notion User Dropdown (after fetching) -->
+        <UFormField
+          label="Notion User"
+          name="notionUserId"
+          description="Select the Notion user to map to"
+          class="not-last:pb-4"
+        >
+          <USelectMenu
+            v-if="notionUsers.length"
+            v-model="selectedNotionUser"
+            :options="notionUserOptions"
+            placeholder="Select Notion user"
+            searchable
+            class="w-full"
+            @update:model-value="handleNotionUserSelect"
+          >
+            <template #label>
+              <span v-if="selectedNotionUser">
+                {{ selectedNotionUser.name }}
+                <span v-if="selectedNotionUser.email" class="text-muted-foreground text-sm">
+                  ({{ selectedNotionUser.email }})
+                </span>
+              </span>
+            </template>
+          </USelectMenu>
+          <UInput
+            v-else
+            v-model="state.notionUserId"
+            class="w-full"
+            size="xl"
+            placeholder="Fetch users first or enter UUID manually"
+            readonly
+          />
         </UFormField>
-        <UFormField label="NotionUserEmail" name="notionUserEmail" class="not-last:pb-4">
-          <UInput v-model="state.notionUserEmail" class="w-full" size="xl" />
+
+        <UFormField label="Notion User Name" name="notionUserName" description="Auto-filled from selection" class="not-last:pb-4">
+          <UInput v-model="state.notionUserName" class="w-full" size="xl" readonly />
         </UFormField>
+        <UFormField label="Notion User Email" name="notionUserEmail" description="Auto-filled from selection" class="not-last:pb-4">
+          <UInput v-model="state.notionUserEmail" type="email" class="w-full" size="xl" readonly />
+        </UFormField>
+
+        <!-- Refresh button if users already loaded -->
+        <div v-if="notionUsers.length" class="flex gap-2">
+          <UButton
+            color="gray"
+            variant="ghost"
+            @click="clearNotionUsers"
+            icon="i-lucide-x"
+            size="xs"
+          >
+            Clear Token
+          </UButton>
+          <UButton
+            color="gray"
+            variant="ghost"
+            @click="fetchNotionUsers"
+            :loading="loadingNotionUsers"
+            icon="i-lucide-refresh-cw"
+            size="xs"
+          >
+            Refresh Users
+          </UButton>
+        </div>
       </div>
       </template>
 
       <template #sidebar>
       <div class="flex flex-col gap-4 p-1">
-        <UFormField label="MappingType" name="mappingType" class="not-last:pb-4">
-          <UInput v-model="state.mappingType" class="w-full" size="xl" />
+        <UFormField label="Mapping Type" name="mappingType" description="How was this mapping created?" class="not-last:pb-4">
+          <USelectMenu
+            v-model="state.mappingType"
+            :options="mappingTypeOptions"
+            placeholder="Select mapping type"
+            class="w-full"
+          />
         </UFormField>
-        <UFormField label="Confidence" name="confidence" class="not-last:pb-4">
-          <UInputNumber v-model="state.confidence" class="w-full" />
+        <UFormField label="Confidence Score" name="confidence" description="0-1 score for auto-mapped entries (1.0 for manual)" class="not-last:pb-4">
+          <UInput v-model.number="state.confidence" type="number" min="0" max="1" step="0.1" class="w-full" size="xl" />
         </UFormField>
-        <UFormField label="LastSyncedAt" name="lastSyncedAt" class="not-last:pb-4">
-          <UInput v-model="state.lastSyncedAt" class="w-full" size="xl" />
+        <UFormField label="Active Status" name="active" description="Is this mapping currently active?" class="not-last:pb-4">
+          <USwitch v-model="state.active" />
         </UFormField>
-        <UFormField label="Metadata" name="metadata" class="not-last:pb-4">
+        <UFormField label="Metadata" name="metadata" description="Source-specific user data (JSON)" class="not-last:pb-4">
           <UTextarea
             :model-value="typeof state.metadata === 'string' ? state.metadata : JSON.stringify(state.metadata, null, 2)"
             @update:model-value="(val) => { try { state.metadata = val ? JSON.parse(val) : {} } catch (e) { console.error('Invalid JSON:', e) } }"
             class="w-full font-mono text-sm"
             :rows="8"
-            placeholder="Enter JSON object"
+            placeholder='{"avatar": "...", "profile": "..."}'
           />
-        </UFormField>
-      </div>
-
-      <div class="flex flex-col gap-4 p-1">
-        <UFormField label="Active" name="active" class="not-last:pb-4">
-          <UCheckbox v-model="state.active" />
         </UFormField>
       </div>
       </template>
@@ -99,6 +183,8 @@ import type { DiscubotUserMappingFormProps, DiscubotUserMappingFormData } from '
 
 const props = defineProps<DiscubotUserMappingFormProps>()
 const { defaultValue, schema, collection } = useDiscubotUserMappings()
+const { currentTeam } = useTeam()
+const toast = useToast()
 
 // Form layout configuration
 const navigationItems = [
@@ -108,6 +194,101 @@ const navigationItems = [
 
 const tabs = ref(true)
 const activeSection = ref('basic')
+
+// Source type options
+const sourceTypeOptions = [
+  { label: 'Slack', value: 'slack' },
+  { label: 'Figma', value: 'figma' }
+]
+
+// Mapping type options
+const mappingTypeOptions = [
+  { label: 'Manual', value: 'manual' },
+  { label: 'Auto (Email)', value: 'auto-email' },
+  { label: 'Auto (Name)', value: 'auto-name' },
+  { label: 'Imported', value: 'imported' }
+]
+
+// Notion user fetching
+const notionToken = ref('')
+const notionUsers = ref<Array<{ id: string; name: string; email: string | null; type: string }>>([])
+const loadingNotionUsers = ref(false)
+const selectedNotionUser = ref<any>(null)
+
+// Fetch Notion users from API
+const fetchNotionUsers = async () => {
+  if (!notionToken.value) {
+    toast.add({
+      title: 'Error',
+      description: 'Please enter a Notion token',
+      color: 'error'
+    })
+    return
+  }
+
+  if (!currentTeam.value?.id) {
+    toast.add({
+      title: 'Error',
+      description: 'No team selected',
+      color: 'error'
+    })
+    return
+  }
+
+  loadingNotionUsers.value = true
+
+  try {
+    const response = await $fetch<any>('/api/notion/users', {
+      params: {
+        notionToken: notionToken.value,
+        teamId: currentTeam.value.id
+      }
+    })
+
+    if (response.success && response.users) {
+      notionUsers.value = response.users
+      toast.add({
+        title: 'Success',
+        description: `Fetched ${response.users.length} Notion users`,
+        color: 'success'
+      })
+    }
+  } catch (error: any) {
+    console.error('Failed to fetch Notion users:', error)
+    toast.add({
+      title: 'Error',
+      description: error.data?.message || 'Failed to fetch Notion users',
+      color: 'error'
+    })
+  } finally {
+    loadingNotionUsers.value = false
+  }
+}
+
+// Clear Notion users and token
+const clearNotionUsers = () => {
+  notionUsers.value = []
+  notionToken.value = ''
+  selectedNotionUser.value = null
+}
+
+// Computed: Notion user options for dropdown
+const notionUserOptions = computed(() => {
+  return notionUsers.value.map(user => ({
+    label: user.email ? `${user.name} (${user.email})` : user.name,
+    value: user.id,
+    ...user
+  }))
+})
+
+// Handle Notion user selection
+const handleNotionUserSelect = (user: any) => {
+  if (user) {
+    state.value.notionUserId = user.id || user.value
+    state.value.notionUserName = user.name
+    state.value.notionUserEmail = user.email
+  }
+}
 
 // Map field names to their tab groups for error tracking
 const fieldToGroup: Record<string, string> = {

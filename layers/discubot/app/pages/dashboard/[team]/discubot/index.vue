@@ -113,6 +113,14 @@
           >
             View Discussions
           </UButton>
+          <UButton
+            color="neutral"
+            variant="outline"
+            icon="i-lucide-users"
+            :to="`/dashboard/${currentTeam?.slug}/discubot/user-mappings`"
+          >
+            User Mappings
+          </UButton>
         </div>
 
       </UCard>
