@@ -64,6 +64,9 @@ export default defineNuxtConfig({
   runtimeConfig: {
     // AI Service
     anthropicApiKey: process.env.ANTHROPIC_API_KEY,
+    // Slack OAuth
+    slackClientId: process.env.SLACK_CLIENT_ID,
+    slackClientSecret: process.env.SLACK_CLIENT_SECRET,
     email: {
       mock: process.env.MOCK_EMAIL,
       fromEmail: process.env.FROM_EMAIL,
