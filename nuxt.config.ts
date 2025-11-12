@@ -13,6 +13,21 @@ export default defineNuxtConfig({
     '@friendlyinternet/nuxt-crouton',
     './layers/discubot'
   ],
+  devServer: {
+    host: '0.0.0.0', // Listen on all network interfaces for ngrok
+  },
+  vite: {
+    server: {
+      allowedHosts: [
+        '.ngrok-free.app',  // Any ngrok free URL
+        '.ngrok.io',        // Alternative ngrok domain
+        'localhost',        // Always allow localhost
+      ],
+      hmr: {
+        clientPort: 443,    // For ngrok HTTPS
+      },
+    },
+  },
   devtools: { enabled: true },
   css: ['~/assets/css/main.css'],
   colorMode: {
