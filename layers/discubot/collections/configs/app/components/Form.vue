@@ -30,6 +30,7 @@
             :items="sourceTypeOptions"
             placeholder="Select a source type..."
             size="xl"
+            class="w-full"
           />
         </UFormField>
         <UFormField
