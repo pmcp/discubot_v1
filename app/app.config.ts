@@ -2,9 +2,11 @@ import { discubotDiscussionsConfig } from '../layers/discubot/collections/discus
 import { discubotConfigsConfig } from '../layers/discubot/collections/configs/app/composables/useDiscubotConfigs'
 import { discubotJobsConfig } from '../layers/discubot/collections/jobs/app/composables/useDiscubotJobs'
 import { discubotTasksConfig } from '../layers/discubot/collections/tasks/app/composables/useDiscubotTasks'
+import { discubotUserMappingsConfig } from '../layers/discubot/collections/usermappings/app/composables/useDiscubotUserMappings'
 
 export default defineAppConfig({
   croutonCollections: {
+    discubotUserMappings: discubotUserMappingsConfig,
     discubotTasks: discubotTasksConfig,
     discubotJobs: discubotJobsConfig,
     discubotConfigs: discubotConfigsConfig,

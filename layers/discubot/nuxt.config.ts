@@ -16,6 +16,7 @@ export default defineNuxtConfig({
     './collections/discussions',
     './collections/configs',
     './collections/jobs',
-    './collections/tasks'
+    './collections/tasks',
+    './collections/usermappings'
   ]
 })
