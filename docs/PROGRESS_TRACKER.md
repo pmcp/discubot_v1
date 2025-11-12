@@ -3,7 +3,7 @@
 **Project Start Date**: 2025-11-11
 **Expected Completion**: 2025-12-16 (5 weeks)
 **Current Phase**: Phase 5 - Admin UI
-**Overall Progress**: 78% (29/37 tasks complete)
+**Overall Progress**: 64% (29/45 tasks complete)
 
 ---
 
@@ -11,8 +11,8 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 29 / 37 |
-| Hours Logged | 87.75 / 119 |
+| Tasks Completed | 29 / 45 |
+| Hours Logged | 87.75 / 125 |
 | Current Phase | Phase 5 |
 | Days Elapsed | 2 / 21 |
 | Blockers | 0 |
@@ -105,7 +105,7 @@
   - Create user mapping service (getOrCreateUserMapping, sync from Slack/Figma, resolveToNotionUser)
   - Enhance Slack adapter (add users:read.email scope, fetchSlackUserInfo helper, mention detection)
   - Enhance Notion service (buildTaskContent with mention rich_text objects)
-- [ ] Task 5.6B: User Mapping Admin UI (3h)
+- 🔄 Task 5.6B: User Mapping Admin UI (3h)
   - User mapping list page with filters
   - User mapping form (manual + bulk import)
   - Notion user dropdown (fetch from Notion API)
@@ -119,16 +119,62 @@
 
 ---
 
-### Phase 6: Polish & Production ⏹️
+### Phase 6: Database Persistence & Job Tracking ⏹️
+**Status**: Not Started
+**Progress**: 0/8 tasks (0%)
+**Time**: 0h / 6h estimated
+**Target**: Week 5, Days 21-22
+
+- [ ] Task 6.1: Database Operations Layer (1.5h)
+  - Create `layers/discubot/server/database/operations.ts`
+  - Implement CRUD operations: createDiscussion, updateDiscussionStatus, updateDiscussionResults, createJob, updateJob, completeJob, createTask, getDiscussionById, cleanupOldJobs
+  - Track ALL discussions (not just task-generating ones)
+  - Bidirectional task linking with notionPageId
+- [ ] Task 6.2: Processor Service Integration (1h)
+  - Modify `layers/discubot/server/services/processor.ts`
+  - Replace placeholder code with actual database calls
+  - Integrate job tracking through all 6 processing stages
+  - Save discussion + task records after successful processing
+- [ ] Task 6.3: Manual Retry Implementation (0.5h)
+  - Create `layers/discubot/server/api/discussions/retry.post.ts`
+  - Implement `processDiscussionById()` in processor service
+  - Add retry endpoint for Admin UI (no auto-retry)
+- [ ] Task 6.4: Job Cleanup Scheduler (0.5h)
+  - Create `server/plugins/jobCleanup.ts`
+  - Implement 24-hour interval cleanup
+  - Auto-delete completed/failed jobs older than 30 days
+- [ ] Task 6.5: Type Safety & Validation (0.5h)
+  - Add Zod schemas for database operations validation
+  - Ensure type compatibility across layers
+  - Run `npx nuxt typecheck`
+- [ ] Task 6.6: Testing Updates (1h)
+  - Update existing tests to mock database operations
+  - Create `tests/database/operations.test.ts`
+  - Create `tests/api/discussions/retry.test.ts`
+  - Verify integration tests pass with database layer
+- [ ] Task 6.7: Admin UI Enhancements (0.5h)
+  - Add retry button to failed jobs in job monitoring dashboard
+  - Verify discussion/task pages show real data
+  - Add loading states during retry operations
+- [ ] Task 6.8: Documentation (0.5h)
+  - Document database schema relationships
+  - Document retry workflow
+  - Update PROGRESS_TRACKER.md with completion
+
+**Checkpoint**: ✅ Admin UI fully functional with historical data, retry mechanism working, job cleanup automated
+
+---
+
+### Phase 7: Polish & Production ⏹️
 **Status**: Not Started
 **Progress**: 0/4 tasks (0%)
 **Time**: 0h / 20h estimated
-**Target**: Week 5, Days 21-24
+**Target**: Week 6, Days 25-28
 
-- [ ] Task 6.1: Security Hardening (6h)
-- [ ] Task 6.2: Testing & Coverage (8h)
-- [ ] Task 6.3: Logging & Monitoring (4h)
-- [ ] Task 6.4: Documentation & Deployment (6h)
+- [ ] Task 7.1: Security Hardening (6h)
+- [ ] Task 7.2: Testing & Coverage (8h)
+- [ ] Task 7.3: Logging & Monitoring (4h)
+- [ ] Task 7.4: Documentation & Deployment (6h)
 
 **Checkpoint**: ✅ System production-ready and deployed
 
