@@ -62,6 +62,8 @@ export default defineNuxtConfig({
 // })
 
   runtimeConfig: {
+    // AI Service
+    anthropicApiKey: process.env.ANTHROPIC_API_KEY,
     email: {
       mock: process.env.MOCK_EMAIL,
       fromEmail: process.env.FROM_EMAIL,

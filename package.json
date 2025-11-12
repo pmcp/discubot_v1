@@ -20,6 +20,7 @@
     "test:run": "vitest run"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.68.0",
     "@friendlyinternet/nuxt-crouton": "^1.4.1",
     "@friendlyinternet/nuxt-crouton-connector": "^0.2.0",
     "@iconify-json/lucide": "^1.2.73",
