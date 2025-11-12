@@ -22,7 +22,7 @@
               label="Go to App"
               to="/dashboard"
             />
-            <UButtonGroup v-else>
+            <UFieldGroup v-else>
               <UButton
                 color="neutral"
                 variant="soft"
@@ -48,7 +48,7 @@
                   class="border-l border-neutral-200/50 dark:border-white/10"
                 />
               </UDropdownMenu>
-            </UButtonGroup>
+            </UFieldGroup>
           </AuthState>
           <ThemeToggle />
         </div>
