@@ -1,9 +1,14 @@
+import { discubotDiscussionsConfig } from '../layers/discubot/collections/discussions/app/composables/useDiscubotDiscussions'
+import { discubotConfigsConfig } from '../layers/discubot/collections/configs/app/composables/useDiscubotConfigs'
+import { discubotJobsConfig } from '../layers/discubot/collections/jobs/app/composables/useDiscubotJobs'
+import { discubotTasksConfig } from '../layers/discubot/collections/tasks/app/composables/useDiscubotTasks'
+
 export default defineAppConfig({
   croutonCollections: {
-    discussionTasks: discussionTasksConfig,
-    discussionSyncJobs: discussionSyncJobsConfig,
-    discussionSourceConfigs: discussionSourceConfigsConfig,
-    discussionDiscussions: discussionDiscussionsConfig,
+    discubotTasks: discubotTasksConfig,
+    discubotJobs: discubotJobsConfig,
+    discubotConfigs: discubotConfigsConfig,
+    discubotDiscussions: discubotDiscussionsConfig,
   },
   ui: {
     icons: {

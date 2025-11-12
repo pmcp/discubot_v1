@@ -10,7 +10,8 @@ export default defineNuxtConfig({
     '@nuxt/eslint',
   ],
   extends: [
-    '@friendlyinternet/nuxt-crouton'
+    '@friendlyinternet/nuxt-crouton',
+    './layers/discubot'
   ],
   devtools: { enabled: true },
   css: ['~/assets/css/main.css'],
