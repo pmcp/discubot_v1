@@ -46,12 +46,18 @@ export interface FigmaEmailMetadata {
  * Examples:
  * - https://www.figma.com/file/abc123def456/Design-File → abc123def456
  * - https://www.figma.com/design/abc123def456/... → abc123def456
+ * - https://api-cdn.figma.com/resize/images/2265042955578165560/... → 2265042955578165560
  */
 export function extractFileKeyFromUrl(url: string): string | null {
   const patterns = [
+    // Direct Figma file URLs
     /figma\.com\/file\/([a-zA-Z0-9]+)/,
     /figma\.com\/design\/([a-zA-Z0-9]+)/,
     /figma\.com\/proto\/([a-zA-Z0-9]+)/,
+    // Figma CDN image URLs (contains file ID)
+    /api-cdn\.figma\.com\/resize\/images\/(\d+)\//,
+    // FigJam files
+    /figma\.com\/board\/([a-zA-Z0-9]+)/,
   ]
 
   for (const pattern of patterns) {
@@ -95,12 +101,15 @@ export function extractTextFromHtml(html: string): string {
 }
 
 /**
- * Extract all links from HTML email
+ * Extract all links from HTML email (both href and src attributes)
+ * Prioritizes links with comment indicators
  */
 export function extractLinksFromHtml(html: string): string[] {
   const $ = cheerio.load(html)
   const links: string[] = []
+  const priorityLinks: string[] = []
 
+  // Extract from <a href="...">
   $('a[href]').each((_, element) => {
     const href = $(element).attr('href')
     if (href && href.startsWith('http')) {
@@ -108,7 +117,22 @@ export function extractLinksFromHtml(html: string): string[] {
     }
   })
 
-  return [...new Set(links)] // Remove duplicates
+  // Extract from <img src="..."> (Figma CDN URLs contain file IDs)
+  // Prioritize images with comment coordinates (commentx, commenty parameters)
+  $('img[src]').each((_, element) => {
+    const src = $(element).attr('src')
+    if (src && src.startsWith('http') && src.includes('figma.com')) {
+      // Images with commentx/commenty are the actual comment location images
+      if (src.includes('commentx=') && src.includes('commenty=')) {
+        priorityLinks.push(src)
+      } else {
+        links.push(src)
+      }
+    }
+  })
+
+  // Return priority links first, then regular links
+  return [...new Set([...priorityLinks, ...links])] // Remove duplicates, priority first
 }
 
 /**
@@ -282,13 +306,26 @@ export function parseEmail(emailData: {
   // Extract links
   const links = html ? extractLinksFromHtml(html) : []
 
-  // Try to extract file key from links
+  // Try to extract file key from sender email address FIRST (most reliable!)
+  // Format: comments-[FILEKEY]@email.figma.com
   let fileKey: string | undefined
-  for (const link of links) {
-    const extracted = extractFileKeyFromUrl(link)
-    if (extracted) {
-      fileKey = extracted
-      break
+  if (emailData.from) {
+    const emailKeyMatch = emailData.from.match(/comments-([a-zA-Z0-9]+)@/i)
+    if (emailKeyMatch) {
+      fileKey = emailKeyMatch[1]
+      console.log('[EmailParser] Extracted file key from sender email:', fileKey)
+    }
+  }
+
+  // Fallback: Try to extract file key from links
+  if (!fileKey) {
+    for (const link of links) {
+      const extracted = extractFileKeyFromUrl(link)
+      if (extracted) {
+        fileKey = extracted
+        console.log('[EmailParser] Extracted file key from link:', fileKey)
+        break
+      }
     }
   }
 
