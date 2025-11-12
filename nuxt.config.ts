@@ -11,7 +11,7 @@ export default defineNuxtConfig({
   ],
   extends: [
     '@friendlyinternet/nuxt-crouton',
-    './layers/discussion-collections'
+    './layers/discussion'
   ],
   devtools: { enabled: true },
   css: ['~/assets/css/main.css'],
