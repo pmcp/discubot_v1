@@ -409,6 +409,7 @@ export async function processDiscussion(
 
       // Update the discussion record with the correct URL and threadId
       const db = useDB()
+      const { discubotDiscussions } = await import('#layers/discubot/collections/discussions/server/database/schema')
       await db
         .update(discubotDiscussions)
         .set({
