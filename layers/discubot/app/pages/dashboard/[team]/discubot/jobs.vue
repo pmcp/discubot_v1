@@ -26,9 +26,9 @@
               </div>
             </div>
           </template>
-        </UDashboardCard>
+        </UCard>
 
-        <UDashboardCard>
+        <UCard>
           <template #body>
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
