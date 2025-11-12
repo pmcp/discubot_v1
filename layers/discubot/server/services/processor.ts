@@ -395,6 +395,28 @@ export async function processDiscussion(
       participants: thread.participants.length,
     })
 
+    // Update sourceUrl and sourceThreadId with comment ID for Figma
+    if (parsed.sourceType === 'figma' && thread.id && parsed.metadata?.fileKey) {
+      const fileKey = parsed.metadata.fileKey
+      parsed.sourceUrl = `https://www.figma.com/file/${fileKey}#${thread.id}`
+      // Update sourceThreadId to include comment ID (format: fileKey:commentId)
+      parsed.sourceThreadId = `${fileKey}:${thread.id}`
+
+      console.log('[Processor] Updated Figma URLs:', {
+        sourceUrl: parsed.sourceUrl,
+        sourceThreadId: parsed.sourceThreadId,
+      })
+
+      // Update the discussion record with the correct URL and threadId
+      await db
+        .update(discubotDiscussions)
+        .set({
+          sourceUrl: parsed.sourceUrl,
+          sourceThreadId: parsed.sourceThreadId,
+        })
+        .where(eq(discubotDiscussions.id, discussionId))
+    }
+
     // ============================================================================
     // STAGE 4: AI Analysis
     // ============================================================================
