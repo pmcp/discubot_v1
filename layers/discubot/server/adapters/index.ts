@@ -7,14 +7,15 @@
 
 import type { DiscussionSourceAdapter, AdapterRegistry } from './base'
 import { createFigmaAdapter } from './figma'
+import { createSlackAdapter } from './slack'
 
 /**
  * Registry of all available adapters
  */
 const adapters: AdapterRegistry = {
   figma: createFigmaAdapter(),
+  slack: createSlackAdapter(),
   // Future adapters:
-  // slack: createSlackAdapter(),
   // linear: createLinearAdapter(),
 }
 
@@ -77,3 +78,4 @@ export function getSupportedSourceTypes(): string[] {
 export type { DiscussionSourceAdapter, AdapterRegistry }
 export { AdapterError } from './base'
 export { FigmaAdapter, createFigmaAdapter } from './figma'
+export { SlackAdapter, createSlackAdapter } from './slack'
