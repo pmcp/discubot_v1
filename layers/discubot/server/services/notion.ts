@@ -28,10 +28,25 @@ import { retryWithBackoff } from '../utils/retry'
 /**
  * Initialize Notion client
  * Uses API key from config parameter, runtime config, or environment variable
+ *
+ * Checks in this order:
+ * 1. apiKey parameter (passed explicitly)
+ * 2. Environment variable (for standalone testing)
+ * 3. Nuxt runtime config (for Nuxt context)
  */
 function getNotionClient(apiKey?: string): Client {
-  const config = useRuntimeConfig()
-  const key = apiKey || config.notionApiKey || process.env.NOTION_API_KEY
+  let key = apiKey || process.env.NOTION_API_KEY
+
+  // Try Nuxt runtime config if not in env (and if available)
+  if (!key) {
+    try {
+      const config = useRuntimeConfig()
+      key = config.notionApiKey
+    }
+    catch {
+      // useRuntimeConfig not available (standalone testing)
+    }
+  }
 
   if (!key) {
     throw new Error('NOTION_API_KEY is not configured')

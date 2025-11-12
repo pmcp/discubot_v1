@@ -105,10 +105,23 @@ function setCachedAnalysis(
 /**
  * Initialize Anthropic client
  * Uses API key from runtime config or environment variable
+ *
+ * Checks environment variable first for standalone testing,
+ * then falls back to Nuxt runtime config.
  */
 function getAnthropicClient(): Anthropic {
-  const config = useRuntimeConfig()
-  const apiKey = config.anthropicApiKey || process.env.ANTHROPIC_API_KEY
+  let apiKey = process.env.ANTHROPIC_API_KEY
+
+  // Try Nuxt runtime config if not in env (and if available)
+  if (!apiKey) {
+    try {
+      const config = useRuntimeConfig()
+      apiKey = config.anthropicApiKey
+    }
+    catch {
+      // useRuntimeConfig not available (standalone testing)
+    }
+  }
 
   if (!apiKey) {
     throw new Error('ANTHROPIC_API_KEY is not configured')
@@ -161,7 +174,7 @@ Respond in JSON format:
   const response = await retryWithBackoff(
     () =>
       client.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-3-5-sonnet-20240620',
         max_tokens: 1024,
         messages: [
           {
@@ -258,7 +271,7 @@ Respond in JSON format:
   const response = await retryWithBackoff(
     () =>
       client.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-3-5-sonnet-20240620',
         max_tokens: 2048,
         messages: [
           {
