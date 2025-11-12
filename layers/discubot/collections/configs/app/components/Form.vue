@@ -150,7 +150,7 @@
           <UInput
             v-model="state.notionToken"
             type="password"
-            placeholder="secret_..."
+            placeholder="ntn_..."
             class="w-full font-mono"
             size="xl"
           />
