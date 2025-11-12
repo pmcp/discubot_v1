@@ -79,16 +79,19 @@ function buildTaskProperties(task: DetectedTask): Record<string, any> {
  * Generic structure that works for any source type:
  * - AI Summary callout
  * - Action items as checkboxes
- * - Participants list
+ * - Participants list with @mentions (if userMentions provided)
  * - Thread content
  * - Generic metadata section
  * - Deep link back to source
+ *
+ * @param userMentions - Optional map of source user IDs to Notion user IDs for @mentions
  */
 function buildTaskContent(
   task: DetectedTask,
   thread: DiscussionThread,
   aiSummary: AISummary,
   config: NotionTaskConfig,
+  userMentions?: Map<string, string>,
 ): any[] {
   const blocks: any[] = []
 
@@ -141,18 +144,57 @@ function buildTaskContent(
     }
   }
 
-  // Participants
+  // Participants with @mentions (if userMentions provided)
   if (thread.participants.length > 0) {
+    const participantRichText: any[] = [
+      {
+        type: 'text',
+        text: { content: '👥 Participants: ' },
+      },
+    ]
+
+    // Build rich text with @mentions for each participant
+    for (let i = 0; i < thread.participants.length; i++) {
+      const participantId = thread.participants[i]
+      if (!participantId) continue
+
+      // Try to get Notion user ID for mention
+      const notionUserId = userMentions?.get(participantId)
+
+      if (notionUserId) {
+        // Add proper @mention
+        participantRichText.push({
+          type: 'mention',
+          mention: {
+            type: 'user',
+            user: {
+              id: notionUserId,
+            },
+          },
+        })
+      }
+      else {
+        // Fallback to plain text if no mapping
+        participantRichText.push({
+          type: 'text',
+          text: { content: `@${participantId}` },
+        })
+      }
+
+      // Add separator between participants (except for last one)
+      if (i < thread.participants.length - 1) {
+        participantRichText.push({
+          type: 'text',
+          text: { content: ', ' },
+        })
+      }
+    }
+
     blocks.push({
       object: 'block',
       type: 'paragraph',
       paragraph: {
-        rich_text: [
-          {
-            type: 'text',
-            text: { content: `👥 Participants: ${thread.participants.join(', ')}` },
-          },
-        ],
+        rich_text: participantRichText,
       },
     })
   }
@@ -286,12 +328,15 @@ function buildTaskContent(
  * Create a single task in Notion
  *
  * Uses retry logic for transient failures.
+ *
+ * @param userMentions - Optional map of source user IDs to Notion user IDs for @mentions
  */
 export async function createNotionTask(
   task: DetectedTask,
   thread: DiscussionThread,
   aiSummary: AISummary,
   config: NotionTaskConfig,
+  userMentions?: Map<string, string>,
 ): Promise<NotionTaskResult> {
   console.log('[Notion Service] Creating task:', {
     title: task.title,
@@ -301,7 +346,7 @@ export async function createNotionTask(
 
   const notion = getNotionClient(config.apiKey)
   const properties = buildTaskProperties(task)
-  const children = buildTaskContent(task, thread, aiSummary, config)
+  const children = buildTaskContent(task, thread, aiSummary, config, userMentions)
 
   const startTime = Date.now()
 
@@ -339,12 +384,15 @@ export async function createNotionTask(
  * Notion's 3 requests/second rate limit.
  *
  * Fails fast - stops on first error to avoid partial imports.
+ *
+ * @param userMentions - Optional map of source user IDs to Notion user IDs for @mentions
  */
 export async function createNotionTasks(
   tasks: DetectedTask[],
   thread: DiscussionThread,
   aiSummary: AISummary,
   config: NotionTaskConfig,
+  userMentions?: Map<string, string>,
 ): Promise<NotionTaskResult[]> {
   console.log('[Notion Service] Creating batch of tasks:', {
     taskCount: tasks.length,
@@ -359,7 +407,7 @@ export async function createNotionTasks(
     if (!task) continue
 
     try {
-      const result = await createNotionTask(task, thread, aiSummary, config)
+      const result = await createNotionTask(task, thread, aiSummary, config, userMentions)
       results.push(result)
 
       console.log(

@@ -111,6 +111,25 @@ interface SlackAuthTestResponse {
 }
 
 /**
+ * Slack users.info response (for fetching user details)
+ */
+interface SlackUserInfoResponse {
+  ok: boolean
+  user?: {
+    id: string
+    name: string
+    real_name?: string
+    profile?: {
+      email?: string
+      display_name?: string
+      real_name?: string
+      image_72?: string
+    }
+  }
+  error?: string
+}
+
+/**
  * Slack Adapter Implementation
  */
 export class SlackAdapter implements DiscussionSourceAdapter {
@@ -630,6 +649,92 @@ export class SlackAdapter implements DiscussionSourceAdapter {
       content: message.text,
       timestamp: new Date(parseFloat(message.ts) * 1000),
     }
+  }
+
+  /**
+   * Fetch Slack user info from API
+   *
+   * Uses users.info endpoint to get user details including email.
+   * Requires users:read and users:read.email scopes.
+   *
+   * @param userId - Slack user ID (e.g., U123ABC456)
+   * @param config - Source configuration with API token
+   * @returns User info or null if error
+   */
+  async fetchSlackUserInfo(
+    userId: string,
+    config: SourceConfig
+  ): Promise<{
+    id: string
+    email?: string
+    name?: string
+    realName?: string
+    displayName?: string
+    avatar?: string
+  } | null> {
+    try {
+      const url = `${SLACK_API_BASE}/users.info`
+      const params = new URLSearchParams({ user: userId })
+
+      const response = await fetch(`${url}?${params}`, {
+        headers: {
+          'Authorization': `Bearer ${config.apiToken}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        console.error(`Failed to fetch Slack user info: ${response.status} ${response.statusText}`)
+        return null
+      }
+
+      const data = await response.json() as SlackUserInfoResponse
+
+      if (!data.ok || !data.user) {
+        console.error(`Failed to fetch Slack user info: ${data.error || 'Unknown error'}`)
+        return null
+      }
+
+      const user = data.user
+      return {
+        id: user.id,
+        email: user.profile?.email,
+        name: user.name,
+        realName: user.profile?.real_name,
+        displayName: user.profile?.display_name,
+        avatar: user.profile?.image_72,
+      }
+    } catch (error) {
+      console.error('Failed to fetch Slack user info:', error)
+      return null
+    }
+  }
+
+  /**
+   * Detect @mentions in Slack message text
+   *
+   * Slack formats mentions as <@U123ABC456>
+   * Returns array of unique user IDs mentioned in the text.
+   *
+   * @param text - Message text with potential mentions
+   * @returns Array of Slack user IDs
+   */
+  detectMentions(text: string): string[] {
+    if (!text) {
+      return []
+    }
+
+    // Regex to match Slack user mentions: <@U123ABC456>
+    const mentionRegex = /<@([A-Z0-9]+)>/g
+    const mentions: string[] = []
+    let match
+
+    while ((match = mentionRegex.exec(text)) !== null) {
+      mentions.push(match[1])
+    }
+
+    // Return unique user IDs
+    return Array.from(new Set(mentions))
   }
 }
 
