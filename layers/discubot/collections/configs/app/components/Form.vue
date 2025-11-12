@@ -18,101 +18,282 @@
     <CroutonFormLayout :tabs="tabs" :navigation-items="navigationItems" :tab-errors="tabErrorCounts" v-model="activeSection">
       <template #main="{ activeSection }">
       <div v-show="!tabs || activeSection === 'basic'" class="flex flex-col gap-4 p-1">
-        <UFormField label="SourceType" name="sourceType" class="not-last:pb-4">
-          <UInput v-model="state.sourceType" class="w-full" size="xl" />
+        <UFormField
+          label="Source Type"
+          name="sourceType"
+          description="Select the platform to integrate with"
+          required
+          class="not-last:pb-4"
+        >
+          <USelect
+            v-model="state.sourceType"
+            :options="sourceTypeOptions"
+            placeholder="Select a source type..."
+            size="xl"
+          />
         </UFormField>
-        <UFormField label="Name" name="name" class="not-last:pb-4">
-          <UInput v-model="state.name" class="w-full" size="xl" />
+        <UFormField
+          label="Configuration Name"
+          name="name"
+          description="A friendly name to identify this configuration (e.g., 'Main Figma Project')"
+          required
+          class="not-last:pb-4"
+        >
+          <UInput
+            v-model="state.name"
+            placeholder="e.g., Main Figma Project"
+            class="w-full"
+            size="xl"
+          />
         </UFormField>
       </div>
 
-      <div v-show="!tabs || activeSection === 'email'" class="flex flex-col gap-4 p-1">
-        <UFormField label="EmailAddress" name="emailAddress" class="not-last:pb-4">
-          <UInput v-model="state.emailAddress" class="w-full" size="xl" />
+      <div v-show="(!tabs || activeSection === 'email') && isFigmaSource" class="flex flex-col gap-4 p-1">
+        <div class="mb-2 p-4 bg-muted/50 rounded-lg">
+          <p class="text-sm text-muted-foreground">
+            Figma uses email forwarding for comment notifications. Configure a unique email address for this project.
+          </p>
+        </div>
+        <UFormField
+          label="Email Address"
+          name="emailAddress"
+          description="Full email address (e.g., comments-team1@yourdomain.com)"
+          class="not-last:pb-4"
+        >
+          <UInput
+            v-model="state.emailAddress"
+            type="email"
+            placeholder="comments-team1@yourdomain.com"
+            class="w-full"
+            size="xl"
+          />
         </UFormField>
-        <UFormField label="EmailSlug" name="emailSlug" class="not-last:pb-4">
-          <UInput v-model="state.emailSlug" class="w-full" size="xl" />
+        <UFormField
+          label="Email Slug"
+          name="emailSlug"
+          description="Unique identifier for this team (used in email routing)"
+          class="not-last:pb-4"
+        >
+          <UInput
+            v-model="state.emailSlug"
+            placeholder="team1"
+            class="w-full"
+            size="xl"
+          />
         </UFormField>
       </div>
 
-      <div v-show="!tabs || activeSection === 'webhook'" class="flex flex-col gap-4 p-1">
-        <UFormField label="WebhookUrl" name="webhookUrl" class="not-last:pb-4">
-          <UInput v-model="state.webhookUrl" class="w-full" size="xl" />
+      <div v-show="(!tabs || activeSection === 'webhook') && isSlackSource" class="flex flex-col gap-4 p-1">
+        <div class="mb-2 p-4 bg-muted/50 rounded-lg">
+          <p class="text-sm text-muted-foreground">
+            Configure Slack webhook integration. You'll receive this webhook URL after setting up your Slack app.
+          </p>
+        </div>
+        <UFormField
+          label="Webhook URL"
+          name="webhookUrl"
+          description="Slack webhook endpoint (provided by Slack app configuration)"
+          class="not-last:pb-4"
+        >
+          <UInput
+            v-model="state.webhookUrl"
+            type="url"
+            placeholder="https://hooks.slack.com/services/..."
+            class="w-full"
+            size="xl"
+          />
         </UFormField>
-        <UFormField label="WebhookSecret" name="webhookSecret" class="not-last:pb-4">
-          <UInput v-model="state.webhookSecret" class="w-full" size="xl" />
+        <UFormField
+          label="Webhook Secret"
+          name="webhookSecret"
+          description="Signing secret for webhook verification (from Slack app settings)"
+          class="not-last:pb-4"
+        >
+          <UInput
+            v-model="state.webhookSecret"
+            type="password"
+            placeholder="Enter signing secret..."
+            class="w-full"
+            size="xl"
+          />
         </UFormField>
       </div>
 
       <div v-show="!tabs || activeSection === 'credentials'" class="flex flex-col gap-4 p-1">
-        <UFormField label="ApiToken" name="apiToken" class="not-last:pb-4">
-          <UInput v-model="state.apiToken" class="w-full" size="xl" />
+        <UFormField
+          :label="state.sourceType === 'figma' ? 'Figma API Token' : 'Slack Bot Token'"
+          name="apiToken"
+          :description="state.sourceType === 'figma' ? 'Personal access token from Figma account settings' : 'Bot User OAuth Token (starts with xoxb-)'"
+          :required="state.sourceType === 'figma' || state.sourceType === 'slack'"
+          class="not-last:pb-4"
+        >
+          <UInput
+            v-model="state.apiToken"
+            type="password"
+            :placeholder="state.sourceType === 'figma' ? 'figd_...' : 'xoxb-...'"
+            class="w-full font-mono"
+            size="xl"
+          />
         </UFormField>
-        <UFormField label="NotionToken" name="notionToken" class="not-last:pb-4">
-          <UInput v-model="state.notionToken" class="w-full" size="xl" />
+        <UFormField
+          label="Notion Integration Token"
+          name="notionToken"
+          description="Internal integration token from Notion workspace settings"
+          required
+          class="not-last:pb-4"
+        >
+          <UInput
+            v-model="state.notionToken"
+            type="password"
+            placeholder="secret_..."
+            class="w-full font-mono"
+            size="xl"
+          />
         </UFormField>
-        <UFormField label="AnthropicApiKey" name="anthropicApiKey" class="not-last:pb-4">
-          <UInput v-model="state.anthropicApiKey" class="w-full" size="xl" />
+        <UFormField
+          label="Claude API Key (Optional)"
+          name="anthropicApiKey"
+          description="Leave empty to use global API key. Provide to override per-configuration."
+          class="not-last:pb-4"
+        >
+          <UInput
+            v-model="state.anthropicApiKey"
+            type="password"
+            placeholder="sk-ant-..."
+            class="w-full font-mono"
+            size="xl"
+          />
         </UFormField>
       </div>
 
       <div v-show="!tabs || activeSection === 'notion'" class="flex flex-col gap-4 p-1">
-        <UFormField label="NotionDatabaseId" name="notionDatabaseId" class="not-last:pb-4">
-          <UInput v-model="state.notionDatabaseId" class="w-full" size="xl" />
+        <UFormField
+          label="Notion Database ID"
+          name="notionDatabaseId"
+          description="32-character database ID from Notion database URL"
+          required
+          class="not-last:pb-4"
+        >
+          <UInput
+            v-model="state.notionDatabaseId"
+            placeholder="a1b2c3d4e5f6..."
+            class="w-full font-mono"
+            size="xl"
+          />
         </UFormField>
-        <UFormField label="NotionFieldMapping" name="notionFieldMapping" class="not-last:pb-4">
+        <UFormField
+          label="Field Mapping (Advanced)"
+          name="notionFieldMapping"
+          description="Custom mapping for Notion database properties. Leave empty for default mapping."
+          class="not-last:pb-4"
+        >
           <UTextarea
             :model-value="typeof state.notionFieldMapping === 'string' ? state.notionFieldMapping : JSON.stringify(state.notionFieldMapping, null, 2)"
             @update:model-value="(val) => { try { state.notionFieldMapping = val ? JSON.parse(val) : {} } catch (e) { console.error('Invalid JSON:', e) } }"
             class="w-full font-mono text-sm"
             :rows="8"
-            placeholder="Enter JSON object"
+            placeholder='{"title": "Name", "description": "Details"}'
           />
         </UFormField>
       </div>
 
       <div v-show="!tabs || activeSection === 'ai'" class="flex flex-col gap-4 p-1">
-        <UFormField label="AiSummaryPrompt" name="aiSummaryPrompt" class="not-last:pb-4">
-          <UTextarea v-model="state.aiSummaryPrompt" class="w-full" size="xl" />
+        <UFormField
+          label="Summary Prompt Template"
+          name="aiSummaryPrompt"
+          description="Custom prompt for AI summarization. Leave empty for default."
+          class="not-last:pb-4"
+        >
+          <UTextarea
+            v-model="state.aiSummaryPrompt"
+            placeholder="Summarize this discussion focusing on..."
+            class="w-full"
+            :rows="4"
+            size="xl"
+          />
         </UFormField>
-        <UFormField label="AiTaskPrompt" name="aiTaskPrompt" class="not-last:pb-4">
-          <UTextarea v-model="state.aiTaskPrompt" class="w-full" size="xl" />
+        <UFormField
+          label="Task Detection Prompt"
+          name="aiTaskPrompt"
+          description="Custom prompt for task extraction. Leave empty for default."
+          class="not-last:pb-4"
+        >
+          <UTextarea
+            v-model="state.aiTaskPrompt"
+            placeholder="Extract actionable tasks from..."
+            class="w-full"
+            :rows="4"
+            size="xl"
+          />
         </UFormField>
       </div>
       </template>
 
       <template #sidebar>
-      <div class="flex flex-col gap-4 p-1">
-        <UFormField label="AiEnabled" name="aiEnabled" class="not-last:pb-4">
-          <UCheckbox v-model="state.aiEnabled" />
-        </UFormField>
-        <UFormField label="AutoSync" name="autoSync" class="not-last:pb-4">
-          <UCheckbox v-model="state.autoSync" />
-        </UFormField>
-        <UFormField label="PostConfirmation" name="postConfirmation" class="not-last:pb-4">
-          <UCheckbox v-model="state.postConfirmation" />
-        </UFormField>
-      </div>
+      <div class="flex flex-col gap-6 p-1">
+        <div class="space-y-4">
+          <h3 class="text-sm font-semibold">Features</h3>
+          <UFormField
+            label="Enable AI Summarization"
+            name="aiEnabled"
+            description="Use Claude to analyze discussions"
+          >
+            <USwitch v-model="state.aiEnabled" />
+          </UFormField>
+          <UFormField
+            label="Auto-Process Discussions"
+            name="autoSync"
+            description="Automatically process incoming discussions"
+          >
+            <USwitch v-model="state.autoSync" />
+          </UFormField>
+          <UFormField
+            label="Post Confirmations"
+            name="postConfirmation"
+            description="Reply to source when task created"
+          >
+            <USwitch v-model="state.postConfirmation" />
+          </UFormField>
+        </div>
 
-      <div class="flex flex-col gap-4 p-1">
-        <UFormField label="Active" name="active" class="not-last:pb-4">
-          <UCheckbox v-model="state.active" />
-        </UFormField>
-        <UFormField label="OnboardingComplete" name="onboardingComplete" class="not-last:pb-4">
-          <UCheckbox v-model="state.onboardingComplete" />
-        </UFormField>
-      </div>
+        <USeparator />
 
-      <div class="flex flex-col gap-4 p-1">
-        <UFormField label="SourceMetadata" name="sourceMetadata" class="not-last:pb-4">
-          <UTextarea
-            :model-value="typeof state.sourceMetadata === 'string' ? state.sourceMetadata : JSON.stringify(state.sourceMetadata, null, 2)"
-            @update:model-value="(val) => { try { state.sourceMetadata = val ? JSON.parse(val) : {} } catch (e) { console.error('Invalid JSON:', e) } }"
-            class="w-full font-mono text-sm"
-            :rows="8"
-            placeholder="Enter JSON object"
-          />
-        </UFormField>
+        <div class="space-y-4">
+          <h3 class="text-sm font-semibold">Status</h3>
+          <UFormField
+            label="Active"
+            name="active"
+            description="Enable this configuration"
+          >
+            <USwitch v-model="state.active" />
+          </UFormField>
+          <UFormField
+            label="Setup Complete"
+            name="onboardingComplete"
+            description="Mark as fully configured"
+          >
+            <USwitch v-model="state.onboardingComplete" />
+          </UFormField>
+        </div>
+
+        <USeparator />
+
+        <div class="space-y-4">
+          <h3 class="text-sm font-semibold">Advanced</h3>
+          <UFormField
+            label="Source Metadata"
+            name="sourceMetadata"
+            description="Additional configuration data (JSON)"
+          >
+            <UTextarea
+              :model-value="typeof state.sourceMetadata === 'string' ? state.sourceMetadata : JSON.stringify(state.sourceMetadata, null, 2)"
+              @update:model-value="(val) => { try { state.sourceMetadata = val ? JSON.parse(val) : {} } catch (e) { console.error('Invalid JSON:', e) } }"
+              class="w-full font-mono text-sm"
+              :rows="6"
+              placeholder='{}'
+            />
+          </UFormField>
+        </div>
       </div>
       </template>
 
@@ -142,15 +323,36 @@ import type { DiscubotConfigFormProps, DiscubotConfigFormData } from '../../type
 const props = defineProps<DiscubotConfigFormProps>()
 const { defaultValue, schema, collection } = useDiscubotConfigs()
 
-// Form layout configuration
-const navigationItems = [
-  { label: 'Basic', value: 'basic' },
-  { label: 'Email', value: 'email' },
-  { label: 'Webhook', value: 'webhook' },
-  { label: 'Credentials', value: 'credentials' },
-  { label: 'Notion', value: 'notion' },
-  { label: 'Ai', value: 'ai' }
+// Source type options
+const sourceTypeOptions = [
+  { label: 'Figma', value: 'figma' },
+  { label: 'Slack', value: 'slack' }
 ]
+
+// Computed properties for conditional rendering
+const isFigmaSource = computed(() => state.value.sourceType === 'figma')
+const isSlackSource = computed(() => state.value.sourceType === 'slack')
+
+// Form layout configuration - dynamic based on source type
+const navigationItems = computed(() => {
+  const base = [{ label: 'Basic', value: 'basic' }]
+
+  if (isFigmaSource.value) {
+    base.push({ label: 'Email', value: 'email' })
+  }
+
+  if (isSlackSource.value) {
+    base.push({ label: 'Webhook', value: 'webhook' })
+  }
+
+  base.push(
+    { label: 'Credentials', value: 'credentials' },
+    { label: 'Notion', value: 'notion' },
+    { label: 'AI', value: 'ai' }
+  )
+
+  return base
+})
 
 const tabs = ref(true)
 const activeSection = ref('basic')

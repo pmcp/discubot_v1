@@ -3,7 +3,7 @@
 **Project Start Date**: 2025-11-11
 **Expected Completion**: 2025-12-16 (5 weeks)
 **Current Phase**: Phase 5 - Admin UI
-**Overall Progress**: 71% (24/34 tasks complete)
+**Overall Progress**: 74% (25/34 tasks complete)
 
 ---
 
@@ -11,8 +11,8 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 24 / 34 |
-| Hours Logged | 65.75 / 112 |
+| Tasks Completed | 25 / 34 |
+| Hours Logged | 71.75 / 112 |
 | Current Phase | Phase 4 |
 | Days Elapsed | 2 / 21 |
 | Blockers | 0 |
@@ -91,12 +91,12 @@
 
 ### Phase 5: Admin UI 🔄
 **Status**: In Progress
-**Progress**: 1/6 tasks (17%)
-**Time**: 4h / 25h estimated
+**Progress**: 2/6 tasks (33%)
+**Time**: 10h / 25h estimated
 **Target**: Week 4-5, Days 16-20
 
 - [x] Task 5.1: Create Dashboard Page (4h) ✅
-- [ ] Task 5.2: Create Source Config Form (6h)
+- [x] Task 5.2: Create Source Config Form (6h) ✅
 - [ ] Task 5.3: Create Job Monitoring Dashboard (5h)
 - [ ] Task 5.4: Create Job Details Modal (4h)
 - [ ] Task 5.5: Create Test Connection Endpoints (3h)
@@ -213,14 +213,16 @@
 ---
 
 ### 2025-11-12 - Day 2 (Continued - Phase 5 Start)
-**Focus**: Begin Phase 5 - Admin UI (Task 5.1)
-**Hours**: 4h
+**Focus**: Phase 5 - Admin UI (Tasks 5.1-5.2)
+**Hours**: 10h
 **Completed**:
 - [x] Task 5.1: Create Dashboard Page ✅
+- [x] Task 5.2: Create Source Config Form ✅
 
 **Blockers**: None
 **Notes**:
 - Task 5.1: Created comprehensive admin dashboard in layers/discubot/app/pages/dashboard/[team]/discubot/. Features: Main dashboard (index.vue) with 4 stats cards (total configs, active jobs, completed 24h, recent tasks), quick action buttons, recent activity feed combining discussions+jobs (10 most recent), collection link cards with hover effects. Created 4 collection pages (configs.vue, jobs.vue, discussions.vue, tasks.vue) using CroutonCollectionViewer pattern - each page loads auto-generated List components (ConfigsList, JobsList, etc.). All pages in discubot layer for proper isolation. Uses VueUse's useTimeAgo for relative timestamps (no external deps needed). Activity feed shows empty state, loading skeletons, and proper status badges. Refresh functionality for real-time updates. All navigation team-scoped: /dashboard/[team]/discubot/*. No new type errors - verified with typecheck (all 86 errors are pre-existing template issues). **Ready for Task 5.2: Enhance Source Config Form.**
+- Task 5.2: Enhanced Crouton-generated config form (layers/discubot/collections/configs/app/components/Form.vue) with production-ready UX. Features: Source type dropdown (Figma/Slack) with conditional tab navigation, dynamic field visibility based on selected source (email fields for Figma, webhook fields for Slack), improved field labels with descriptive help text, password inputs for sensitive tokens (apiToken, notionToken, anthropicApiKey), USwitch components for boolean toggles (following Nuxt UI 4 patterns), contextual help banners explaining integration requirements, organized sidebar with grouped sections (Features, Status, Advanced), placeholder hints for token formats (figd_..., xoxb-..., secret_..., sk-ant-...), JSON textarea fields with proper parsing for notionFieldMapping and sourceMetadata. All field enhancements include required indicators, descriptive labels, and inline descriptions. Computed properties (isFigmaSource, isSlackSource) drive conditional rendering. Dynamic navigation items adjust tabs based on source type selection. No new type errors introduced - verified with typecheck (all 86 errors are pre-existing template issues). **Phase 5 is now 33% complete (2/6 tasks). Ready for Task 5.3: Create Job Monitoring Dashboard.**
 
 ---
 
