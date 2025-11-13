@@ -165,8 +165,8 @@ npx nuxt typecheck
 # Step 4: Update tracker
 # (Edit PROGRESS_TRACKER.md - mark complete, update stats)
 
-# Step 5: Commit
-git add .
+# Step 5: Commit (stage only task-related files)
+git add layers/discussion/ docs/PROGRESS_TRACKER.md
 git commit -m "feat: generate discussion layer (Task 1.5)
 
 Generated ~100 files for 4 collections:
@@ -205,8 +205,10 @@ git push
 - ✅ **ALWAYS update PROGRESS_TRACKER.md** before committing
 - ✅ **ALWAYS use TodoWrite** to track the 5 steps
 - ✅ **ALWAYS read PROGRESS_TRACKER.md** when starting
+- ✅ **ONLY stage task-related files** - Use `git add <specific-files>`, never `git add .`
 - ❌ **NEVER batch multiple tasks** in one commit (unless explicitly told)
 - ❌ **NEVER commit without updating tracker** first
+- ❌ **NEVER use `git add .`** - always specify exact files changed for the task
 
 ### Why This Workflow?
 
