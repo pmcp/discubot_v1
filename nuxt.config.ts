@@ -94,7 +94,7 @@ export default defineNuxtConfig({
     },
   },
   future: { compatibilityVersion: 4 },
-  compatibilityDate: "2024-09-19",
+  compatibilityDate: "2024-09-23",
   nitro: {
     preset: "cloudflare_module",
     cloudflare: {
@@ -103,6 +103,13 @@ export default defineNuxtConfig({
     },
     rollupConfig: {
       plugins: [vue()],
+    },
+    esbuild: {
+      options: {
+        banner: {
+          js: 'import "reflect-metadata";'
+        }
+      }
     },
     experimental: {
       tasks: true,

@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",
-    "@friendlyinternet/nuxt-crouton": "^1.4.2",
+    "@friendlyinternet/nuxt-crouton": "^1.5.1",
     "@friendlyinternet/nuxt-crouton-connector": "^0.2.0",
     "@iconify-json/lucide": "^1.2.73",
     "@notionhq/client": "^5.4.0",
@@ -42,6 +42,7 @@
     "nanoid": "5.1.5",
     "nuxt": "^4.2.1",
     "nuxt-auth-utils": "0.5.20",
+    "reflect-metadata": "^0.2.2",
     "resend": "4.5.1",
     "stripe": "18.2.0",
     "use-email": "^0.0.10",
@@ -71,7 +72,7 @@
     "typescript-eslint": "^8.46.4",
     "vitest": "^4.0.8",
     "vue-tsc": "^3.1.3",
-    "wrangler": "^4.47.0"
+    "wrangler": "^4.48.0"
   },
   "packageManager": "pnpm@10.15.1",
   "simple-git-hooks": {
