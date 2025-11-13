@@ -317,12 +317,120 @@ async function updateDiscussionResults(
       aiKeyPoints: aiAnalysis.summary.keyPoints,
       aiTasks: aiAnalysis.taskDetection,
       isMultiTask: aiAnalysis.taskDetection.isMultiTask,
-      notionTaskIds: notionTasks.map(t => t.id),
+      // notionTaskIds will be set by saveTaskRecords() after task records are created
       processedAt: new Date(),
     },
   )
 
   console.log('[Processor] Discussion results saved')
+}
+
+/**
+ * Save task records to database after Notion task creation
+ */
+async function saveTaskRecords(
+  notionTasks: NotionTaskResult[],
+  aiTasks: any[],
+  discussionId: string,
+  jobId: string,
+  parsed: ParsedDiscussion,
+): Promise<string[]> {
+  console.log('[Processor] Saving task records:', {
+    count: notionTasks.length,
+    discussionId,
+    jobId,
+  })
+
+  // Verify teamId is available
+  if (!currentTeamId) {
+    console.error('[Processor] TeamId not available for task creation')
+    return []
+  }
+
+  try {
+    // Import Crouton query for task creation
+    const { createDiscubotTask } = await import(
+      '#layers/discubot/collections/tasks/server/database/queries'
+    )
+
+    const taskIds: string[] = []
+
+    // Create task records for each Notion task
+    for (let i = 0; i < notionTasks.length; i++) {
+      const notionTask = notionTasks[i]
+      const aiTask = aiTasks[i] || aiTasks[0] // Fallback to first task if index mismatch
+
+      // Skip if notionTask is undefined
+      if (!notionTask) {
+        console.warn('[Processor] Skipping undefined notionTask at index:', i)
+        continue
+      }
+
+      try {
+        const task = await createDiscubotTask({
+          teamId: currentTeamId,
+          owner: SYSTEM_USER_ID,
+          discussionId,
+          syncJobId: jobId,
+          notionPageId: notionTask.id,
+          notionPageUrl: notionTask.url,
+          title: aiTask?.title || parsed.title,
+          description: aiTask?.description || undefined,
+          status: 'todo',
+          priority: aiTask?.priority || undefined,
+          assignee: aiTask?.assignee || undefined,
+          summary: aiTask?.description || undefined,
+          sourceUrl: parsed.sourceUrl,
+          isMultiTaskChild: notionTasks.length > 1,
+          taskIndex: notionTasks.length > 1 ? i : undefined,
+          metadata: {
+            createdAt: notionTask.createdAt.toISOString(),
+            sourceType: parsed.sourceType,
+            sourceThreadId: parsed.sourceThreadId,
+          },
+        })
+
+        if (task?.id) {
+          taskIds.push(task.id)
+          console.log('[Processor] Task record created:', {
+            taskId: task.id,
+            notionPageId: notionTask.id,
+            title: aiTask?.title || parsed.title,
+          })
+        }
+      } catch (error) {
+        console.error('[Processor] Failed to create task record:', {
+          notionPageId: notionTask.id,
+          error,
+        })
+        // Continue processing other tasks even if one fails
+      }
+    }
+
+    // Update discussion with task IDs
+    if (taskIds.length > 0) {
+      const { updateDiscubotDiscussion } = await import(
+        '#layers/discubot/collections/discussions/server/database/queries'
+      )
+
+      await updateDiscubotDiscussion(
+        discussionId,
+        currentTeamId,
+        SYSTEM_USER_ID,
+        {
+          notionTaskIds: taskIds,
+        },
+      )
+
+      console.log('[Processor] Discussion updated with task IDs:', taskIds)
+    }
+
+    return taskIds
+  } catch (error) {
+    console.error('[Processor] Failed to save task records:', error)
+    // Don't fail processing if task record creation fails
+    return []
+  }
 }
 
 /**
@@ -664,6 +772,17 @@ export async function processDiscussion(
         count: notionTasks.length,
         ids: notionTasks.map(t => t.id),
       })
+
+      // Save task records to database
+      if (notionTasks.length > 0 && discussionId && jobId) {
+        await saveTaskRecords(
+          notionTasks,
+          aiAnalysis.taskDetection.tasks,
+          discussionId,
+          jobId,
+          parsed,
+        )
+      }
     }
     else {
       console.log('[Processor] Skipping Notion task creation')
