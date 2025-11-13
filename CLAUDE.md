@@ -66,7 +66,8 @@ Step 4: Update Progress Tracker
 └─ Add notes/learnings in Daily Log section
 
 Step 5: Git Commit (MANDATORY)
-├─ Stage all changes: git add .
+├─ Stage ONLY files related to current task (git add <specific-files>)
+├─ NEVER use "git add ." - always stage specific files
 ├─ Commit with conventional format
 ├─ Push if appropriate
 └─ See commit format below
