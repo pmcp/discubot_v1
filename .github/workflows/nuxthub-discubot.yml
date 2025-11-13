@@ -38,38 +38,3 @@ jobs:
         id: deploy
         with:
           project-key: discubot-v1-wmxc
-        env:
-          # AI Service
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-
-          # Slack OAuth
-          SLACK_CLIENT_ID: ${{ secrets.SLACK_CLIENT_ID }}
-          SLACK_CLIENT_SECRET: ${{ secrets.SLACK_CLIENT_SECRET }}
-
-          # Auth Utils
-          NUXT_OAUTH_GITHUB_CLIENT_ID: ${{ secrets.NUXT_OAUTH_GITHUB_CLIENT_ID }}
-          NUXT_OAUTH_GITHUB_CLIENT_SECRET: ${{ secrets.NUXT_OAUTH_GITHUB_CLIENT_SECRET }}
-          NUXT_OAUTH_GOOGLE_CLIENT_ID: ${{ secrets.NUXT_OAUTH_GOOGLE_CLIENT_ID }}
-          NUXT_OAUTH_GOOGLE_CLIENT_SECRET: ${{ secrets.NUXT_OAUTH_GOOGLE_CLIENT_SECRET }}
-          NUXT_SESSION_PASSWORD: ${{ secrets.NUXT_SESSION_PASSWORD }}
-
-          # Payment
-          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
-
-          # Email
-          RESEND_API_TOKEN: ${{ secrets.RESEND_API_TOKEN }}
-          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
-          EMAIL_PROVIDER: ${{ secrets.EMAIL_PROVIDER }}
-          MOCK_EMAIL: ${{ secrets.MOCK_EMAIL }}
-
-          # Twilio
-          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
-          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
-          TWILIO_PHONE_NUMBER: ${{ secrets.TWILIO_PHONE_NUMBER }}
-
-          # App Config
-          BASE_URL: ${{ secrets.BASE_URL }}
-          APP_NAME: ${{ secrets.APP_NAME }}
-          APP_DESCRIPTION: ${{ secrets.APP_DESCRIPTION }}
-          LOGO_URL: ${{ secrets.LOGO_URL }}
