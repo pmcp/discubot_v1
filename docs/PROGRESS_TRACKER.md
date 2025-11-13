@@ -3,7 +3,7 @@
 **Project Start Date**: 2025-11-11
 **Expected Completion**: 2025-12-16 (5 weeks)
 **Current Phase**: Phase 6 - Database Persistence
-**Overall Progress**: 78% (35/45 tasks complete)
+**Overall Progress**: 80% (36/45 tasks complete)
 
 ---
 
@@ -11,8 +11,8 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 35 / 45 |
-| Hours Logged | 98.75 / 128.5 |
+| Tasks Completed | 36 / 45 |
+| Hours Logged | 100.75 / 128.5 |
 | Current Phase | Phase 6 |
 | Days Elapsed | 3 / 21 |
 | Blockers | 0 |
@@ -121,8 +121,8 @@
 
 ### Phase 6: Database Persistence & Job Tracking 🔄
 **Status**: In Progress
-**Progress**: 4/8 tasks (50%)
-**Time**: 5h / 9.5h estimated
+**Progress**: 5/8 tasks (63%)
+**Time**: 7h / 9.5h estimated
 **Target**: Week 5, Days 21-23
 
 **⚠️ CRITICAL**: This phase MUST leverage nuxt-crouton's generated queries. DO NOT create duplicate database operations.
@@ -157,7 +157,7 @@
   - Create NEW job record for retry (per user preference)
   - Reconstruct `ParsedDiscussion` from database record
   - Call `processDiscussion()` with reconstructed data
-- [ ] Task 6.5: Update Admin UI with Real Data (2h)
+- [x] Task 6.5: Update Admin UI with Real Data (2h) ✅
   - Replace mock data in admin dashboard
   - Use `useCollectionQuery('discubotDiscussions')` for discussions
   - Use `useCollectionQuery('discubotJobs')` for jobs
@@ -400,6 +400,7 @@
 - Task 6.2: Successfully added comprehensive job lifecycle management to processor service. **Implementation**: 1) **Job Creation** - Added job record creation BEFORE processing starts (before Stage 1), creates job with status='pending', stage='ingestion', tracks startTimestamp in metadata, uses SYSTEM_USER_ID for automated operations, best-effort approach (doesn't fail processing if job creation fails). 2) **Helper Function** - Created `updateJobStatus()` helper function for consistent job updates throughout the pipeline, accepts jobId (optional), teamId, and updates object (status, stage, error, errorStack, metadata), uses Crouton's `updateDiscubotJob` query, logs warnings but doesn't block processing on failures. 3) **Stage Updates** - Added job status updates at all 6 stages: Stage 1 (Validation) sets status='processing', stage='ingestion'; Stage 2 (Config Loading) updates with discussionId and sourceConfigId; Stage 3 (Thread Building) sets stage='thread_building'; Stage 4 (AI Analysis) sets stage='ai_analysis'; Stage 5 (Task Creation) sets stage='task_creation'; Stage 6 (Finalization) sets stage='notification'. 4) **Discussion Linking** - After creating discussion record (Stage 2), links discussion.syncJobId to job using `updateDiscubotDiscussion()`, also updates job with discussionId and sourceConfigId for proper foreign key relationships. 5) **Success Finalization** - At end of processing, updates job with status='completed', completedAt timestamp, processingTime (ms), taskIds array from created Notion tasks. 6) **Failure Finalization** - In catch block, updates job with status='failed', completedAt, processingTime, error message, errorStack, comprehensive error logging. **Type Safety**: Ran `npx nuxt typecheck` - No NEW type errors introduced, all 167+ errors are pre-existing template issues. **Design Decisions**: Job creation at start tracks full lifecycle, best-effort updates don't block processing, metadata tracks stage-specific data, graceful degradation if job operations fail. **Phase 6 is now 25% complete (2/8 tasks). Ready for Task 6.3: Add Task Record Persistence.**
 - Task 6.3: Successfully added task record persistence after Notion task creation. **Implementation**: 1) Created `saveTaskRecords()` helper function that runs AFTER Notion task creation in Stage 5, accepts notionTasks array, aiTasks array, discussionId, jobId, and parsed discussion. 2) Function iterates through notionTasks array, creates task record for each using `createDiscubotTask()` Crouton query, stores notionPageId, notionPageUrl, title, description, status, priority, assignee, summary, sourceUrl from both Notion results and AI detection. 3) Handles multi-task scenarios by setting isMultiTaskChild=true when notionTasks.length > 1, sets taskIndex=i for ordering. 4) Updates discussion.notionTaskIds array with created task record IDs (not Notion page IDs) using `updateDiscubotDiscussion()`. 5) **Type Safety Fixes**: Removed createdBy/updatedBy from task creation (auto-handled by Crouton), changed null to undefined for optional fields (description, priority, assignee, summary, taskIndex), added notionTask undefined check with continue statement, used optional chaining for aiTask properties. 6) **Modified updateDiscussionResults()**: Removed notionTaskIds assignment since it's now handled by saveTaskRecords() after task records are created. **Type Safety**: Ran `npx nuxt typecheck` - No NEW type errors introduced. Verified all processor.ts errors (8 remaining) are pre-existing issues unrelated to task persistence. **Design Decisions**: Task records created AFTER Notion tasks ensure notionPageId/URL are available, discussion.notionTaskIds stores task record IDs (for querying tasks collection), best-effort approach with error logging, continues processing even if individual task record fails. **Phase 6 is now 38% complete (3/8 tasks). Ready for Task 6.4: Implement Manual Retry Endpoint.**
 - Task 6.4: Implemented manual retry endpoint for failed discussions. **Implementation**: Created `layers/discubot/server/api/discussions/[id]/retry.post.ts` as POST /api/discussions/[id]/retry. Features: 1) **Authentication** - Uses Crouton's `resolveTeamAndCheckMembership` from `#crouton/team-auth` for built-in authentication and team membership verification (throws 404 if team not found, 403 if unauthorized). 2) **Discussion Loading** - Loads discussion from database using `getDiscubotDiscussionsByIds(team.id, [discussionId])`, validates discussion exists (404 if not), validates status === 'failed' (422 if not retryable). 3) **ParsedDiscussion Reconstruction** - Maps database fields to ParsedDiscussion interface with proper type casting (sourceType, sourceThreadId, sourceUrl, teamId, authorHandle, title, content, participants, timestamp, metadata). 4) **New Job Creation** - Creates NEW job record using `createDiscubotJob()` with SYSTEM_USER_ID, marks as retry in metadata (`isRetry: true`, `retriedBy: user.id`), starts with fresh attempts counter (0), tracks original discussionId. 5) **Thread Reuse Optimization** - If discussion.threadData exists in DB, passes it to processor to avoid re-fetching from source API. 6) **Optional Skip Flags** - Accepts skipAI and skipNotion in request body for testing purposes. 7) **Error Handling** - Comprehensive error handling: 400 (missing ID), 404 (not found), 403 (unauthorized), 422 (not retryable/non-retryable errors), 503 (retryable errors), 500 (unexpected errors). 8) **Response Format** - Returns AI analysis summary, created task URLs, processing metrics, and isRetry flag. **Type Safety**: Ran `npx nuxt typecheck` - No NEW type errors introduced (excluding pre-existing `#crouton/team-auth` alias issue that affects ALL Crouton-generated endpoints). Fixed all type issues with proper casting and undefined handling. **Phase 6 is now 50% complete (4/8 tasks). Ready for Task 6.5: Update Admin UI with Real Data.**
+- Task 6.5: Connected admin UI to real database with Crouton queries. **Analysis**: Discovered that all dashboard pages were ALREADY using real Crouton queries! Dashboard (index.vue) uses `useCollectionQuery` for all 4 collections (configs, jobs, discussions, tasks) with computed stats and activity feed. Jobs page (jobs.vue) already uses `useCollectionQuery('discubotJobs')` with filtering and real-time refresh. Discussions/Tasks pages use `CroutonCollectionViewer` for auto-generated list views. **Implementation**: Added retry button functionality to jobs page - Shows "Retry Job" button for failed jobs with discussionId, calls POST `/api/discussions/[id]/retry` endpoint, displays loading state during retry, shows success/error toasts with user feedback, refreshes jobs list after successful retry to show new job record. Button includes proper accessibility (aria-label), is disabled during retry operations, and prevents event bubbling with @click.stop. **Type Safety**: Ran `npx nuxt typecheck` - No NEW type errors introduced, all 167 errors are pre-existing template issues. **Pagination**: Not needed - Crouton's `CroutonCollectionViewer` handles pagination automatically, custom dashboard views show "top 10" which is appropriate for overview. **Phase 6 is now 63% complete (5/8 tasks). Ready for Task 6.6: Add Job Cleanup Scheduler.**
 
 ---
 

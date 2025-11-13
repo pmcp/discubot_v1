@@ -265,6 +265,22 @@
                       Created {{ job.taskIds.length }} {{ job.taskIds.length === 1 ? 'task' : 'tasks' }}
                     </span>
                   </div>
+
+                  <!-- Retry Button (for failed jobs) -->
+                  <div v-if="job.status === 'failed' && job.discussionId" class="mt-3 flex gap-2">
+                    <UButton
+                      color="warning"
+                      variant="outline"
+                      size="xs"
+                      icon="i-lucide-rotate-cw"
+                      :loading="retryingJobId === job.id"
+                      :disabled="retryingJobId !== null"
+                      @click.stop="retryJob(job)"
+                      aria-label="Retry failed job"
+                    >
+                      Retry Job
+                    </UButton>
+                  </div>
                 </div>
 
                 <!-- Action Button -->
@@ -290,12 +306,16 @@ definePageMeta({
 // Team context
 const { currentTeam } = useTeam()
 const { open: openCrouton } = useCrouton()
+const toast = useToast()
 
 // Data fetching
 const { items: jobs, pending, refresh: refreshJobs } = await useCollectionQuery('discubotJobs')
 
 // Filter state
 const selectedFilter = ref<'all' | 'processing' | 'completed' | 'failed' | 'retrying' | 'pending'>('all')
+
+// Retry state
+const retryingJobId = ref<string | null>(null)
 
 // Job statistics
 const jobStats = computed(() => {
@@ -372,5 +392,46 @@ function formatDuration(ms: number) {
 function openJobDetails(job: any) {
   // Open job details in Crouton modal
   openCrouton('view', 'discubotJobs', job.id)
+}
+
+async function retryJob(job: any) {
+  if (!job.discussionId) {
+    toast.add({
+      title: 'Cannot retry job',
+      description: 'No discussion ID found for this job',
+      color: 'error'
+    })
+    return
+  }
+
+  retryingJobId.value = job.id
+
+  try {
+    const response = await $fetch(`/api/discussions/${job.discussionId}/retry`, {
+      method: 'POST',
+      body: {}
+    })
+
+    toast.add({
+      title: 'Retry successful',
+      description: 'The discussion is being reprocessed',
+      color: 'success'
+    })
+
+    // Refresh jobs list to show new retry job
+    await refreshJobs()
+  } catch (error: any) {
+    console.error('Failed to retry job:', error)
+
+    const errorMessage = error.data?.message || error.message || 'Failed to retry job'
+
+    toast.add({
+      title: 'Retry failed',
+      description: errorMessage,
+      color: 'error'
+    })
+  } finally {
+    retryingJobId.value = null
+  }
 }
 </script>
