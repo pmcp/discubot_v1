@@ -55,7 +55,7 @@ The bot needs permissions before it can be invited.
 Add this to your `.env` file:
 
 ```bash
-SLACK_BOT_TOKEN=xoxb-1234567890-1234567890-abcdefghijklmnopqrstuvwx
+SLACK_BOT_TOKEN=xoxb-1234567890123-1234567890123-RandomStringHere123456
 ```
 
 **Important**: Restart your dev server after adding:

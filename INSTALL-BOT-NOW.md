@@ -74,7 +74,7 @@ After clicking "Allow", you'll be redirected back to the "Install App" page:
 3. It starts with `xoxb-` and is very long
 4. Click **"Copy"** button (or select and copy)
 
-**Example**: `xoxb-1234567890-1234567890-abcdefghijklmnopqrstuvwx`
+**Example**: `xoxb-1234567890123-1234567890123-RandomStringHere123456`
 
 ---
 
@@ -87,7 +87,7 @@ After clicking "Allow", you'll be redirected back to the "Install App" page:
    ```
 3. Paste your token:
    ```bash
-   SLACK_BOT_TOKEN=xoxb-1234567890-1234567890-abcdefghijklmnopqrstuvwx
+   SLACK_BOT_TOKEN=xoxb-1234567890123-1234567890123-RandomStringHere123456
    ```
 4. Save the file
 

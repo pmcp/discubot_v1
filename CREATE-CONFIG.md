@@ -28,7 +28,7 @@ Source Type: slack
 Active: ON (toggle to enabled)
 
 Slack Configuration:
-- API Token: xoxb-6917477961058-9887123952564-4G5yDmWChpcVLaYEGgSjUjVTs
+- API Token: xoxb-YOUR-SLACK-BOT-TOKEN-HERE
   (your SLACK_BOT_TOKEN from .env)
 
 Notion Configuration:
@@ -68,7 +68,7 @@ curl -X POST http://localhost:3000/api/teams/T06SZE1U91Q/discubot-configs \
     "name": "Slack Test Config",
     "sourceType": "slack",
     "active": true,
-    "apiToken": "xoxb-6917477961058-9887123952564-4G5yDmWChpcVLaYEGgSjUjVTs",
+    "apiToken": "xoxb-YOUR-SLACK-BOT-TOKEN-HERE",
     "notionToken": "YOUR_NOTION_TOKEN",
     "notionDatabaseId": "YOUR_NOTION_DB_ID",
     "anthropicApiKey": "YOUR_ANTHROPIC_KEY",
@@ -86,7 +86,7 @@ curl -X POST http://localhost:3000/api/teams/T06SZE1U91Q/discubot-configs \
 ## What You Need
 
 ### ✅ Already Have:
-- Slack Bot Token: `xoxb-6917477961058-9887123952564-4G5yDmWChpcVLaYEGgSjUjVTs`
+- Slack Bot Token: (in your `.env` - starts with `xoxb-`)
 - Anthropic API Key: (in your `.env`)
 - Team ID: `T06SZE1U91Q`
 
