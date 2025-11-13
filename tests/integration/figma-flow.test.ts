@@ -53,6 +53,29 @@ const createMockThread = (overrides: Partial<DiscussionThread> = {}): Discussion
 const mockAnthropicCreate = vi.fn()
 const mockNotionPagesCreate = vi.fn()
 const mockFigmaFetch = vi.fn()
+const mockCreateDiscussion = vi.fn()
+const mockUpdateDiscussion = vi.fn()
+const mockCreateJob = vi.fn()
+const mockUpdateJob = vi.fn()
+const mockCreateTask = vi.fn()
+
+// Mock Crouton database queries
+vi.mock('#layers/discubot/collections/discussions/server/database/queries', () => ({
+  createDiscubotDiscussion: mockCreateDiscussion,
+  updateDiscubotDiscussion: mockUpdateDiscussion,
+  getDiscubotDiscussionsByIds: vi.fn(),
+}))
+
+vi.mock('#layers/discubot/collections/jobs/server/database/queries', () => ({
+  createDiscubotJob: mockCreateJob,
+  updateDiscubotJob: mockUpdateJob,
+  getDiscubotJobsByIds: vi.fn(),
+}))
+
+vi.mock('#layers/discubot/collections/tasks/server/database/queries', () => ({
+  createDiscubotTask: mockCreateTask,
+  getDiscubotTasksByIds: vi.fn(),
+}))
 
 // Mock Anthropic SDK
 vi.mock('@anthropic-ai/sdk', () => {
@@ -82,6 +105,39 @@ global.fetch = mockFigmaFetch as any
 describe('Figma Integration Flow', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+
+    // Set up default Crouton database mock responses
+    mockCreateDiscussion.mockResolvedValue({
+      id: 'discussion_123',
+      sourceType: 'figma',
+      sourceThreadId: 'thread-1',
+      teamId: 'design-team',
+      status: 'processing',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    mockUpdateDiscussion.mockResolvedValue(undefined)
+    mockCreateJob.mockResolvedValue({
+      id: 'job_123',
+      teamId: 'design-team',
+      sourceType: 'figma',
+      status: 'pending',
+      stage: 'ingestion',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    mockUpdateJob.mockResolvedValue(undefined)
+    mockCreateTask.mockResolvedValue({
+      id: 'task_123',
+      discussionId: 'discussion_123',
+      jobId: 'job_123',
+      notionPageId: 'notion-page-id',
+      notionPageUrl: 'https://notion.so/page-id',
+      title: 'Test Task',
+      teamId: 'design-team',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
 
     // Set up default Anthropic mock response
     mockAnthropicCreate.mockResolvedValue({
