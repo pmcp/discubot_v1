@@ -2,8 +2,8 @@
 
 **Project Start Date**: 2025-11-11
 **Expected Completion**: 2025-12-16 (5 weeks)
-**Current Phase**: Phase 5 - Admin UI
-**Overall Progress**: 69% (31/45 tasks complete)
+**Current Phase**: Phase 6 - Database Persistence
+**Overall Progress**: 71% (32/45 tasks complete)
 
 ---
 
@@ -11,9 +11,9 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 31 / 45 |
-| Hours Logged | 93.75 / 125 |
-| Current Phase | Phase 5 |
+| Tasks Completed | 32 / 45 |
+pr| Hours Logged | 95.25 / 128.5 |
+| Current Phase | Phase 6 |
 | Days Elapsed | 2 / 21 |
 | Blockers | 0 |
 | Tests Passing | 83 / 83 (Slack) |
@@ -119,49 +119,79 @@
 
 ---
 
-### Phase 6: Database Persistence & Job Tracking ⏹️
-**Status**: Not Started
-**Progress**: 0/8 tasks (0%)
-**Time**: 0h / 6h estimated
-**Target**: Week 5, Days 21-22
+### Phase 6: Database Persistence & Job Tracking 🔄
+**Status**: In Progress
+**Progress**: 1/8 tasks (13%)
+**Time**: 1.5h / 9.5h estimated
+**Target**: Week 5, Days 21-23
 
-- [ ] Task 6.1: Database Operations Layer (1.5h)
-  - Create `layers/discubot/server/database/operations.ts`
-  - Implement CRUD operations: createDiscussion, updateDiscussionStatus, updateDiscussionResults, createJob, updateJob, completeJob, createTask, getDiscussionById, cleanupOldJobs
-  - Track ALL discussions (not just task-generating ones)
-  - Bidirectional task linking with notionPageId
-- [ ] Task 6.2: Processor Service Integration (1h)
-  - Modify `layers/discubot/server/services/processor.ts`
-  - Replace placeholder code with actual database calls
-  - Integrate job tracking through all 6 processing stages
-  - Save discussion + task records after successful processing
-- [ ] Task 6.3: Manual Retry Implementation (0.5h)
-  - Create `layers/discubot/server/api/discussions/retry.post.ts`
-  - Implement `processDiscussionById()` in processor service
-  - Add retry endpoint for Admin UI (no auto-retry)
-- [ ] Task 6.4: Job Cleanup Scheduler (0.5h)
-  - Create `server/plugins/jobCleanup.ts`
-  - Implement 24-hour interval cleanup
-  - Auto-delete completed/failed jobs older than 30 days
-- [ ] Task 6.5: Type Safety & Validation (0.5h)
-  - Add Zod schemas for database operations validation
-  - Ensure type compatibility across layers
-  - Run `npx nuxt typecheck`
-- [ ] Task 6.6: Testing Updates (1h)
-  - Update existing tests to mock database operations
-  - Create `tests/database/operations.test.ts`
-  - Create `tests/api/discussions/retry.test.ts`
-  - Verify integration tests pass with database layer
-- [ ] Task 6.7: Admin UI Enhancements (0.5h)
-  - Add retry button to failed jobs in job monitoring dashboard
-  - Verify discussion/task pages show real data
-  - Add loading states during retry operations
+**⚠️ CRITICAL**: This phase MUST leverage nuxt-crouton's generated queries. DO NOT create duplicate database operations.
+
+- [x] Task 6.1: Import and Use Crouton Queries in Processor (1.5h) ✅
+  - **DELETE any plans to create `database/operations.ts`** - Operations already exist!
+  - Import existing queries from Crouton collections:
+    - `createDiscubotDiscussion`, `updateDiscubotDiscussion` from `layers/discubot/collections/discussions/server/database/queries.ts`
+    - `createDiscubotJob`, `updateDiscubotJob` from `layers/discubot/collections/jobs/server/database/queries.ts`
+    - `createDiscubotTask` from `layers/discubot/collections/tasks/server/database/queries.ts`
+  - Create system user utility (e.g., `SYSTEM_USER_ID = 'system'`) for automated operations
+  - Replace placeholder functions in `processor.ts`:
+    - Replace `saveDiscussion()` with `createDiscubotDiscussion()`
+    - Replace `updateDiscussionStatus()` with `updateDiscubotDiscussion()`
+    - Replace `updateDiscussionResults()` with `updateDiscubotDiscussion()`
+  - Handle owner/createdBy/updatedBy fields using system user constant
+- [ ] Task 6.2: Add Job Lifecycle Management (1.5h)
+  - Create job record BEFORE processing starts
+  - Update job status through all 6 stages (ingestion → notification)
+  - Track job metadata (attempts, errors, timing)
+  - Link `discussion.syncJobId` to job record
+  - Finalize job on completion/failure with proper status
+- [ ] Task 6.3: Add Task Record Persistence (1h)
+  - Import `createDiscubotTask()` query
+  - Save task records AFTER Notion task creation (currently missing!)
+  - Store `notionPageId`, `notionPageUrl`, `title`
+  - Update `discussion.notionTaskIds` array with created task IDs
+  - Handle multi-task scenarios (`isMultiTaskChild`, `taskIndex`)
+- [ ] Task 6.4: Implement Manual Retry Endpoint (1h)
+  - Create `layers/discubot/server/api/discussions/[id]/retry.post.ts`
+  - Load discussion from database using Crouton queries
+  - Create NEW job record for retry (per user preference)
+  - Reconstruct `ParsedDiscussion` from database record
+  - Call `processDiscussion()` with reconstructed data
+- [ ] Task 6.5: Update Admin UI with Real Data (2h)
+  - Replace mock data in admin dashboard
+  - Use `useCollectionQuery('discubotDiscussions')` for discussions
+  - Use `useCollectionQuery('discubotJobs')` for jobs
+  - Add "Retry" button to failed jobs using `useCroutonMutate()`
+  - Show real job status, error messages, timing
+  - Add pagination using Crouton's built-in pagination support
+- [ ] Task 6.6: Add Job Cleanup Scheduler (0.5h)
+  - Create `server/plugins/jobCleanup.ts` Nitro plugin
+  - Implement periodic cleanup (24-hour interval)
+  - Delete old completed/failed jobs (30 days retention)
+  - Use Drizzle queries for cleanup (simple DELETE operation)
+  - Log cleanup activity
+- [ ] Task 6.7: Type Safety & Testing (1.5h)
+  - Run `npx nuxt typecheck` after all changes
+  - Add unit tests for system user utilities
+  - Test job lifecycle through all 6 stages
+  - Test retry endpoint with real database data
+  - Test admin UI queries and mutations
+  - Update existing tests to use Crouton queries
 - [ ] Task 6.8: Documentation (0.5h)
-  - Document database schema relationships
-  - Document retry workflow
+  - Document system user convention (`SYSTEM_USER_ID = 'system'`)
+  - Document job lifecycle flow (create → update stages → finalize)
+  - Document retry strategy (new job record per retry)
   - Update PROGRESS_TRACKER.md with completion
 
-**Checkpoint**: ✅ Admin UI fully functional with historical data, retry mechanism working, job cleanup automated
+**Key Principles**:
+- ✅ Use Crouton-generated queries (NO custom operations.ts)
+- ✅ Import from `layers/discubot/collections/*/server/database/queries.ts`
+- ✅ Use Crouton composables (`useCollectionQuery`, `useCollectionMutation`) for admin UI
+- ✅ Create NEW job records for retries (not increment attempts)
+- ✅ System user = "system" constant for automated operations
+- ✅ No deduplication in processor (handled at webhook level)
+
+**Checkpoint**: ✅ Admin UI fully functional with real historical data, retry mechanism working with new job creation, job cleanup automated, all operations use Crouton infrastructure
 
 ---
 
@@ -352,6 +382,18 @@
 **Blockers**: None
 **Notes**:
 - Task 5.6C: Completed comprehensive polish and responsive design improvements across all Admin UI components. **1) Mobile-First Responsive Breakpoints**: Implemented responsive grid layouts throughout - Dashboard Quick Actions now adapt from 1 column (mobile) → 2 (tablet) → 3 (laptop) → 5 (desktop). User Mapping filters stack vertically on mobile, horizontal on tablet+. Stats cards show 2 columns on mobile, 4 on desktop. Collection link cards use responsive padding, icon sizes, and text truncation. All text sizes adapt (text-xs sm:text-sm, text-xl sm:text-2xl). Buttons show abbreviated text on mobile ("Refresh" → icon only, "New Source Config" → "New Config"). **2) Loading States & Skeletons**: Created reusable LoadingSkeleton.vue component with customizable count, proper ARIA attributes (role="status", aria-live="polite"), and screen reader announcements. Added loading skeletons to User Mappings stats cards (4 animated skeleton cards). Jobs page already had loading skeletons. Dashboard already had loading skeletons and empty states. **3) Empty States with CTAs**: Created reusable EmptyState.vue component with variant support (default, primary, warning, error), customizable icon/title/description, action button slots, fully responsive layout. Enhanced Jobs page empty state with circular icon background, contextual messages based on filter, CTA buttons for "Configure Integrations" and "View Documentation". Empty states include proper ARIA live regions. **4) Accessibility Improvements**: Added ARIA labels to all filter controls (aria-label="Filter by source type"), form inputs, and icon-only buttons. Implemented keyboard navigation - all clickable cards support tabindex="0", @keydown.enter, @keydown.space handlers. Added touch-manipulation class for better mobile responsiveness. Proper role attributes (role="navigation", role="status", role="button", role="link"). Screen reader support with sr-only text for loading states. Focus states visible on all interactive elements. Improved form labels with explicit for/id associations. **5) Additional Polish**: Responsive modal UX (mobile close button in bulk import, max-h-[90vh] with scroll). Collapsible example format in bulk import (details/summary pattern). Active states on touchable elements (active:scale-[0.98]). Hover transitions (hover:shadow-lg, hover:text-primary). Created comprehensive documentation (docs/guides/admin-ui-polish.md) covering all patterns, testing checklist, browser support, and future improvements. No new type errors introduced - all 86+ errors are pre-existing template issues verified with typecheck. **Phase 5 is now 89% complete (8/9 tasks). Ready for final task: Task 5.7 or Phase completion review.**
+
+---
+
+### 2025-11-13 - Day 3
+**Focus**: Phase 6 - Database Persistence (Task 6.1)
+**Hours**: 1.5h
+**Completed**:
+- [x] Task 6.1: Import and Use Crouton Queries in Processor ✅
+
+**Blockers**: None
+**Notes**:
+- Task 6.1: Successfully integrated Crouton-generated database queries into processor service, replacing all placeholder functions. **Implementation**: 1) Created `layers/discubot/server/utils/constants.ts` with `SYSTEM_USER_ID = 'system'` constant for automated operations. 2) Added module-level `currentTeamId` variable for state tracking across update functions. 3) Replaced `saveDiscussion()` - Now imports and uses `createDiscubotDiscussion()` from Crouton queries, maps ParsedDiscussion to NewDiscubotDiscussion type, stores teamId for later updates, includes null check for discussion creation. 4) Replaced `updateDiscussionStatus()` - Now imports and uses `updateDiscubotDiscussion()`, performs partial updates with status and error fields, includes teamId availability check with proper error handling. 5) Replaced `updateDiscussionResults()` - Now imports and uses `updateDiscubotDiscussion()`, maps all processing results (thread data, AI analysis, Notion tasks) to database fields, sets completion timestamp. 6) Fixed Figma URL update (lines 453-465) - Replaced direct Drizzle update with `updateDiscubotDiscussion()` for consistency. **Type Safety**: Ran `npx nuxt typecheck` - Fixed "possibly undefined" error by adding null check after createDiscubotDiscussion(). Verified no NEW type errors introduced - all remaining errors (167, 552, 719, 735) are pre-existing template issues. **Architecture Decision**: Used module-level variable for teamId storage (Option A from research) - simplest approach, can refactor if concurrent processing needed. All database operations now go through Crouton's generated queries, following nuxt-crouton best practices. No custom database operations created. **Phase 6 is now 13% complete (1/8 tasks). Ready for Task 6.2: Add Job Lifecycle Management.**
 
 ---
 

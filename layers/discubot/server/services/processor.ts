@@ -37,7 +37,14 @@ import type {
 import { analyzeDiscussion } from './ai'
 import { createNotionTask, createNotionTasks } from './notion'
 import { retryWithBackoff } from '../utils/retry'
+import { SYSTEM_USER_ID } from '../utils/constants'
 import { eq, and } from 'drizzle-orm'
+
+/**
+ * Module-level teamId storage for database updates
+ * Set during saveDiscussion(), used by update functions
+ */
+let currentTeamId: string | undefined
 
 /**
  * Processing result returned after successful processing
@@ -172,50 +179,61 @@ async function loadSourceConfig(
 /**
  * Save discussion to database
  *
- * Creates a new discussion record with initial status.
+ * Creates a new discussion record with initial status using Crouton queries.
  */
 async function saveDiscussion(
   parsed: ParsedDiscussion,
   configId: string,
   status: DiscussionStatus = 'pending',
 ): Promise<string> {
-  // TODO: Use Crouton collection queries
-  // For now, this is a placeholder
   console.log('[Processor] Saving discussion to database:', {
     sourceType: parsed.sourceType,
     sourceThreadId: parsed.sourceThreadId,
     status,
   })
 
-  // Future implementation:
-  // const result = await useDB()
-  //   .insert(discussions)
-  //   .values({
-  //     teamId: parsed.teamId,
-  //     sourceType: parsed.sourceType,
-  //     sourceThreadId: parsed.sourceThreadId,
-  //     sourceUrl: parsed.sourceUrl,
-  //     sourceConfigId: configId,
-  //     title: parsed.title,
-  //     content: parsed.content,
-  //     authorHandle: parsed.authorHandle,
-  //     participants: parsed.participants,
-  //     status,
-  //     rawPayload: parsed.metadata,
-  //     owner: 'system',
-  //     createdBy: 'system',
-  //     updatedBy: 'system',
-  //   })
-  //   .returning({ id: discussions.id })
-  //
-  // return result[0].id
+  // Store teamId for use in update functions
+  currentTeamId = parsed.teamId
 
-  // Temporary: Return mock ID
-  return `disc_${Date.now()}`
+  // Import Crouton query
+  const { createDiscubotDiscussion } = await import(
+    '#layers/discubot/collections/discussions/server/database/queries'
+  )
+
+  // Create discussion record
+  const discussion = await createDiscubotDiscussion({
+    teamId: parsed.teamId,
+    owner: SYSTEM_USER_ID,
+    sourceType: parsed.sourceType,
+    sourceThreadId: parsed.sourceThreadId,
+    sourceUrl: parsed.sourceUrl,
+    sourceConfigId: configId,
+    title: parsed.title,
+    content: parsed.content,
+    authorHandle: parsed.authorHandle,
+    participants: parsed.participants,
+    status,
+    rawPayload: parsed.metadata,
+    metadata: {},
+    threadData: {},
+  })
+
+  if (!discussion) {
+    throw new ProcessingError(
+      'Failed to create discussion record',
+      'save_discussion',
+      { sourceType: parsed.sourceType, sourceThreadId: parsed.sourceThreadId },
+      false,
+    )
+  }
+
+  console.log('[Processor] Discussion saved with ID:', discussion.id)
+
+  return discussion.id
 }
 
 /**
- * Update discussion status in database
+ * Update discussion status in database using Crouton queries
  */
 async function updateDiscussionStatus(
   discussionId: string,
@@ -228,20 +246,37 @@ async function updateDiscussionStatus(
     error,
   })
 
-  // Future implementation:
-  // await useDB()
-  //   .update(discussions)
-  //   .set({
-  //     status,
-  //     ...(error && { metadata: { error } }),
-  //     updatedAt: new Date(),
-  //     updatedBy: 'system',
-  //   })
-  //   .where(eq(discussions.id, discussionId))
+  // Verify teamId is available
+  if (!currentTeamId) {
+    throw new ProcessingError(
+      'TeamId not available for discussion update',
+      'update_status',
+      { discussionId },
+      false,
+    )
+  }
+
+  // Import Crouton query
+  const { updateDiscubotDiscussion } = await import(
+    '#layers/discubot/collections/discussions/server/database/queries'
+  )
+
+  // Update discussion with new status
+  await updateDiscubotDiscussion(
+    discussionId,
+    currentTeamId,
+    SYSTEM_USER_ID,
+    {
+      status,
+      ...(error && { metadata: { error } }),
+    },
+  )
+
+  console.log('[Processor] Discussion status updated')
 }
 
 /**
- * Update discussion with processing results
+ * Update discussion with processing results using Crouton queries
  */
 async function updateDiscussionResults(
   discussionId: string,
@@ -254,23 +289,40 @@ async function updateDiscussionResults(
     taskCount: notionTasks.length,
   })
 
-  // Future implementation:
-  // await useDB()
-  //   .update(discussions)
-  //   .set({
-  //     status: 'completed',
-  //     threadData: thread,
-  //     totalMessages: thread.replies.length + 1,
-  //     aiSummary: aiAnalysis.summary.summary,
-  //     aiKeyPoints: aiAnalysis.summary.keyPoints,
-  //     aiTasks: aiAnalysis.taskDetection,
-  //     isMultiTask: aiAnalysis.taskDetection.isMultiTask,
-  //     notionTaskIds: notionTasks.map(t => t.id),
-  //     processedAt: new Date(),
-  //     updatedAt: new Date(),
-  //     updatedBy: 'system',
-  //   })
-  //   .where(eq(discussions.id, discussionId))
+  // Verify teamId is available
+  if (!currentTeamId) {
+    throw new ProcessingError(
+      'TeamId not available for discussion update',
+      'update_results',
+      { discussionId },
+      false,
+    )
+  }
+
+  // Import Crouton query
+  const { updateDiscubotDiscussion } = await import(
+    '#layers/discubot/collections/discussions/server/database/queries'
+  )
+
+  // Update discussion with all processing results
+  await updateDiscubotDiscussion(
+    discussionId,
+    currentTeamId,
+    SYSTEM_USER_ID,
+    {
+      status: 'completed',
+      threadData: thread,
+      totalMessages: thread.replies.length + 1,
+      aiSummary: aiAnalysis.summary.summary,
+      aiKeyPoints: aiAnalysis.summary.keyPoints,
+      aiTasks: aiAnalysis.taskDetection,
+      isMultiTask: aiAnalysis.taskDetection.isMultiTask,
+      notionTaskIds: notionTasks.map(t => t.id),
+      processedAt: new Date(),
+    },
+  )
+
+  console.log('[Processor] Discussion results saved')
 }
 
 /**
@@ -407,16 +459,19 @@ export async function processDiscussion(
         sourceThreadId: parsed.sourceThreadId,
       })
 
-      // Update the discussion record with the correct URL and threadId
-      const db = useDB()
-      const { discubotDiscussions } = await import('#layers/discubot/collections/discussions/server/database/schema')
-      await db
-        .update(discubotDiscussions)
-        .set({
+      // Update the discussion record with the correct URL and threadId using Crouton query
+      const { updateDiscubotDiscussion } = await import(
+        '#layers/discubot/collections/discussions/server/database/queries'
+      )
+      await updateDiscubotDiscussion(
+        discussionId,
+        currentTeamId!,
+        SYSTEM_USER_ID,
+        {
           sourceUrl: parsed.sourceUrl,
           sourceThreadId: parsed.sourceThreadId,
-        })
-        .where(eq(discubotDiscussions.id, discussionId))
+        },
+      )
 
       // Now that we have the comment ID, add the "eyes" emoji reaction
       try {
