@@ -1,5 +1,15 @@
 import vue from '@vitejs/plugin-vue'
 
+// Rollup plugin to inject reflect-metadata at the top of the bundle
+function injectReflectMetadata() {
+  return {
+    name: 'inject-reflect-metadata',
+    banner() {
+      return 'import "reflect-metadata";'
+    }
+  }
+}
+
 export default defineNuxtConfig({
   modules: [
     '@nuxthub/core',
@@ -102,14 +112,7 @@ export default defineNuxtConfig({
       nodeCompat: true
     },
     rollupConfig: {
-      plugins: [vue()],
-    },
-    esbuild: {
-      options: {
-        banner: {
-          js: 'import "reflect-metadata";'
-        }
-      }
+      plugins: [vue(), injectReflectMetadata()],
     },
     experimental: {
       tasks: true,
