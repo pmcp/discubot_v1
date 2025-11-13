@@ -384,6 +384,7 @@ export async function processDiscussion(
 ): Promise<ProcessingResult> {
   const startTime = Date.now()
   let discussionId: string | undefined
+  let jobId: string | undefined
 
   console.log('[Processor] Starting discussion processing:', {
     sourceType: parsed.sourceType,
@@ -391,11 +392,55 @@ export async function processDiscussion(
     title: parsed.title,
   })
 
+  // ============================================================================
+  // CREATE JOB RECORD (Before processing starts)
+  // ============================================================================
+  try {
+    const { createDiscubotJob } = await import(
+      '#layers/discubot/collections/jobs/server/database/queries'
+    )
+
+    const job = await createDiscubotJob({
+      teamId: parsed.teamId,
+      owner: SYSTEM_USER_ID,
+      discussionId: '', // Will update after discussion is created
+      sourceConfigId: '', // Will update after config is loaded
+      status: 'pending',
+      stage: 'ingestion',
+      attempts: 0,
+      maxAttempts: 3,
+      error: null,
+      errorStack: null,
+      startedAt: new Date(),
+      completedAt: null,
+      processingTime: null,
+      taskIds: [],
+      metadata: {
+        sourceType: parsed.sourceType,
+        sourceThreadId: parsed.sourceThreadId,
+        startTimestamp: Date.now(),
+      },
+      createdBy: SYSTEM_USER_ID,
+      updatedBy: SYSTEM_USER_ID,
+    })
+
+    jobId = job?.id
+    console.log('[Processor] Job created:', jobId)
+  } catch (error) {
+    console.error('[Processor] Failed to create job record:', error)
+    // Don't fail processing if job creation fails
+  }
+
   try {
     // ============================================================================
     // STAGE 1: Validation
     // ============================================================================
     console.log('[Processor] Stage 1: Validation')
+    await updateJobStatus(jobId, parsed.teamId, {
+      status: 'processing',
+      stage: 'ingestion',
+    })
+
     validateParsedDiscussion(parsed)
 
     // Add initial "eyes" reaction to show bot is processing
@@ -434,11 +479,50 @@ export async function processDiscussion(
     // Save discussion record
     discussionId = await saveDiscussion(parsed, config.id, 'processing')
 
+    // Update job with discussion and config IDs
+    if (jobId && discussionId) {
+      try {
+        const { updateDiscubotJob } = await import(
+          '#layers/discubot/collections/jobs/server/database/queries'
+        )
+
+        await updateDiscubotJob(jobId, parsed.teamId, SYSTEM_USER_ID, {
+          discussionId,
+          sourceConfigId: config.id,
+        })
+
+        // Link discussion to job
+        const { updateDiscubotDiscussion } = await import(
+          '#layers/discubot/collections/discussions/server/database/queries'
+        )
+
+        await updateDiscubotDiscussion(
+          discussionId,
+          currentTeamId!,
+          SYSTEM_USER_ID,
+          {
+            syncJobId: jobId,
+          },
+        )
+
+        console.log('[Processor] Linked discussion to job:', {
+          discussionId,
+          jobId,
+        })
+      } catch (error) {
+        console.error('[Processor] Failed to link discussion to job:', error)
+        // Don't fail processing if linking fails
+      }
+    }
+
     // ============================================================================
     // STAGE 3: Thread Building
     // ============================================================================
     console.log('[Processor] Stage 3: Thread Building')
     await updateDiscussionStatus(discussionId, 'processing')
+    await updateJobStatus(jobId, parsed.teamId, {
+      stage: 'thread_building',
+    })
 
     const thread = await buildThread(parsed, config, options.thread)
     console.log('[Processor] Thread built:', {
@@ -489,6 +573,10 @@ export async function processDiscussion(
     // STAGE 4: AI Analysis
     // ============================================================================
     console.log('[Processor] Stage 4: AI Analysis')
+    await updateJobStatus(jobId, parsed.teamId, {
+      stage: 'ai_analysis',
+    })
+
     let aiAnalysis: AIAnalysisResult
 
     if (options.skipAI) {
@@ -527,6 +615,9 @@ export async function processDiscussion(
     // ============================================================================
     console.log('[Processor] Stage 5: Task Creation')
     await updateDiscussionStatus(discussionId, 'analyzed')
+    await updateJobStatus(jobId, parsed.teamId, {
+      stage: 'task_creation',
+    })
 
     let notionTasks: NotionTaskResult[] = []
 
@@ -582,6 +673,9 @@ export async function processDiscussion(
     // STAGE 6: Finalization
     // ============================================================================
     console.log('[Processor] Stage 6: Finalization')
+    await updateJobStatus(jobId, parsed.teamId, {
+      stage: 'notification',
+    })
 
     // Update discussion with results
     await updateDiscussionResults(
@@ -625,6 +719,32 @@ export async function processDiscussion(
 
     const processingTime = Date.now() - startTime
 
+    // ============================================================================
+    // FINALIZE JOB (Success)
+    // ============================================================================
+    if (jobId) {
+      try {
+        const { updateDiscubotJob } = await import(
+          '#layers/discubot/collections/jobs/server/database/queries'
+        )
+
+        await updateDiscubotJob(jobId, parsed.teamId, SYSTEM_USER_ID, {
+          status: 'completed',
+          completedAt: new Date(),
+          processingTime,
+          taskIds: notionTasks.map(t => t.id),
+        })
+
+        console.log('[Processor] Job finalized:', {
+          jobId,
+          processingTime: `${processingTime}ms`,
+        })
+      } catch (error) {
+        console.error('[Processor] Failed to finalize job:', error)
+        // Don't fail processing if job finalization fails
+      }
+    }
+
     console.log('[Processor] Processing complete:', {
       discussionId,
       processingTime: `${processingTime}ms`,
@@ -649,6 +769,37 @@ export async function processDiscussion(
         'failed',
         error instanceof Error ? error.message : 'Unknown error',
       )
+    }
+
+    // ============================================================================
+    // FINALIZE JOB (Failure)
+    // ============================================================================
+    if (jobId) {
+      try {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        const errorStack = error instanceof Error ? error.stack : undefined
+        const processingTime = Date.now() - startTime
+
+        const { updateDiscubotJob } = await import(
+          '#layers/discubot/collections/jobs/server/database/queries'
+        )
+
+        await updateDiscubotJob(jobId, parsed.teamId, SYSTEM_USER_ID, {
+          status: 'failed',
+          completedAt: new Date(),
+          processingTime,
+          error: errorMessage,
+          errorStack: errorStack || null,
+        })
+
+        console.log('[Processor] Job marked as failed:', {
+          jobId,
+          error: errorMessage,
+        })
+      } catch (updateError) {
+        console.error('[Processor] Failed to update job with error:', updateError)
+        // Don't fail processing if job update fails
+      }
     }
 
     // Wrap error if not already a ProcessingError
@@ -737,4 +888,43 @@ function buildConfirmationMessage(tasks: NotionTaskResult[]): string {
 
   const taskList = tasks.map((t, i) => `${i + 1}. ${t.url}`).join('\n')
   return `✅ Created ${tasks.length} tasks in Notion:\n${taskList}`
+}
+
+/**
+ * Update job record with new status/stage/metadata
+ *
+ * Best-effort updates - logs warnings but doesn't fail processing.
+ */
+async function updateJobStatus(
+  jobId: string | undefined,
+  teamId: string,
+  updates: {
+    status?: 'pending' | 'processing' | 'completed' | 'failed' | 'retrying'
+    stage?: 'ingestion' | 'thread_building' | 'ai_analysis' | 'task_creation' | 'notification'
+    error?: string
+    errorStack?: string
+    metadata?: Record<string, any>
+  },
+): Promise<void> {
+  if (!jobId) {
+    console.warn('[Processor] Cannot update job: jobId is undefined')
+    return
+  }
+
+  try {
+    const { updateDiscubotJob } = await import(
+      '#layers/discubot/collections/jobs/server/database/queries'
+    )
+
+    await updateDiscubotJob(jobId, teamId, SYSTEM_USER_ID, updates)
+
+    console.log('[Processor] Job updated:', {
+      jobId,
+      status: updates.status,
+      stage: updates.stage,
+    })
+  } catch (error) {
+    console.error('[Processor] Failed to update job:', error)
+    // Don't fail processing if job update fails
+  }
 }

@@ -3,7 +3,7 @@
 **Project Start Date**: 2025-11-11
 **Expected Completion**: 2025-12-16 (5 weeks)
 **Current Phase**: Phase 6 - Database Persistence
-**Overall Progress**: 71% (32/45 tasks complete)
+**Overall Progress**: 73% (33/45 tasks complete)
 
 ---
 
@@ -11,10 +11,10 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 32 / 45 |
-pr| Hours Logged | 95.25 / 128.5 |
+| Tasks Completed | 33 / 45 |
+| Hours Logged | 96.75 / 128.5 |
 | Current Phase | Phase 6 |
-| Days Elapsed | 2 / 21 |
+| Days Elapsed | 3 / 21 |
 | Blockers | 0 |
 | Tests Passing | 83 / 83 (Slack) |
 
@@ -121,8 +121,8 @@ pr| Hours Logged | 95.25 / 128.5 |
 
 ### Phase 6: Database Persistence & Job Tracking 🔄
 **Status**: In Progress
-**Progress**: 1/8 tasks (13%)
-**Time**: 1.5h / 9.5h estimated
+**Progress**: 2/8 tasks (25%)
+**Time**: 3h / 9.5h estimated
 **Target**: Week 5, Days 21-23
 
 **⚠️ CRITICAL**: This phase MUST leverage nuxt-crouton's generated queries. DO NOT create duplicate database operations.
@@ -139,7 +139,7 @@ pr| Hours Logged | 95.25 / 128.5 |
     - Replace `updateDiscussionStatus()` with `updateDiscubotDiscussion()`
     - Replace `updateDiscussionResults()` with `updateDiscubotDiscussion()`
   - Handle owner/createdBy/updatedBy fields using system user constant
-- [ ] Task 6.2: Add Job Lifecycle Management (1.5h)
+- [x] Task 6.2: Add Job Lifecycle Management (1.5h) ✅
   - Create job record BEFORE processing starts
   - Update job status through all 6 stages (ingestion → notification)
   - Track job metadata (attempts, errors, timing)
@@ -386,14 +386,16 @@ pr| Hours Logged | 95.25 / 128.5 |
 ---
 
 ### 2025-11-13 - Day 3
-**Focus**: Phase 6 - Database Persistence (Task 6.1)
-**Hours**: 1.5h
+**Focus**: Phase 6 - Database Persistence (Tasks 6.1-6.2)
+**Hours**: 3h
 **Completed**:
 - [x] Task 6.1: Import and Use Crouton Queries in Processor ✅
+- [x] Task 6.2: Add Job Lifecycle Management ✅
 
 **Blockers**: None
 **Notes**:
 - Task 6.1: Successfully integrated Crouton-generated database queries into processor service, replacing all placeholder functions. **Implementation**: 1) Created `layers/discubot/server/utils/constants.ts` with `SYSTEM_USER_ID = 'system'` constant for automated operations. 2) Added module-level `currentTeamId` variable for state tracking across update functions. 3) Replaced `saveDiscussion()` - Now imports and uses `createDiscubotDiscussion()` from Crouton queries, maps ParsedDiscussion to NewDiscubotDiscussion type, stores teamId for later updates, includes null check for discussion creation. 4) Replaced `updateDiscussionStatus()` - Now imports and uses `updateDiscubotDiscussion()`, performs partial updates with status and error fields, includes teamId availability check with proper error handling. 5) Replaced `updateDiscussionResults()` - Now imports and uses `updateDiscubotDiscussion()`, maps all processing results (thread data, AI analysis, Notion tasks) to database fields, sets completion timestamp. 6) Fixed Figma URL update (lines 453-465) - Replaced direct Drizzle update with `updateDiscubotDiscussion()` for consistency. **Type Safety**: Ran `npx nuxt typecheck` - Fixed "possibly undefined" error by adding null check after createDiscubotDiscussion(). Verified no NEW type errors introduced - all remaining errors (167, 552, 719, 735) are pre-existing template issues. **Architecture Decision**: Used module-level variable for teamId storage (Option A from research) - simplest approach, can refactor if concurrent processing needed. All database operations now go through Crouton's generated queries, following nuxt-crouton best practices. No custom database operations created. **Phase 6 is now 13% complete (1/8 tasks). Ready for Task 6.2: Add Job Lifecycle Management.**
+- Task 6.2: Successfully added comprehensive job lifecycle management to processor service. **Implementation**: 1) **Job Creation** - Added job record creation BEFORE processing starts (before Stage 1), creates job with status='pending', stage='ingestion', tracks startTimestamp in metadata, uses SYSTEM_USER_ID for automated operations, best-effort approach (doesn't fail processing if job creation fails). 2) **Helper Function** - Created `updateJobStatus()` helper function for consistent job updates throughout the pipeline, accepts jobId (optional), teamId, and updates object (status, stage, error, errorStack, metadata), uses Crouton's `updateDiscubotJob` query, logs warnings but doesn't block processing on failures. 3) **Stage Updates** - Added job status updates at all 6 stages: Stage 1 (Validation) sets status='processing', stage='ingestion'; Stage 2 (Config Loading) updates with discussionId and sourceConfigId; Stage 3 (Thread Building) sets stage='thread_building'; Stage 4 (AI Analysis) sets stage='ai_analysis'; Stage 5 (Task Creation) sets stage='task_creation'; Stage 6 (Finalization) sets stage='notification'. 4) **Discussion Linking** - After creating discussion record (Stage 2), links discussion.syncJobId to job using `updateDiscubotDiscussion()`, also updates job with discussionId and sourceConfigId for proper foreign key relationships. 5) **Success Finalization** - At end of processing, updates job with status='completed', completedAt timestamp, processingTime (ms), taskIds array from created Notion tasks. 6) **Failure Finalization** - In catch block, updates job with status='failed', completedAt, processingTime, error message, errorStack, comprehensive error logging. **Type Safety**: Ran `npx nuxt typecheck` - No NEW type errors introduced, all 167+ errors are pre-existing template issues. **Design Decisions**: Job creation at start tracks full lifecycle, best-effort updates don't block processing, metadata tracks stage-specific data, graceful degradation if job operations fail. **Phase 6 is now 25% complete (2/8 tasks). Ready for Task 6.3: Add Task Record Persistence.**
 
 ---
 
