@@ -37,4 +37,4 @@ jobs:
         uses: nuxt-hub/action@v1
         id: deploy
         with:
-          project-key: whattheprops-8qf5
+          project-key: discubot-s4jp

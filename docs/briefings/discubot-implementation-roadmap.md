@@ -28,7 +28,7 @@
 
 ### Project Structure
 
-This roadmap breaks Discubot into **6 phases** with **~34 tasks** total (reduced from 38). Each phase has clear:
+This roadmap breaks Discubot into **7 phases** with **~45 tasks** total. Each phase has clear:
 - **Deliverables**: What gets built
 - **Success Criteria**: How you know it's done
 - **Tasks**: Specific work items for Vibekanban
@@ -61,7 +61,10 @@ Phase 4: Slack Adapter (Week 3-4)
 Phase 5: Admin UI (Week 4-5)
   └─ User-friendly management interface
 
-Phase 6: Polish (Week 5-6)
+Phase 6: Database Persistence (Week 5)
+  └─ Historical data tracking, retry mechanism
+
+Phase 7: Polish (Week 6)
   └─ Production-ready, secure, tested
 ```
 
@@ -86,9 +89,10 @@ Each task below can be directly created in Vibekanban with:
 | 2. Core Services | 3-4 days | 6 | AI, Notion, Processor (simple retry) | Can process mock discussion |
 | 3. Figma Adapter | 4-6 days | 7 | Figma integration | Email → Notion working |
 | 4. Slack Adapter | 4-6 days | 7 | Slack integration | Slack → Notion working |
-| 5. Admin UI | 4-6 days | 6 | Dashboard + Management | Teams can configure |
-| 6. Polish | 3-5 days | 4 | Testing + Deferred features | Ready for production |
-| **TOTAL** | **4-5 weeks** | **~34** | **Full System (Lean)** | **Live in production** |
+| 5. Admin UI | 4-6 days | 9 | Dashboard + Management | Teams can configure |
+| 6. Database Persistence | 1-2 days | 8 | Job tracking, retry | Historical data working |
+| 7. Polish | 3-5 days | 4 | Testing + Deferred features | Ready for production |
+| **TOTAL** | **5-6 weeks** | **~45** | **Full System** | **Live in production** |
 
 **Time Savings**: ~1 week saved by removing unnecessary complexity
 
@@ -102,7 +106,7 @@ Each task below can be directly created in Vibekanban with:
 
 **Deliverables**:
 - Project repository created
-- 4 Crouton collections generated (discussions, sourceConfigs, syncJobs, tasks)
+- 4 Crouton collections generated (discussions, configs, jobs, tasks)
 - Database schema created
 - TypeScript types working
 - SuperSaaS integration configured
@@ -160,10 +164,10 @@ pnpm add @friendlyinternet/nuxt-crouton-connector
 mkdir -p schemas
 
 # Create 4 schema files from discubot-crouton-schemas.md
-schemas/
+crouton/schemas/
 ├── discussion-schema.json       (with embedded threadData - see briefing)
-├── source-config-schema.json   (copy from briefing)
-├── sync-job-schema.json        (copy from briefing)
+├── config-schema.json   (copy from briefing)
+├── job-schema.json        (copy from briefing)
 └── task-schema.json            (copy from briefing)
 
 # Note: threads and sources collections removed (lean architecture)
@@ -187,8 +191,8 @@ touch crouton.config.mjs
 
 # Verification
 - [ ] File is valid JavaScript
-- [ ] All 4 collections listed (discussions, sourceConfigs, syncJobs, tasks)
-- [ ] target layer: 'discussion-collections' (renamed from discussion-sync)
+- [ ] All 4 collections listed (discussions, configs, jobs, tasks)
+- [ ] target layer: 'discussion' (renamed from discubot)
 - [ ] useTeamUtility: true
 - [ ] SuperSaaS connector configured
 ```
@@ -202,11 +206,11 @@ touch crouton.config.mjs
 npx crouton-generate --config ./crouton.config.mjs
 
 # Expected output
-layers/discussion-collections/
+layers/discubot/
   collections/
     discussions/     # With embedded threadData
-    sourceConfigs/
-    syncJobs/
+    configs/
+    jobs/
     tasks/
 
 # Verification
@@ -223,7 +227,7 @@ layers/discussion-collections/
 ```markdown
 # Update nuxt.config.ts
 extends: [
-  './layers/discussion-collections'  # Renamed from discussion-sync
+  './layers/discubot'  # Renamed from discubot
 ]
 
 # Generate database migration
@@ -237,7 +241,7 @@ npx nuxt typecheck
 
 # Verification
 - [ ] No TypeScript errors
-- [ ] 4 database tables created (discussions, sourceConfigs, syncJobs, tasks)
+- [ ] 4 database tables created (discussions, configs, jobs, tasks)
 - [ ] Can start dev server
 - [ ] Generated APIs respond (test with curl)
 ```
@@ -280,15 +284,15 @@ npx nuxt typecheck
 
 ```markdown
 # Create directories (single layer for all manual code)
-mkdir -p layers/discussion/{server/{services,adapters,api,utils},types,components}
+mkdir -p layers/discubot/{server/{services,adapters,api,utils},types,components}
 
 # Create layer config
-touch layers/discussion/nuxt.config.ts
+touch layers/discubot/nuxt.config.ts
 
 # Update main config
 extends: [
-  './layers/discussion-collections',  # Generated
-  './layers/discussion'               # Manual
+  './layers/discubot',  # Generated
+  './layers/discubot'               # Manual
 ]
 
 # Verification
@@ -303,7 +307,7 @@ extends: [
 
 ```markdown
 # Create file
-layers/discussion/server/utils/retry.ts
+layers/discubot/server/utils/retry.ts
 
 # Implement simple exponential backoff
 async function retryWithBackoff<T>(
@@ -336,7 +340,7 @@ tests/utils/retry.test.ts
 ```markdown
 # Copy from figno
 cp /path/to/figno/server/services/ai.ts \
-   layers/discussion/server/services/
+   layers/discubot/server/services/
 
 # Adapt
 - Remove Figma-specific prompts
@@ -366,7 +370,7 @@ tests/services/ai.test.ts
 ```markdown
 # Copy from figno
 cp /path/to/figno/server/services/notion.ts \
-   layers/discussion/server/services/
+   layers/discubot/server/services/
 
 # Adapt
 - Make field mapping configurable
@@ -392,7 +396,7 @@ tests/services/notion.test.ts
 
 ```markdown
 # Create file
-layers/discussion/server/adapters/base.ts
+layers/discubot/server/adapters/base.ts
 
 # Define interfaces
 - DiscussionSourceAdapter (main interface)
@@ -417,7 +421,7 @@ layers/discussion/server/adapters/base.ts
 
 ```markdown
 # Create file
-layers/discussion/server/services/processor.ts
+layers/discubot/server/services/processor.ts
 
 # Implement 7-stage pipeline (kept per user preference)
 1. Ingestion (handled by webhook)
@@ -479,16 +483,16 @@ tests/services/processor.test.ts
 
 ```markdown
 # Create directories
-mkdir -p layers/discussion-figma/{server/{adapters,api/webhook,utils},types}
+mkdir -p layers/discubot-figma/{server/{adapters,api/webhook,utils},types}
 
 # Create layer config
-touch layers/discussion-figma/nuxt.config.ts
+touch layers/discubot-figma/nuxt.config.ts
 
 # Update main config
 extends: [
-  './layers/discussion-core',
-  './layers/discussion-figma',
-  './layers/discussion-sync'
+  './layers/discubot-core',
+  './layers/discubot-figma',
+  './layers/discubot'
 ]
 
 # Verification
@@ -503,7 +507,7 @@ extends: [
 ```markdown
 # Copy from figno
 cp /path/to/figno/server/utils/emailParser.ts \
-   layers/discussion-figma/server/utils/
+   layers/discubot-figma/server/utils/
 
 # Review and clean up
 - Keep HTML parsing logic (cheerio)
@@ -527,7 +531,7 @@ tests/figma/emailParser.test.ts
 
 ```markdown
 # Create file
-layers/discussion-figma/server/adapters/figma.ts
+layers/discubot-figma/server/adapters/figma.ts
 
 # Implement DiscussionSourceAdapter interface
 - parseIncoming(mailPayload) → ParsedDiscussion
@@ -558,7 +562,7 @@ tests/figma/adapter.test.ts
 
 ```markdown
 # Create file
-layers/discussion-figma/server/api/webhook/figma.post.ts
+layers/discubot-figma/server/api/webhook/figma.post.ts
 
 # Implement
 - Signature verification (HMAC-SHA256)
@@ -586,7 +590,7 @@ tests/figma/webhook.test.ts
 
 ```markdown
 # Create file
-layers/discussion-core/server/api/internal/process-discussion.post.ts
+layers/discubot-core/server/api/internal/process-discussion.post.ts
 
 # Implement
 - Accept { discussionId, syncJobId }
@@ -642,7 +646,7 @@ tests/core/internal-processor.test.ts
 
 ```markdown
 # Create docs
-layers/discussion/README.md (Figma section)
+layers/discubot/README.md (Figma section)
 
 # Document
 - Figma adapter setup instructions
@@ -690,17 +694,17 @@ layers/discussion/README.md (Figma section)
 
 ```markdown
 # Create directories
-mkdir -p layers/discussion-slack/{server/{adapters,api/{webhook,oauth}},types}
+mkdir -p layers/discubot-slack/{server/{adapters,api/{webhook,oauth}},types}
 
 # Create layer config
-touch layers/discussion-slack/nuxt.config.ts
+touch layers/discubot-slack/nuxt.config.ts
 
 # Update main config
 extends: [
-  './layers/discussion-core',
-  './layers/discussion-figma',
-  './layers/discussion-slack',
-  './layers/discussion-sync'
+  './layers/discubot-core',
+  './layers/discubot-figma',
+  './layers/discubot-slack',
+  './layers/discubot'
 ]
 
 # Verification
@@ -714,7 +718,7 @@ extends: [
 
 ```markdown
 # Create file
-layers/discussion-slack/server/adapters/slack.ts
+layers/discubot-slack/server/adapters/slack.ts
 
 # Implement DiscussionSourceAdapter interface
 - parseIncoming(slackPayload) → ParsedDiscussion
@@ -745,7 +749,7 @@ tests/slack/adapter.test.ts
 
 ```markdown
 # Create file
-layers/discussion-slack/server/api/webhook/slack.post.ts
+layers/discubot-slack/server/api/webhook/slack.post.ts
 
 # Implement
 - Signature verification (HMAC-SHA256 with timestamp)
@@ -774,8 +778,8 @@ tests/slack/webhook.test.ts
 
 ```markdown
 # Create files
-layers/discussion-slack/server/api/oauth/install.get.ts
-layers/discussion-slack/server/api/oauth/callback.get.ts
+layers/discubot-slack/server/api/oauth/install.get.ts
+layers/discubot-slack/server/api/oauth/callback.get.ts
 
 # install.get.ts
 - Generate secure state token
@@ -785,7 +789,7 @@ layers/discussion-slack/server/api/oauth/callback.get.ts
 # callback.get.ts
 - Verify state parameter
 - Exchange code for access_token
-- Store in sourceConfigs (encrypted!)
+- Store in configs (encrypted!)
 - Delete state
 - Redirect to settings page
 
@@ -835,7 +839,7 @@ tests/slack/oauth.test.ts
 
 ```markdown
 # Create docs
-layers/discussion/README.md (Slack section)
+layers/discubot/README.md (Slack section)
 
 # Document
 - Slack adapter setup
@@ -923,7 +927,7 @@ app/components/integrations/SlackConfigForm.vue
 - "Test Connection" buttons
 
 # Use Crouton components
-- Leverage generated sourceConfigs form
+- Leverage generated configs form
 - Customize for each source
 
 # Verification
@@ -951,7 +955,7 @@ app/pages/dashboard/[team]/integrations/jobs.vue
 - Row click → job details modal
 
 # Use Crouton components
-- Leverage generated syncJobs table
+- Leverage generated jobs table
 - Customize columns and filters
 
 # Verification
@@ -1041,7 +1045,269 @@ server/api/teams/[id]/integrations/test-notion.post.ts
 
 ---
 
-## Phase 6: Polish & Production
+## Phase 6: Database Persistence & Job Tracking
+
+**Goal**: Enable historical data tracking, retry mechanisms, and full Admin UI functionality
+
+**Duration**: 1-2 days
+
+**Deliverables**:
+- Database operations layer for discussions, jobs, tasks
+- Processor service integrated with database
+- Manual retry endpoint for failed discussions
+- Job cleanup scheduler (30-day retention)
+- Admin UI enhancements with retry functionality
+
+**Success Criteria**:
+- [ ] All discussions tracked in database (not just task-generating ones)
+- [ ] Jobs tracked through all 6 processing stages
+- [ ] Tasks stored with bidirectional Notion linking
+- [ ] Failed discussions can be manually retried from Admin UI
+- [ ] Old jobs auto-cleanup after 30 days
+- [ ] Admin UI shows real historical data
+
+### Tasks for Vibekanban
+
+#### Task 6.1: Database Operations Layer
+**Estimate**: 1.5 hours
+**Dependencies**: Phase 5 complete
+
+```markdown
+# Create file
+layers/discubot/server/database/operations.ts
+
+# Implement CRUD operations
+- createDiscussion(parsed, configId, status)
+- updateDiscussionStatus(discussionId, status, error?)
+- updateDiscussionResults(discussionId, thread, aiAnalysis, notionTasks)
+- getDiscussionById(discussionId)
+- createJob(discussionId, configId, teamId)
+- updateJob(jobId, { status, stage, error, attempts })
+- completeJob(jobId, processingTime, taskIds)
+- createTask(discussionId, jobId, notionTask)
+- cleanupOldJobs(daysOld = 30)
+
+# Implementation notes
+- Track ALL discussions (not just task-generating)
+- Bidirectional linking: task.notionPageId for Notion sync
+- Use Drizzle ORM for type safety
+- Proper error handling and logging
+
+# Verification
+- [ ] All operations implemented
+- [ ] TypeScript types correct
+- [ ] No SQL injection risks (using Drizzle)
+```
+
+#### Task 6.2: Processor Service Integration
+**Estimate**: 1 hour
+**Dependencies**: Task 6.1
+
+```markdown
+# Modify file
+layers/discubot/server/services/processor.ts
+
+# Replace placeholder code with database calls
+- Line 182-215: saveDiscussion() → use createDiscussion()
+- Line 220-241: updateDiscussionStatus() → use updateDiscussionStatus()
+- Line 246-274: updateDiscussionResults() → use updateDiscussionResults()
+
+# Add job tracking
+- Stage 1 (Validation): createJob(status: 'pending')
+- Stage 2 (Config Loading): updateJob(stage: 'config_loading')
+- Stage 3 (Thread Building): updateJob(stage: 'thread_building')
+- Stage 4 (AI Analysis): updateJob(stage: 'ai_analysis')
+- Stage 5 (Task Creation): createTask() for each Notion task
+- Stage 6 (Finalization): completeJob() with metrics
+
+# Error handling
+- On failure: updateJob(status: 'failed', error: errorMessage)
+- NO auto-retry (manual retry only per requirements)
+
+# Verification
+- [ ] All TODO/placeholder comments removed
+- [ ] Database calls working
+- [ ] Job tracking through all stages
+- [ ] Discussions + tasks saved correctly
+```
+
+#### Task 6.3: Manual Retry Implementation
+**Estimate**: 0.5 hours
+**Dependencies**: Task 6.2
+
+```markdown
+# Create file
+layers/discubot/server/api/discussions/retry.post.ts
+
+# Implement retry endpoint
+- POST /api/discussions/retry
+- Accept: { discussionId: string }
+- Load discussion using getDiscussionById()
+- Reconstruct ParsedDiscussion object
+- Create new job record
+- Call processDiscussion() again
+- Return success/error
+
+# Modify processor.ts
+- Implement processDiscussionById() (currently throws "not implemented")
+- Load discussion data from database
+- Reconstruct thread from threadData field
+- Process through normal pipeline
+
+# Verification
+- [ ] Retry endpoint works
+- [ ] Failed discussions can be reprocessed
+- [ ] New job created for retry
+- [ ] Original discussion updated
+```
+
+#### Task 6.4: Job Cleanup Scheduler
+**Estimate**: 0.5 hours
+**Dependencies**: Task 6.1
+
+```markdown
+# Create file
+server/plugins/jobCleanup.ts
+
+# Implement cleanup plugin
+export default defineNitroPlugin(() => {
+  // Run every 24 hours
+  setInterval(async () => {
+    const deleted = await cleanupOldJobs(30)
+    console.log(`[JobCleanup] Deleted ${deleted} old jobs`)
+  }, 24 * 60 * 60 * 1000)
+})
+
+# Configuration
+- Cleanup interval: 24 hours (configurable via env var)
+- Retention period: 30 days for completed/failed jobs
+- Log results for monitoring
+
+# Verification
+- [ ] Plugin runs on server start
+- [ ] Cleanup executes every 24 hours
+- [ ] Old jobs deleted correctly
+- [ ] Logs show deletion counts
+```
+
+#### Task 6.5: Type Safety & Validation
+**Estimate**: 0.5 hours
+**Dependencies**: Task 6.2
+
+```markdown
+# Add Zod schemas
+- Schema for createDiscussion input
+- Schema for updateJob input
+- Schema for retry endpoint payload
+
+# Ensure type compatibility
+- Crouton types match processor types
+- Database schema matches TypeScript interfaces
+- Proper null/undefined handling
+
+# Run typecheck
+npx nuxt typecheck
+
+# Verification
+- [ ] No new TypeScript errors
+- [ ] Zod validation works
+- [ ] Types consistent across layers
+```
+
+#### Task 6.6: Testing Updates
+**Estimate**: 1 hour
+**Dependencies**: Task 6.5
+
+```markdown
+# Update existing tests
+- Mock database operations in processor tests
+- Update webhook tests to expect database calls
+- Ensure integration tests pass with database layer
+
+# Create new tests
+tests/database/operations.test.ts
+- Test all CRUD operations
+- Test cleanupOldJobs()
+- Mock database with in-memory SQLite
+
+tests/api/discussions/retry.test.ts
+- Test retry endpoint validation
+- Test successful retry flow
+- Test retry with missing discussion
+- Test retry error handling
+
+# Verification
+- [ ] All tests pass
+- [ ] Database operations tested
+- [ ] Retry endpoint tested
+- [ ] Integration tests updated
+```
+
+#### Task 6.7: Admin UI Enhancements
+**Estimate**: 0.5 hours
+**Dependencies**: Task 6.3
+
+```markdown
+# Modify file
+layers/discubot/app/pages/dashboard/[team]/discubot/jobs.vue
+
+# Add retry functionality
+- Add "Retry" button to failed job cards
+- Show loading state during retry
+- Call /api/discussions/retry endpoint
+- Refresh job list after retry completes
+- Show success/error toast notification
+
+# Verify data visibility
+- Check discussions.vue shows real data
+- Check tasks.vue shows real data
+- All pages use Crouton viewers correctly
+
+# Verification
+- [ ] Retry button appears on failed jobs
+- [ ] Retry works and refreshes data
+- [ ] Discussion/task pages show data
+- [ ] Loading states smooth
+```
+
+#### Task 6.8: Documentation
+**Estimate**: 0.5 hours
+**Dependencies**: All Phase 6 tasks
+
+```markdown
+# Document database schema relationships
+docs/architecture/database-relationships.md
+- Discussion → Job (1:1)
+- Discussion → Tasks (1:N)
+- Job → Tasks (1:N)
+- Include ERD diagram
+
+# Document retry workflow
+docs/guides/retry-workflow.md
+- When to use retry
+- How retry works
+- What gets preserved vs regenerated
+- Limitations and edge cases
+
+# Update PROGRESS_TRACKER.md
+- Mark Phase 6 tasks as complete
+- Update hours logged
+- Update phase progress
+- Add notes/learnings
+
+# Verification
+- [ ] Database relationships documented
+- [ ] Retry workflow documented
+- [ ] PROGRESS_TRACKER updated
+```
+
+**Phase 6 Checkpoint**: Admin UI fully functional with historical data, retry mechanism working, job cleanup automated
+
+**Total Phase 6 Time**: ~6 hours
+
+---
+
+## Phase 7: Polish & Production
 
 **Goal**: Production-ready system with security, testing, and documentation
 
@@ -1064,9 +1330,9 @@ server/api/teams/[id]/integrations/test-notion.post.ts
 
 ### Tasks for Vibekanban
 
-#### Task 6.1: Security Hardening
+#### Task 7.1: Security Hardening
 **Estimate**: 6 hours
-**Dependencies**: Phase 5 complete
+**Dependencies**: Phase 6 complete
 
 ```markdown
 # Review security checklist
@@ -1095,9 +1361,9 @@ server/api/teams/[id]/integrations/test-notion.post.ts
 - [ ] Secrets not committed
 ```
 
-#### Task 6.2: Testing & Coverage
+#### Task 7.2: Testing & Coverage
 **Estimate**: 8 hours
-**Dependencies**: Task 6.1
+**Dependencies**: Task 7.1
 
 ```markdown
 # Unit tests
@@ -1128,9 +1394,9 @@ pnpm test:e2e
 - [ ] CI pipeline passes
 ```
 
-#### Task 6.3: Logging & Monitoring
+#### Task 7.3: Logging & Monitoring
 **Estimate**: 4 hours
-**Dependencies**: Task 6.1
+**Dependencies**: Task 7.1
 
 ```markdown
 # Implement structured logging
@@ -1155,9 +1421,9 @@ pnpm test:e2e
 - [ ] Alerts trigger on errors
 ```
 
-#### Task 6.4: Documentation & Deployment
+#### Task 7.4: Documentation & Deployment
 **Estimate**: 6 hours
-**Dependencies**: Task 6.2, Task 6.3
+**Dependencies**: Task 7.2, Task 7.3
 
 ```markdown
 # Create documentation
@@ -1190,7 +1456,7 @@ docs/
 - [ ] No errors in production logs
 ```
 
-**Phase 6 Checkpoint**: System production-ready and deployed
+**Phase 7 Checkpoint**: System production-ready and deployed
 
 ---
 
@@ -1356,21 +1622,23 @@ test('user can configure Figma source', async ({ page }) => {
 | 2. Core Services | 6 (was 7) | 23 | **~15** | 2-3 |
 | 3. Figma Adapter | 7 (was 8) | 26 | **~23** | 4 |
 | 4. Slack Adapter | 6 (was 7) | 24 | **~23** | 4 |
-| 5. Admin UI | 6 | 25 | **~25** | 4-5 |
-| 6. Polish & Production | 4 | 24 | **~20** | 3-4 |
-| **TOTAL** | **~34** | **129** | **~112** | **18-21 days** |
+| 5. Admin UI | 9 (was 6) | 32 | **~32** | 5-6 |
+| 6. Database Persistence | 8 | 0 | **~6** | 1 |
+| 7. Polish & Production | 4 | 24 | **~20** | 3-4 |
+| **TOTAL** | **~45** | **135** | **~125** | **19-23 days** |
 
-**Time Savings**: ~17 hours (~1+ week) from lean architecture simplifications
+**Time Savings**: ~10 hours from lean architecture simplifications
 
 ### Key Milestones (Revised)
 
 - **Week 1**: Foundation + Core services complete
 - **Week 2**: Figma integration live
 - **Week 3**: Slack integration live
-- **Week 4**: Admin UI complete
-- **Week 5**: Testing, polish, production deployment
+- **Week 4-5**: Admin UI complete
+- **Week 5**: Database persistence + historical tracking
+- **Week 6**: Testing, polish, production deployment
 
-**Reduced from 6 weeks to 4-5 weeks** through architectural simplification
+**Timeline**: 5-6 weeks with complete feature set including historical data tracking
 
 ### Success Metrics
 
@@ -1396,9 +1664,9 @@ Good luck building Discubot! 🚀
 
 ---
 
-**Document Version**: 2.0 (Revised - Lean Architecture)
-**Last Updated**: 2025-11-11
-**Total Tasks**: ~34 (reduced from 38)
-**Total Effort**: 18-21 days (reduced from 21-27 days)
-**Time Savings**: ~1+ week through simplification
+**Document Version**: 3.0 (Updated - Added Database Persistence Phase)
+**Last Updated**: 2025-11-12
+**Total Tasks**: ~45 (expanded from 34 to include persistence)
+**Total Effort**: 19-23 days (5-6 weeks)
+**Key Addition**: Phase 6 - Database Persistence & Job Tracking
 **Confidence**: High (based on proven figno patterns + lean KISS principles)

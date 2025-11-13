@@ -9,6 +9,10 @@ export default defineNuxtConfig({
     'nuxthub-ratelimit',
     '@nuxt/eslint',
   ],
+  extends: [
+    '@friendlyinternet/nuxt-crouton',
+    './layers/discubot'
+  ],
   devtools: { enabled: true },
   css: ['~/assets/css/main.css'],
   colorMode: {
@@ -58,6 +62,11 @@ export default defineNuxtConfig({
 // })
 
   runtimeConfig: {
+    // AI Service
+    anthropicApiKey: process.env.ANTHROPIC_API_KEY,
+    // Slack OAuth
+    slackClientId: process.env.SLACK_CLIENT_ID,
+    slackClientSecret: process.env.SLACK_CLIENT_SECRET,
     email: {
       mock: process.env.MOCK_EMAIL,
       fromEmail: process.env.FROM_EMAIL,
@@ -85,19 +94,28 @@ export default defineNuxtConfig({
     },
   },
   future: { compatibilityVersion: 4 },
-  compatibilityDate: '2024-07-30',
+  compatibilityDate: "2024-09-19",
   nitro: {
+    preset: "cloudflare_module",
+    cloudflare: {
+      deployConfig: true,
+      nodeCompat: true
+    },
     rollupConfig: {
       plugins: [vue()],
     },
     experimental: {
       tasks: true,
     },
+    devServer: {
+      watch: [],
+    },
   },
   hub: {
     database: true,
     blob: true,
     kv: true,
+    workers: true
   },
   auth: {
     webAuthn: true,

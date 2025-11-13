@@ -3,6 +3,7 @@
   <NuxtLoadingIndicator color="#000000" />
   <UApp :toaster="{ position: 'top-center' }">
     <NuxtPage />
+    <CroutonForm />
   </UApp>
 </template>
 

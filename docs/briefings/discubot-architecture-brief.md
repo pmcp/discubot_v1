@@ -4,8 +4,8 @@
 **Date**: 2025-11-11
 **Status**: Design Phase (Revised - Lean Architecture)
 **Framework**: Nuxt 4 + Nuxt-Crouton + SuperSaaS
-**Version**: 2.0 (rebuild from figno proof-of-concept)
-**Architecture**: Lean MVP approach - 4 collections, 2 layers
+**Version**: 2.1 (rebuild from figno proof-of-concept)
+**Architecture**: Lean MVP approach - 5 collections, 2 layers
 
 ---
 
@@ -219,8 +219,8 @@ fignoEmailConfigs
 
 **Solution:** 4 generic collections with clear purpose
 - discussions (with embedded thread data)
-- sourceConfigs (team-specific settings)
-- syncJobs (processing tracking)
+- configs (team-specific settings)
+- jobs (processing tracking)
 - tasks (audit trail + backup)
 
 #### 3. **Limited Reusability**
@@ -267,15 +267,16 @@ fignoEmailConfigs
 │  3. AI analysis (Claude) → summary + tasks                  │
 │  4. Task creation (Notion) → tasks collection               │
 │  5. Status update → source adapter                          │
-│  6. Job tracking → syncJobs collection                      │
+│  6. Job tracking → jobs collection                      │
 └───────────────────────┬──────────────────────────────────────┘
                         ↓
 ┌─────────────────────────────────────────────────────────────┐
-│           CROUTON-GENERATED COLLECTIONS (4 Total)            │
+│           CROUTON-GENERATED COLLECTIONS (5 Total)            │
 │  - discussions: Raw discussion + embedded thread data        │
-│  - sourceConfigs: Team-specific source settings             │
-│  - syncJobs: Job queue and status tracking                  │
+│  - configs: Team-specific source settings             │
+│  - jobs: Job queue and status tracking                  │
 │  - tasks: Created Notion tasks (audit trail + backup)       │
+│  - userMappings: Source user → Notion user mappings         │
 │                                                              │
 │  Removed for simplicity (MVP):                              │
 │  - threads: Embedded as JSON in discussions.threadData      │
@@ -510,6 +511,196 @@ export class SlackAdapter implements DiscussionSourceAdapter {
 
 ---
 
+## User Mapping & Mention Resolution
+
+### The Problem
+
+When discussions from Slack or Figma mention users (e.g., `<@U123ABC456>` in Slack or `@user@example.com` in Figma), we need to properly @mention those users in the created Notion tasks. However, user IDs differ across platforms:
+- **Slack**: User IDs like `U123ABC456`
+- **Figma**: Email handles like `user@example.com`
+- **Notion**: UUIDs like `b2e19928-b427-4aad-9a9d-fde65479b1d9`
+
+### The Solution: User Mapping Collection
+
+A dedicated `userMappings` collection maps external user identities to Notion users:
+
+```typescript
+interface UserMapping {
+  sourceType: 'slack' | 'figma'
+  sourceUserId: string           // U123ABC456 or user@example.com
+  sourceTeamId: string            // T123ABC456 or file key
+  notionUserId: string            // Notion UUID
+  displayName: string             // Cached name
+  email: string                   // For matching
+  sourceProfile: json             // Full profile cache
+  lastSyncedAt: Date
+  active: boolean
+}
+```
+
+### Mention Resolution Workflow
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  STAGE 1: DETECT MENTIONS                                   │
+│  Slack message: "Hey <@U123ABC456>, can you review this?"  │
+│  Regex: /<@(U[A-Z0-9]+)>/g                                 │
+│  Extracted: ["U123ABC456"]                                  │
+└──────────────────┬──────────────────────────────────────────┘
+                   │
+                   ↓
+┌─────────────────────────────────────────────────────────────┐
+│  STAGE 2: RESOLVE TO NOTION USER                            │
+│  Look up userMappings:                                      │
+│    sourceType="slack"                                       │
+│    sourceUserId="U123ABC456"                                │
+│    sourceTeamId="T123ABC456"                                │
+│  Result: notionUserId="b2e19928-..."                       │
+└──────────────────┬──────────────────────────────────────────┘
+                   │
+                   ↓
+┌─────────────────────────────────────────────────────────────┐
+│  STAGE 3: CREATE NOTION MENTION OBJECT                      │
+│  {                                                          │
+│    type: "mention",                                         │
+│    mention: {                                               │
+│      type: "user",                                          │
+│      user: { id: "b2e19928-..." }                         │
+│    },                                                       │
+│    plain_text: "@John Doe"                                 │
+│  }                                                          │
+└──────────────────┬──────────────────────────────────────────┘
+                   │
+                   ↓
+┌─────────────────────────────────────────────────────────────┐
+│  STAGE 4: INSERT INTO NOTION TASK                           │
+│  Notion page rich_text:                                     │
+│  [                                                          │
+│    { type: "text", text: { content: "Hey " } },           │
+│    { type: "mention", ... },  ← Proper @mention           │
+│    { type: "text", text: { content: ", can you..." } }    │
+│  ]                                                          │
+│  Result: User gets notified in Notion! 🔔                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Slack OAuth Scope Enhancement
+
+To fetch user information from Slack, we need the `users:read.email` scope:
+
+```typescript
+// server/api/oauth/slack/install.get.ts
+const SLACK_SCOPES = [
+  'channels:history',
+  'chat:write',
+  'reactions:write',
+  'app_mentions:read',
+  'im:history',
+  'mpim:history',
+  'users:read',        // Read basic user info
+  'users:read.email'   // NEW: Required to fetch email for matching
+]
+```
+
+### User Info Caching
+
+The system caches user profile data to avoid repeated API calls:
+
+```typescript
+// server/services/userMapping.ts
+export async function getOrCreateUserMapping(
+  slackUserId: string,
+  slackTeamId: string,
+  config: SourceConfig
+): Promise<UserMapping> {
+  // 1. Check if mapping exists in database
+  let mapping = await db.query.userMappings.findFirst({
+    where: and(
+      eq(userMappings.sourceType, 'slack'),
+      eq(userMappings.sourceUserId, slackUserId),
+      eq(userMappings.sourceTeamId, slackTeamId)
+    )
+  })
+
+  // 2. If found and fresh (< 24 hours), return cached
+  if (mapping && isRecent(mapping.lastSyncedAt, 24 * 60 * 60 * 1000)) {
+    return mapping
+  }
+
+  // 3. Otherwise, fetch from Slack API
+  const userInfo = await fetchSlackUserInfo(slackUserId, config.apiToken)
+
+  // 4. Attempt to match Notion user by email
+  const notionUserId = await matchNotionUserByEmail(
+    userInfo.profile.email,
+    config.notionToken
+  )
+
+  // 5. Create or update mapping
+  if (!mapping && notionUserId) {
+    mapping = await db.insert(userMappings).values({
+      sourceType: 'slack',
+      sourceUserId: slackUserId,
+      sourceTeamId: slackTeamId,
+      notionUserId,
+      displayName: userInfo.real_name,
+      email: userInfo.profile.email,
+      sourceProfile: userInfo,
+      lastSyncedAt: new Date(),
+      active: true
+    }).returning()
+  } else if (mapping) {
+    // Update existing
+    await db.update(userMappings)
+      .set({
+        displayName: userInfo.real_name,
+        email: userInfo.profile.email,
+        sourceProfile: userInfo,
+        lastSyncedAt: new Date()
+      })
+      .where(eq(userMappings.id, mapping.id))
+  }
+
+  return mapping
+}
+```
+
+### Fallback Strategy
+
+If no user mapping is found:
+1. Show plain text username instead: `@username` (not a Notion mention)
+2. Log warning for admin to create mapping
+3. Task is still created successfully (graceful degradation)
+4. No notification sent to Notion user
+
+### Manual vs Automatic Mapping
+
+**Automatic (Preferred):**
+- Match by email address automatically
+- Happens on first mention detection
+- Requires `users:read.email` scope (Slack) or email in comments (Figma)
+
+**Manual (Fallback):**
+- Admin creates mappings in Admin UI
+- Useful when emails don't match
+- Supports multiple source workspaces → same Notion user
+
+### Admin UI for User Mappings
+
+**List Page** (`/dashboard/[team]/discubot/user-mappings.vue`):
+- Show all user mappings with filters
+- Display: source type, source user, display name, Notion user, last synced
+- Actions: Edit, Sync now, Delete
+
+**Form** (Crouton-generated + enhanced):
+- Select source type (Slack/Figma)
+- Input source user ID or select from fetched list
+- Select Notion user from dropdown (fetched via `users.list` API)
+- Auto-sync profile data button
+- Bulk import: Fetch all workspace users, attempt email matching
+
+---
+
 ## Layer Separation Strategy
 
 ### Project Structure (Lean 2-Layer Approach)
@@ -517,11 +708,11 @@ export class SlackAdapter implements DiscussionSourceAdapter {
 ```
 discubot_v1/                           # Main project (SuperSaaS template)
 ├── layers/
-│   ├── discussion-collections/        # Crouton-generated (NEVER manually edit)
+│   ├── discussion/        # Crouton-generated (NEVER manually edit)
 │   │   ├── collections/
 │   │   │   ├── discussions/           # Generated by Crouton
-│   │   │   ├── sourceConfigs/         # Generated by Crouton
-│   │   │   ├── syncJobs/              # Generated by Crouton
+│   │   │   ├── configs/               # Generated by Crouton
+│   │   │   ├── jobs/                  # Generated by Crouton
 │   │   │   └── tasks/                 # Generated by Crouton
 │   │   └── nuxt.config.ts
 │   │
@@ -550,17 +741,19 @@ discubot_v1/                           # Main project (SuperSaaS template)
 │       └── nuxt.config.ts
 │
 ├── crouton.config.mjs                 # Crouton generator config
-├── schemas/                           # Collection schemas (4 total)
-│   ├── discussion-schema.json         # With embedded threadData
-│   ├── source-config-schema.json
-│   ├── sync-job-schema.json
-│   └── task-schema.json
+├── crouton/
+│   ├── schemas/                       # Collection schemas (4 total)
+│   │   ├── discussion-schema.json     # With embedded threadData
+│   │   ├── config-schema.json
+│   │   ├── job-schema.json
+│   │   └── task-schema.json
+│   └── crouton.config.mjs
 └── nuxt.config.ts
 ```
 
 ### Why This Separation?
 
-#### **discussion-collections/** (Generated - NEVER Manually Edit)
+#### **discussion/** (Generated - NEVER Manually Edit)
 All CRUD operations for data management, auto-generated by Crouton.
 
 **Responsibilities:**
@@ -578,8 +771,8 @@ All CRUD operations for data management, auto-generated by Crouton.
 
 **Collections:**
 - discussions (with embedded threadData)
-- sourceConfigs (team-specific settings)
-- syncJobs (7-stage pipeline tracking)
+- configs (team-specific settings)
+- jobs (7-stage pipeline tracking)
 - tasks (audit trail + backup)
 
 #### **discussion/** (Manual - All Business Logic)
@@ -624,7 +817,7 @@ const SOURCE_TYPES = {
 ### Layer Dependencies
 
 ```
-discussion/ ──→ discussion-collections/
+discussion/ ──→ discussion/
   ├─ services/
   ├─ adapters/
   ├─ api/
@@ -632,20 +825,20 @@ discussion/ ──→ discussion-collections/
 ```
 
 **Rules:**
-1. `discussion/` depends on `discussion-collections/` (for types, composables)
-2. `discussion-collections/` has no dependencies (pure Crouton)
+1. `discussion/` depends on `discussion/` (for types, composables)
+2. `discussion/` has no dependencies (pure Crouton)
 3. All manual code lives in `discussion/`
-4. All generated code lives in `discussion-collections/`
+4. All generated code lives in `discussion/`
 
 ### File Regeneration Strategy
 
 **Generated (Never Manual Edit):**
-- `layers/discussion-collections/collections/**/*` - All Crouton output (~100 files)
+- `layers/discubot/collections/**/*` - All Crouton output (~100 files)
 
 **Manual (Safe to Edit):**
-- `layers/discussion/**/*` - All business logic, services, adapters
-- `schemas/*.json` - 4 collection definitions
-- `crouton.config.mjs` - Generator configuration
+- `layers/discubot/**/*` - All business logic, services, adapters
+- `crouton/schemas/*.json` - 4 collection definitions
+- `crouton/crouton.config.mjs` - Generator configuration
 
 **When to Regenerate:**
 1. Schema changes → Re-run `npx crouton-generate`
@@ -673,7 +866,7 @@ discussion/ ──→ discussion-collections/
                    ↓
 ┌─────────────────────────────────────────────────────────┐
 │  STAGE 2: JOB CREATION                                  │
-│  Create syncJobs record (status: pending)               │
+│  Create jobs record (status: pending)                   │
 │  Store job ID in discussions.syncJobId                  │
 │  Trigger background processor                           │
 │  Duration: < 1 second                                   │
@@ -683,7 +876,7 @@ discussion/ ──→ discussion-collections/
 ┌─────────────────────────────────────────────────────────┐
 │  STAGE 3: THREAD BUILDING                               │
 │  Processor: Fetch full thread via adapter.fetchThread() │
-│  Update syncJobs (stage: thread_building)               │
+│  Update jobs (stage: thread_building)               │
 │  Create threads record with rootMessage + replies       │
 │  Output: threads record (status: pending)               │
 │  Duration: 2-5 seconds (depends on thread length)       │
@@ -692,7 +885,7 @@ discussion/ ──→ discussion-collections/
                    ↓
 ┌─────────────────────────────────────────────────────────┐
 │  STAGE 4: AI ANALYSIS                                   │
-│  Update syncJobs (stage: ai_analysis)                   │
+│  Update jobs (stage: ai_analysis)                   │
 │  Call Claude AI:                                        │
 │    1. generateSummary(thread) → summary + key points   │
 │    2. detectTasks(thread) → isMultiTask + tasks[]      │
@@ -704,11 +897,11 @@ discussion/ ──→ discussion-collections/
                    ↓
 ┌─────────────────────────────────────────────────────────┐
 │  STAGE 5: TASK CREATION                                 │
-│  Update syncJobs (stage: task_creation)                 │
+│  Update jobs (stage: task_creation)                     │
 │  For each detected task:                                │
 │    1. Create Notion page via Notion API                │
 │    2. Create tasks record (notionPageId, url, etc.)    │
-│    3. Add task ID to syncJobs.taskIds[]                │
+│    3. Add task ID to jobs.taskIds[]                    │
 │    4. Wait 200ms (rate limiting)                       │
 │  Output: tasks records (status: todo)                   │
 │  Duration: 1-3 seconds per task                         │
@@ -717,7 +910,7 @@ discussion/ ──→ discussion-collections/
                    ↓
 ┌─────────────────────────────────────────────────────────┐
 │  STAGE 6: NOTIFICATION                                  │
-│  Update syncJobs (stage: notification)                  │
+│  Update jobs (stage: notification)                      │
 │  Build confirmation message:                            │
 │    Single: "✅ Task created: {title}\n🔗 {notionUrl}" │
 │    Multi:  "✅ Created {N} tasks:\n1. ...\n2. ..."    │
@@ -730,7 +923,7 @@ discussion/ ──→ discussion-collections/
                    ↓
 ┌─────────────────────────────────────────────────────────┐
 │  STAGE 7: COMPLETION                                    │
-│  Update syncJobs:                                       │
+│  Update jobs:                                           │
 │    - status: completed                                  │
 │    - completedAt: now                                   │
 │    - processingTime: duration                           │
@@ -744,7 +937,7 @@ discussion/ ──→ discussion-collections/
 ```
 ANY STAGE FAILS
 │
-├─ Update syncJobs:
+├─ Update jobs:
 │    - status: failed or retrying
 │    - error: error message
 │    - errorStack: stack trace
@@ -759,7 +952,7 @@ ANY STAGE FAILS
 │    └─ Retry from current stage
 │
 └─ If attempts >= maxAttempts:
-     ├─ Update syncJobs (status: failed)
+     ├─ Update jobs (status: failed)
      ├─ Update discussions (status: failed)
      ├─ Call adapter.updateStatus(threadId, 'failed')
      ├─ Optionally post error message to source
@@ -823,9 +1016,9 @@ ANY STAGE FAILS
        └─ Adds ✅ reaction to comment
 
 9. STAGE 7: Completion (instant)
-   ├─ syncJobs.status = 'completed'
-   ├─ syncJobs.completedAt = now
-   ├─ syncJobs.processingTime = 15000ms
+   ├─ jobs.status = 'completed'
+   ├─ jobs.completedAt = now
+   ├─ jobs.processingTime = 15000ms
    └─ discussions.status = 'completed'
 
 Total time: 15 seconds
@@ -1261,10 +1454,10 @@ async parseIncoming(payload: SlackEventPayload): Promise<ParsedDiscussion> {
   const slackWorkspaceId = payload.team_id
 
   // Look up source config by Slack workspace ID
-  const config = await db.query.sourceConfigs.findFirst({
+  const config = await db.query.configs.findFirst({
     where: and(
-      eq(sourceConfigs.slackWorkspaceId, slackWorkspaceId),
-      eq(sourceConfigs.active, true)
+      eq(configs.slackWorkspaceId, slackWorkspaceId),
+      eq(configs.active, true)
     )
   })
 
@@ -1529,7 +1722,7 @@ Docker (for local D1 emulation)
 Discubot v2 represents a complete architectural evolution from the figno proof-of-concept, built with a **lean, pragmatic approach**:
 
 **From:** Figma-specific monolith with 10+ tables and tight coupling
-**To:** Generic adapter-based system with **4 collections** and clear separation
+**To:** Generic adapter-based system with **5 collections** and clear separation
 
 **From:** Manual CRUD code for every entity
 **To:** Crouton-generated collections with auto-generated forms, tables, APIs
@@ -1575,8 +1768,8 @@ We're building for **current needs** (2 sources, 0 users) not **imagined future 
 
 ---
 
-**Document Version**: 2.0 (Revised - Lean Architecture)
-**Last Updated**: 2025-11-11
+**Document Version**: 2.1 (Revised - Lean Architecture + User Mappings)
+**Last Updated**: 2025-11-12
 **Author**: Architecture Planning for Discubot v2
-**Changes**: Simplified from 6 collections to 4, from 4 layers to 2, deferred advanced features
-**Next Review**: After Phase 1 completion
+**Changes**: Added userMappings collection for Notion @mentions, documented mention resolution workflow
+**Next Review**: After Phase 5 completion

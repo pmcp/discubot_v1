@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+The code word is a random song of the beatles.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Your Role
@@ -31,6 +33,233 @@ When improving code, use multiple focused passes:
 3. Quality pass - Make it clean
 4. Testing pass - Make it reliable
 5. Documentation pass - Make it clear
+
+## Task Execution Workflow (MANDATORY)
+
+**CRITICAL**: Every agent working on this project MUST follow this exact workflow for every task. No exceptions.
+
+### The 5-Step Task Flow
+
+For **every single task** in `/docs/PROGRESS_TRACKER.md`:
+
+```
+Step 1: Mark Task In Progress
+├─ Edit PROGRESS_TRACKER.md
+├─ Change [ ] to 🔄 for current task
+└─ Use TodoWrite tool to track the 5 steps
+
+Step 2: Do The Work
+├─ Complete the actual task requirements
+├─ Follow CLAUDE.md patterns and conventions
+└─ Keep it simple (KISS principle)
+
+Step 3: Run Type Checking (if code changed)
+├─ Run: npx nuxt typecheck
+├─ Fix any type errors immediately
+└─ Do NOT skip this step
+
+Step 4: Update Progress Tracker
+├─ Edit PROGRESS_TRACKER.md
+├─ Change 🔄 to [x] ✅ for completed task
+├─ Update "Quick Stats" table (tasks completed, hours logged)
+├─ Update phase progress percentage
+└─ Add notes/learnings in Daily Log section
+
+Step 5: Git Commit (MANDATORY)
+├─ Stage all changes: git add .
+├─ Commit with conventional format
+├─ Push if appropriate
+└─ See commit format below
+```
+
+### Conventional Commit Format
+
+Use this format for ALL commits:
+
+```bash
+<type>: <description> (Task X.Y)
+
+[optional body with details]
+
+[optional footer with breaking changes]
+```
+
+**Types:**
+- `feat:` - New feature (Tasks 1.5, 2.1, 3.1, etc.)
+- `fix:` - Bug fix
+- `refactor:` - Code refactoring (no functionality change)
+- `docs:` - Documentation only
+- `test:` - Adding/updating tests
+- `chore:` - Build process, dependencies, config
+
+**Examples:**
+```bash
+# Simple commit
+git commit -m "feat: generate discussion layer (Task 1.5)"
+
+# With details
+git commit -m "feat: implement Figma adapter (Task 3.2)
+
+- Parse Figma email webhooks
+- Extract comment threads
+- Handle @mentions
+- Support reply chains"
+
+# Documentation update
+git commit -m "docs: update PROGRESS_TRACKER with Task 1.5 completion"
+
+# Multiple tasks bundled (avoid if possible)
+git commit -m "feat: complete Phase 1 foundation (Tasks 1.5-1.6)
+
+Generated collections and ran migrations"
+```
+
+### Using TodoWrite During Tasks
+
+**ALWAYS use TodoWrite** to track the 5-step flow:
+
+```typescript
+TodoWrite([
+  { content: "Mark Task X.Y in progress in PROGRESS_TRACKER.md", status: "in_progress" },
+  { content: "Complete Task X.Y work", status: "pending" },
+  { content: "Run npx nuxt typecheck", status: "pending" },
+  { content: "Update PROGRESS_TRACKER.md with completion", status: "pending" },
+  { content: "Commit: feat: [description] (Task X.Y)", status: "pending" }
+])
+```
+
+Mark each step complete as you go.
+
+### Progress Tracker Updates
+
+When updating `/docs/PROGRESS_TRACKER.md`:
+
+1. **Task Status**: Change `[ ]` → `🔄` → `[x] ✅`
+2. **Quick Stats Table**:
+   ```markdown
+   | Tasks Completed | 5 / 34 |  ← Increment
+   | Hours Logged | 3.75 / 112 |  ← Add task hours
+   ```
+3. **Phase Progress**:
+   ```markdown
+   **Progress**: 5/6 tasks (83%)  ← Update percentage
+   **Time**: 3.75h / 6h estimated  ← Update hours
+   ```
+4. **Daily Log**: Add entry with what was completed
+
+### Example Complete Task Execution
+
+**Task 1.5: Generate Collections**
+
+```bash
+# Step 1: Mark in progress
+# (Edit PROGRESS_TRACKER.md, use TodoWrite)
+
+# Step 2: Do the work
+pnpm crouton generate
+
+# Step 3: Typecheck
+npx nuxt typecheck
+
+# Step 4: Update tracker
+# (Edit PROGRESS_TRACKER.md - mark complete, update stats)
+
+# Step 5: Commit
+git add .
+git commit -m "feat: generate discussion layer (Task 1.5)
+
+Generated ~100 files for 4 collections:
+- discussions (with embedded threadData)
+- sourceConfigs
+- syncJobs
+- tasks
+
+All files generated in layers/discussion/"
+
+git push
+```
+
+### Multi-Agent Continuity
+
+**When a new agent takes over:**
+
+1. **ALWAYS read** `/docs/PROGRESS_TRACKER.md` first
+2. Check which tasks are complete vs in progress
+3. Read the Daily Log for context
+4. Continue from the next pending task
+5. Follow the same 5-step workflow
+
+**When resuming work:**
+
+1. Check git status to see what's uncommitted
+2. If work is half-done, decide:
+   - Complete and commit it, OR
+   - Revert and restart from clean state
+3. Update PROGRESS_TRACKER.md accordingly
+
+### Critical Reminders
+
+- ✅ **NEVER skip the commit step** - Every task = One commit
+- ✅ **ALWAYS run typecheck** after code changes
+- ✅ **ALWAYS update PROGRESS_TRACKER.md** before committing
+- ✅ **ALWAYS use TodoWrite** to track the 5 steps
+- ✅ **ALWAYS read PROGRESS_TRACKER.md** when starting
+- ❌ **NEVER batch multiple tasks** in one commit (unless explicitly told)
+- ❌ **NEVER commit without updating tracker** first
+
+### Why This Workflow?
+
+1. **Traceability**: Every task has a commit with clear history
+2. **Resumability**: Any agent can pick up where another left off
+3. **Accountability**: Progress tracker always reflects reality
+4. **Quality**: Type checking catches errors early
+5. **Communication**: Clear commit messages document decisions
+
+### Context Clearing Between Tasks
+
+**IMPORTANT**: To ensure fresh context and test workflow documentation, clear context after each task completion.
+
+**Agent responsibilities:**
+1. Complete all 5 workflow steps
+2. Announce: **"✅ Task X.Y complete. Ready for context clear."**
+3. Say the code word (found at the top of CLAUDE.md)
+4. STOP and wait for user action
+5. Do NOT continue to next task automatically
+
+**Code word verification**: At the end of EVERY task completion, the agent MUST say the code word stated at the top of this file. This proves the agent has read CLAUDE.md and is following instructions.
+
+**User action:**
+```bash
+# After agent announces completion
+/clear
+
+# Then in fresh session
+continue with next task
+```
+
+**Fresh agent startup (after /clear):**
+1. Read CLAUDE.md (automatic via claudeMd system)
+2. Read `/docs/PROGRESS_TRACKER.md` FIRST
+3. Check last completed task
+4. Continue with next pending task
+5. Follow the 5-step workflow
+
+**Benefits of context clearing:**
+- ✅ Tests that documentation is complete and clear
+- ✅ Simulates multi-agent handoffs
+- ✅ Ensures PROGRESS_TRACKER.md is the source of truth
+- ✅ Catches missing documentation or unclear instructions
+- ✅ Prevents context accumulation and token bloat
+
+**Example flow:**
+```
+Agent: Completes Task 1.5, commits
+Agent: "✅ Task 1.5 complete. Ready for context clear."
+User: /clear
+User: "continue with next task"
+New Agent: Reads PROGRESS_TRACKER.md
+New Agent: "I see Task 1.5 is complete. Starting Task 1.6..."
+```
 
 ## Technology Stack
 
