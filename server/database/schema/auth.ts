@@ -63,7 +63,7 @@ export const webAuthnCredentials = sqliteTable('webauthn_credentials', {
   backedUp: integer('backed_up', { mode: 'boolean' }).notNull(),
   transports: text('transports', { mode: 'json' })
     .notNull()
-    .$type<WebAuthnCredential['transports']>(),
+    .$type<string[]>(), // WebAuthn disabled - using simple string array
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$default(
     () => new Date(),
   ),
