@@ -37,16 +37,21 @@ export interface ResendApiError {
  * After receiving a webhook from Resend, we need to fetch the actual email content
  * because Resend webhooks don't include the body (HTML/text) for serverless optimization.
  *
- * @param emailId - The email ID from the webhook (e.g., from webhook.data.id)
+ * IMPORTANT: For received/inbound emails, use the /emails/receiving/{id} endpoint,
+ * NOT the /emails/{id} endpoint (which is only for sent emails).
+ *
+ * @param emailId - The email ID from the webhook (e.g., from webhook.data.email_id)
  * @param apiToken - Resend API token (re_...)
  * @returns The full email object with HTML and text content
  * @throws Error if API call fails or email not found
+ *
+ * @see https://resend.com/docs/api-reference/emails/retrieve-received-email
  *
  * @example
  * ```typescript
  * // In webhook handler
  * const webhook = await readBody(event)
- * const emailId = webhook.data.id
+ * const emailId = webhook.data.email_id
  *
  * const email = await fetchResendEmail(emailId, config.resendApiToken)
  * console.log(email.html, email.text)
@@ -65,7 +70,9 @@ export async function fetchResendEmail(
   }
 
   try {
-    const url = `https://api.resend.com/emails/${emailId}`
+    // Use the /emails/receiving/{id} endpoint for received/inbound emails
+    // NOT /emails/{id} which is only for sent emails
+    const url = `https://api.resend.com/emails/receiving/${emailId}`
     const response = await fetch(url, {
       method: 'GET',
       headers: {
