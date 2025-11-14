@@ -32,6 +32,8 @@
 import type { ParsedDiscussion } from '~/layers/discubot/types'
 import { getAdapter } from '../../adapters'
 import { processDiscussion } from '../../services/processor'
+import { verifyMailgunSignature } from '../../utils/webhookSecurity'
+import { rateLimit, RateLimitPresets } from '../../utils/rateLimit'
 
 /**
  * Mailgun webhook payload structure
@@ -44,6 +46,11 @@ interface MailgunPayload {
   'body-html'?: string
   'stripped-text'?: string
   timestamp?: number
+  signature?: {
+    timestamp: string | number
+    token: string
+    signature: string
+  }
   [key: string]: any
 }
 
@@ -76,8 +83,32 @@ export default defineEventHandler(async (event) => {
   const startTime = Date.now()
 
   try {
+    // 0. Apply rate limiting (100 requests per minute)
+    await rateLimit(event, RateLimitPresets.WEBHOOK)
+
     // 1. Read and validate incoming payload
     const payload = await readBody<MailgunPayload>(event)
+
+    // 1.5. Verify webhook signature if present
+    const config = useRuntimeConfig()
+    const signingKey = config.mailgunSigningKey as string | undefined
+
+    if (signingKey && payload.signature) {
+      const { timestamp, token, signature } = payload.signature
+
+      if (!verifyMailgunSignature(timestamp, token, signature, signingKey)) {
+        console.warn('[Mailgun Webhook] Invalid signature detected')
+        throw createError({
+          statusCode: 401,
+          statusMessage: 'Invalid webhook signature',
+        })
+      }
+
+      console.log('[Mailgun Webhook] Signature verified successfully')
+    }
+    else if (!signingKey) {
+      console.warn('[Mailgun Webhook] Signature verification skipped - MAILGUN_SIGNING_KEY not configured')
+    }
 
     console.log('[Mailgun Webhook] Received webhook', {
       recipient: payload.recipient,

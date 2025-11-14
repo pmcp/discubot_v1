@@ -51,6 +51,8 @@
 import type { ParsedDiscussion } from '~/layers/discubot/types'
 import { getAdapter } from '../../adapters'
 import { processDiscussion } from '../../services/processor'
+import { verifySlackSignature } from '../../utils/webhookSecurity'
+import { rateLimit, RateLimitPresets } from '../../utils/rateLimit'
 
 /**
  * In-memory cache to deduplicate events
@@ -170,6 +172,39 @@ export default defineEventHandler(async (event) => {
   const startTime = Date.now()
 
   try {
+    // 0. Apply rate limiting (100 requests per minute)
+    await rateLimit(event, RateLimitPresets.WEBHOOK)
+
+    // 0.5. Verify webhook signature (skip for URL verification)
+    const config = useRuntimeConfig()
+    const signingSecret = config.slackSigningSecret as string | undefined
+
+    // Only verify signature if signing secret is configured
+    if (signingSecret) {
+      const rawBody = await readRawBody(event)
+      const headers = getHeaders(event)
+
+      if (!rawBody) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Missing request body',
+        })
+      }
+
+      if (!verifySlackSignature(rawBody, headers, signingSecret)) {
+        console.warn('[Slack Webhook] Invalid signature detected')
+        throw createError({
+          statusCode: 401,
+          statusMessage: 'Invalid webhook signature',
+        })
+      }
+
+      console.log('[Slack Webhook] Signature verified successfully')
+    }
+    else {
+      console.warn('[Slack Webhook] Signature verification skipped - SLACK_SIGNING_SECRET not configured')
+    }
+
     // 1. Read incoming payload
     const payload = await readBody<SlackEventPayload | SlackUrlVerificationPayload>(event)
 
