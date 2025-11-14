@@ -300,8 +300,21 @@ export function parseEmail(emailData: {
   const html = emailData['body-html'] || ''
   const plainText = emailData['stripped-text'] || emailData['body-plain'] || ''
 
+  console.log('[EmailParser] Parsing email', {
+    hasHtml: !!html,
+    hasPlainText: !!plainText,
+    htmlLength: html.length,
+    plainTextLength: plainText.length,
+    plainTextPreview: plainText.substring(0, 200),
+  })
+
   // Extract text content
   const text = plainText || (html ? extractTextFromHtml(html) : '')
+
+  console.log('[EmailParser] Extracted text', {
+    textLength: text.length,
+    textPreview: text.substring(0, 200),
+  })
 
   // Extract links
   const links = html ? extractLinksFromHtml(html) : []
