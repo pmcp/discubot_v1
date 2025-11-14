@@ -45,7 +45,8 @@ import { getAdapter } from '../../adapters'
 import { processDiscussion } from '../../services/processor'
 import { fetchResendEmail, transformToMailgunFormat } from '../../utils/resendEmail'
 import { rateLimit, RateLimitPresets } from '../../utils/rateLimit'
-import { classifyFigmaEmail } from '../../utils/emailClassifier'
+import { classifyFigmaEmail, shouldForwardEmail } from '../../utils/emailClassifier'
+import { forwardEmailToConfigOwner } from '../../utils/emailForwarding'
 import { createDiscubotInboxMessage } from '#layers/discubot/collections/inboxMessages/server/database/queries'
 import { getAllDiscubotConfigs } from '#layers/discubot/collections/configs/server/database/queries'
 import { SYSTEM_USER_ID } from '../../utils/constants'
@@ -338,6 +339,34 @@ export default defineEventHandler(async (event) => {
           createdBy: SYSTEM_USER_ID,
           updatedBy: SYSTEM_USER_ID,
         })
+
+        // Forward critical emails if enabled
+        if (shouldForwardEmail(classification.messageType)) {
+          const forwardResult = await forwardEmailToConfigOwner({
+            inboxMessageId: inboxMessage.id,
+            configId,
+            teamId,
+            from: resendEmail.from,
+            subject: resendEmail.subject,
+            htmlBody: resendEmail.html || undefined,
+            textBody: resendEmail.text || undefined,
+            messageType: classification.messageType,
+          })
+
+          if (forwardResult.forwarded) {
+            console.log('[Resend Webhook] Email forwarded', {
+              inboxMessageId: inboxMessage.id,
+              forwardedTo: forwardResult.forwardedTo,
+              messageType: classification.messageType,
+            })
+          }
+          else {
+            console.warn('[Resend Webhook] Email forwarding failed', {
+              inboxMessageId: inboxMessage.id,
+              reason: forwardResult.error,
+            })
+          }
+        }
 
         const processingTime = Date.now() - startTime
 

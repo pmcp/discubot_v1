@@ -154,6 +154,17 @@
       "group": "features"
     }
   },
+  "enableEmailForwarding": {
+    "type": "boolean",
+    "meta": {
+      "required": true,
+      "default": false,
+      "label": "Enable Email Forwarding",
+      "description": "Forward critical emails (verification, password reset) to config owner",
+      "area": "sidebar",
+      "group": "features"
+    }
+  },
   "active": {
     "type": "boolean",
     "meta": {

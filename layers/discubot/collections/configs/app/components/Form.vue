@@ -262,6 +262,13 @@
           >
             <USwitch v-model="state.postConfirmation" />
           </UFormField>
+          <UFormField
+            label="Enable Email Forwarding"
+            name="enableEmailForwarding"
+            description="Forward critical emails (verification, password reset) to your email"
+          >
+            <USwitch v-model="state.enableEmailForwarding" />
+          </UFormField>
         </div>
 
         <USeparator />
