@@ -341,10 +341,6 @@ const sourceTypeOptions = [
 const config = useRuntimeConfig()
 const EMAIL_DOMAIN = config.public.emailDomain || 'messages.friendlyinter.net'
 
-// Computed properties for conditional rendering
-const isFigmaSource = computed(() => state.value.sourceType === 'figma')
-const isSlackSource = computed(() => state.value.sourceType === 'slack')
-
 // Auto-generate email slug from name (kebab-case)
 const generateEmailSlug = (name: string): string => {
   return name
@@ -360,43 +356,7 @@ const generateEmailAddress = (slug: string): string => {
   return `${slug}@${EMAIL_DOMAIN}`
 }
 
-// Watch for name changes to auto-generate slug and email (only for new configs)
-watch(() => state.value.name, (newName) => {
-  if (props.action === 'create' && isFigmaSource.value && newName) {
-    const slug = generateEmailSlug(newName)
-    state.value.emailSlug = slug
-    state.value.emailAddress = generateEmailAddress(slug)
-  }
-})
-
-// Watch for slug changes to update email address
-watch(() => state.value.emailSlug, (newSlug) => {
-  if (isFigmaSource.value && newSlug) {
-    state.value.emailAddress = generateEmailAddress(newSlug)
-  }
-})
-
-// Form layout configuration - dynamic based on source type
-const navigationItems = computed(() => {
-  const base = [{ label: 'Basic', value: 'basic' }]
-
-  if (isFigmaSource.value) {
-    base.push({ label: 'Email', value: 'email' })
-  }
-
-  if (isSlackSource.value) {
-    base.push({ label: 'Webhook', value: 'webhook' })
-  }
-
-  base.push(
-    { label: 'Credentials', value: 'credentials' },
-    { label: 'Notion', value: 'notion' },
-    { label: 'AI', value: 'ai' }
-  )
-
-  return base
-})
-
+// UI state
 const tabs = ref(true)
 const activeSection = ref('basic')
 
@@ -427,18 +387,6 @@ const handleValidationError = (event: any) => {
   }
 }
 
-// Compute errors per tab
-const tabErrorCounts = computed(() => {
-  const counts: Record<string, number> = {}
-
-  validationErrors.value.forEach(error => {
-    const tabName = fieldToGroup[error.name] || 'general'
-    counts[tabName] = (counts[tabName] || 0) + 1
-  })
-
-  return counts
-})
-
 // Switch to a specific tab (for clicking error links)
 const switchToTab = (tabValue: string) => {
   activeSection.value = tabValue
@@ -456,6 +404,59 @@ const initialValues = props.action === 'update' && props.activeItem?.id
   : { ...defaultValue }
 
 const state = ref<DiscubotConfigFormData & { id?: string | null }>(initialValues)
+
+// Computed properties for conditional rendering (must be after state definition)
+const isFigmaSource = computed(() => state.value.sourceType === 'figma')
+const isSlackSource = computed(() => state.value.sourceType === 'slack')
+
+// Form layout configuration - dynamic based on source type
+const navigationItems = computed(() => {
+  const base = [{ label: 'Basic', value: 'basic' }]
+
+  if (isFigmaSource.value) {
+    base.push({ label: 'Email', value: 'email' })
+  }
+
+  if (isSlackSource.value) {
+    base.push({ label: 'Webhook', value: 'webhook' })
+  }
+
+  base.push(
+    { label: 'Credentials', value: 'credentials' },
+    { label: 'Notion', value: 'notion' },
+    { label: 'AI', value: 'ai' }
+  )
+
+  return base
+})
+
+// Compute errors per tab
+const tabErrorCounts = computed(() => {
+  const counts: Record<string, number> = {}
+
+  validationErrors.value.forEach(error => {
+    const tabName = fieldToGroup[error.name] || 'general'
+    counts[tabName] = (counts[tabName] || 0) + 1
+  })
+
+  return counts
+})
+
+// Watch for name changes to auto-generate slug and email (only for new configs)
+watch(() => state.value.name, (newName) => {
+  if (props.action === 'create' && isFigmaSource.value && newName) {
+    const slug = generateEmailSlug(newName)
+    state.value.emailSlug = slug
+    state.value.emailAddress = generateEmailAddress(slug)
+  }
+})
+
+// Watch for slug changes to update email address
+watch(() => state.value.emailSlug, (newSlug) => {
+  if (isFigmaSource.value && newSlug) {
+    state.value.emailAddress = generateEmailAddress(newSlug)
+  }
+})
 
 const handleSubmit = async () => {
   try {
