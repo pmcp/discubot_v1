@@ -72,13 +72,13 @@ export function extractFileKeyFromUrl(url: string): string | null {
 
 /**
  * Parse HTML email body to extract plain text content
- * Handles various HTML structures that Figma might use
+ * Handles various HTML structures that Figma might use (Mailgun, Resend, etc.)
  */
 export function extractTextFromHtml(html: string): string {
   const $ = cheerio.load(html)
 
-  // Remove script and style elements
-  $('script, style').remove()
+  // Remove script, style, and other non-content elements
+  $('script, style, head').remove()
 
   // Try to find the main comment content
   // Figma emails typically have the comment in specific elements
@@ -86,18 +86,49 @@ export function extractTextFromHtml(html: string): string {
     '.comment-body',
     '.comment-text',
     'td[class*="comment"]',
+    // Resend-specific selectors
+    'div[style*="color"]',  // Figma uses styled divs for comment text
+    'td[style*="padding"]', // Comment content is often in padded table cells
     'p',
   ]
 
   for (const selector of commentSelectors) {
     const element = $(selector).first()
-    if (element.length && element.text().trim()) {
-      return element.text().trim()
+    if (element.length) {
+      const text = element.text().trim()
+      // Make sure we got substantial text (more than just whitespace)
+      if (text.length > 5) {
+        console.log('[EmailParser] Found comment text using selector:', selector)
+        return text
+      }
     }
   }
 
-  // Fallback: get all text content
-  return $('body').text().trim()
+  // Fallback 1: Look for any substantial text blocks in the email
+  // Get all text content and try to find the actual comment
+  const bodyText = $('body').text()
+  const lines = bodyText.split('\n').map(line => line.trim()).filter(line => line.length > 0)
+
+  // The comment text is usually one of the longer lines that isn't a URL or boilerplate
+  const substantialLines = lines.filter(line =>
+    line.length > 10 &&
+    !line.startsWith('http') &&
+    !line.includes('@') &&
+    !line.toLowerCase().includes('unsubscribe') &&
+    !line.toLowerCase().includes('figma')
+  )
+
+  if (substantialLines.length > 0) {
+    // Return the first substantial line (likely the comment text)
+    const commentText = substantialLines[0]
+    console.log('[EmailParser] Found comment text from substantial lines')
+    return commentText
+  }
+
+  // Fallback 2: get all text content
+  const allText = $('body').text().trim()
+  console.log('[EmailParser] Using full body text as fallback')
+  return allText
 }
 
 /**
