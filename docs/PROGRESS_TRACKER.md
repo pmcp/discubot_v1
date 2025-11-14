@@ -2,8 +2,8 @@
 
 **Project Start Date**: 2025-11-11
 **Expected Completion**: 2025-12-16 (5 weeks)
-**Current Phase**: Phase 9 - Complete! 🎉
-**Overall Progress**: 96% (54/56 tasks complete)
+**Current Phase**: Phase 10 - Email Inbox Feature 📥
+**Overall Progress**: 93% (54/58 tasks complete)
 
 ---
 
@@ -11,9 +11,9 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 54 / 56 |
-| Hours Logged | 125.75 / 139.5 |
-| Current Phase | Phase 9 - Complete! 🎉 |
+| Tasks Completed | 54 / 58 |
+| Hours Logged | 125.75 / 142.5 |
+| Current Phase | Phase 10 - Email Inbox Feature 📥 |
 | Days Elapsed | 5 / 21 |
 | Blockers | 0 |
 | Tests Passing | 278+ / 352+ (79%+ - 42 expected API key failures) |
@@ -324,6 +324,56 @@
   - Included troubleshooting section and cost comparison
 
 **Checkpoint**: ✅ Figma emails can flow through Resend, Mailgun deprecated (kept for backward compatibility), single email provider consolidation achieved!
+
+---
+
+### Phase 10: Email Inbox Feature 📥
+**Status**: Pending
+**Progress**: 0/5 tasks (0%)
+**Time**: 0h / 3h estimated
+**Target**: Day 5
+
+**⚠️ GOAL**: Create inbox for non-comment Figma emails (account verification, password resets, invitations) so users can manage their Figma bot accounts.
+
+- [ ] Task 10.1: Create inboxMessages Crouton Schema (0.5h)
+  - Create `crouton/schemas/inbox-message-schema.json`
+  - Fields: configId, teamId, messageType (enum), from, to, subject, htmlBody, textBody, receivedAt, read, forwardedTo, resendEmailId
+  - Indexes: configId, teamId, messageType, read
+  - Update `crouton.config.mjs` to include new collection
+  - Run `pnpm crouton generate` (~100 files generated)
+
+- [ ] Task 10.2: Add Email Classification Utility (0.5h)
+  - Create `layers/discubot/server/utils/emailClassifier.ts`
+  - Function: `classifyFigmaEmail(email)` returns messageType
+  - Detect: account-verification, password-reset, comment, invitation, notification, other
+  - Pattern matching on subject lines and sender addresses
+  - Unit tests for classification logic
+
+- [ ] Task 10.3: Update Resend Webhook to Store Emails (1h)
+  - Import Crouton's `createDiscubotInboxMessage` query
+  - Add email classification before processing
+  - If messageType === 'comment' → existing flow (processDiscussion)
+  - Else → store in inbox using Crouton query
+  - Update webhook to return different responses for comments vs inbox messages
+  - Add logging for inbox message storage
+
+- [ ] Task 10.4: Create Inbox Admin UI (0.5h)
+  - Create `layers/discubot/app/pages/dashboard/[team]/discubot/inbox.vue`
+  - Use `CroutonCollectionViewer` for auto-generated list view
+  - Filter by messageType (tabs for verification/password-reset/other)
+  - Mark as read functionality
+  - Open email in modal to view HTML content and extract links
+  - Add navigation link to main dashboard
+
+- [ ] Task 10.5: Optional Email Forwarding (0.5h)
+  - Add forwarding logic for critical email types (verification, password-reset)
+  - Create `forwardEmailToConfigOwner()` utility
+  - Use Resend Send API to forward to config owner's email
+  - Track forwarded emails (update `forwardedTo` field)
+  - Add configuration option to enable/disable forwarding per config
+  - Test forwarding flow end-to-end
+
+**Checkpoint**: ✅ Users can view Figma account emails in admin UI, manage bot account setup, optional forwarding for critical emails
 
 ---
 
