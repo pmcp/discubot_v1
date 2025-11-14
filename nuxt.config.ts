@@ -114,6 +114,18 @@ export default defineNuxtConfig({
     devServer: {
       watch: [],
     },
+    // Import reflect-metadata polyfill before any other code
+    // Required by tsyringe (used by @peculiar/x509)
+    externals: {
+      inline: ['reflect-metadata']
+    },
+    moduleSideEffects: ['reflect-metadata'],
+    imports: {
+      presets: [{
+        from: 'reflect-metadata',
+        imports: ['default']
+      }]
+    }
   },
   hub: {
     database: true,
