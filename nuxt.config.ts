@@ -102,7 +102,8 @@ export default defineNuxtConfig({
     preset: "cloudflare_module",
     cloudflare: {
       deployConfig: true,
-      nodeCompat: true
+      nodeCompat: true,
+      compatibilityFlags: ["nodejs_compat"]
     },
     rollupConfig: {
       plugins: [vue()],

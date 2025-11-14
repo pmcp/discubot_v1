@@ -10,7 +10,7 @@
  * but doesn't block application startup (to allow development).
  */
 
-import { logSecurityChecks } from '~/layers/discubot/server/utils/securityCheck'
+import { logSecurityChecks } from '../../layers/discubot/server/utils/securityCheck'
 
 export default defineNitroPlugin(async () => {
   console.log('[Security Check] Running startup security checks...')
