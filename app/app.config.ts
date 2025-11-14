@@ -3,9 +3,11 @@ import { discubotConfigsConfig } from '../layers/discubot/collections/configs/ap
 import { discubotJobsConfig } from '../layers/discubot/collections/jobs/app/composables/useDiscubotJobs'
 import { discubotTasksConfig } from '../layers/discubot/collections/tasks/app/composables/useDiscubotTasks'
 import { discubotUserMappingsConfig } from '../layers/discubot/collections/usermappings/app/composables/useDiscubotUserMappings'
+import { discubotInboxMessagesConfig } from '../layers/discubot/collections/inboxmessages/app/composables/useDiscubotInboxMessages'
 
 export default defineAppConfig({
   croutonCollections: {
+    discubotInboxMessages: discubotInboxMessagesConfig,
     discubotUserMappings: discubotUserMappingsConfig,
     discubotTasks: discubotTasksConfig,
     discubotJobs: discubotJobsConfig,

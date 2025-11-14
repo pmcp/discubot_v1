@@ -13,3 +13,4 @@ export { discubotConfigs } from '../../../layers/discubot/collections/configs/se
 export { discubotJobs } from '../../../layers/discubot/collections/jobs/server/database/schema'
 export { discubotTasks } from '../../../layers/discubot/collections/tasks/server/database/schema'
 export { discubotUsermappings } from '../../../layers/discubot/collections/usermappings/server/database/schema'
+export { discubotInboxmessages } from '../../../layers/discubot/collections/inboxmessages/server/database/schema'

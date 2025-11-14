@@ -1,11 +1,12 @@
 export default {
-  // Define all collections (5 total - lean approach + user mappings)
+  // Define all collections (6 total - lean approach + user mappings + inbox messages)
   collections: [
     { name: 'discussions', fieldsFile: './schemas/discussion-schema.json' },
     { name: 'configs', fieldsFile: './schemas/config-schema.json' },
     { name: 'jobs', fieldsFile: './schemas/job-schema.json' },
     { name: 'tasks', fieldsFile: './schemas/task-schema.json' },
-    { name: 'userMappings', fieldsFile: './schemas/user-mapping-schema.json' }
+    { name: 'userMappings', fieldsFile: './schemas/user-mapping-schema.json' },
+    { name: 'inboxMessages', fieldsFile: './schemas/inbox-message-schema.json' }
   ],
 
   // Organize into layers
@@ -17,7 +18,8 @@ export default {
         'configs',
         'jobs',
         'tasks',
-        'userMappings'
+        'userMappings',
+        'inboxMessages'
       ]
     }
   ],
