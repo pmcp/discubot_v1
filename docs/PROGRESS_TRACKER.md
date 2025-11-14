@@ -11,8 +11,8 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 54 / 58 |
-| Hours Logged | 125.75 / 142.5 |
+| Tasks Completed | 55 / 58 |
+| Hours Logged | 126.25 / 142.5 |
 | Current Phase | Phase 10 - Email Inbox Feature 📥 |
 | Days Elapsed | 5 / 21 |
 | Blockers | 0 |
@@ -328,19 +328,19 @@
 ---
 
 ### Phase 10: Email Inbox Feature 📥
-**Status**: Pending
-**Progress**: 0/5 tasks (0%)
-**Time**: 0h / 3h estimated
+**Status**: In Progress
+**Progress**: 1/5 tasks (20%)
+**Time**: 0.5h / 3h estimated
 **Target**: Day 5
 
 **⚠️ GOAL**: Create inbox for non-comment Figma emails (account verification, password resets, invitations) so users can manage their Figma bot accounts.
 
-- [ ] Task 10.1: Create inboxMessages Crouton Schema (0.5h)
-  - Create `crouton/schemas/inbox-message-schema.json`
-  - Fields: configId, teamId, messageType (enum), from, to, subject, htmlBody, textBody, receivedAt, read, forwardedTo, resendEmailId
-  - Indexes: configId, teamId, messageType, read
-  - Update `crouton.config.mjs` to include new collection
-  - Run `pnpm crouton generate` (~100 files generated)
+- [x] Task 10.1: Create inboxMessages Crouton Schema (0.5h) ✅
+  - Created `crouton/schemas/inbox-message-schema.json`
+  - Fields: configId, messageType (enum), from, to, subject, htmlBody, textBody, receivedAt, read, forwardedTo, forwardedAt, resendEmailId
+  - Updated `crouton.config.mjs` to include new collection (6 total collections now)
+  - Generated ~100 files via `pnpm crouton-generate`
+  - No new type errors introduced (verified with typecheck)
 
 - [ ] Task 10.2: Add Email Classification Utility (0.5h)
   - Create `layers/discubot/server/utils/emailClassifier.ts`
