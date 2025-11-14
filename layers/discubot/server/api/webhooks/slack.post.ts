@@ -175,7 +175,21 @@ export default defineEventHandler(async (event) => {
     // 0. Apply rate limiting (100 requests per minute)
     await rateLimit(event, RateLimitPresets.WEBHOOK)
 
-    // 0.5. Verify webhook signature (skip for URL verification)
+    // 1. Read incoming payload FIRST to check if it's URL verification
+    const payload = await readBody<SlackEventPayload | SlackUrlVerificationPayload>(event)
+
+    // 2. Handle URL verification challenge (one-time setup) - NO signature verification needed
+    // Slack's URL verification challenges don't include signatures
+    if (payload.type === 'url_verification') {
+      const challenge = (payload as SlackUrlVerificationPayload).challenge
+      console.log('[Slack Webhook] URL verification challenge received')
+
+      return {
+        challenge,
+      }
+    }
+
+    // 3. For all other requests (event_callback), verify webhook signature
     const config = useRuntimeConfig()
     const signingSecret = config.slackSigningSecret as string | undefined
 
@@ -203,19 +217,6 @@ export default defineEventHandler(async (event) => {
     }
     else {
       console.warn('[Slack Webhook] Signature verification skipped - SLACK_SIGNING_SECRET not configured')
-    }
-
-    // 1. Read incoming payload
-    const payload = await readBody<SlackEventPayload | SlackUrlVerificationPayload>(event)
-
-    // 2. Handle URL verification challenge (one-time setup)
-    if (payload.type === 'url_verification') {
-      const challenge = (payload as SlackUrlVerificationPayload).challenge
-      console.log('[Slack Webhook] URL verification challenge received')
-
-      return {
-        challenge,
-      }
     }
 
     // 3. Validate event payload
