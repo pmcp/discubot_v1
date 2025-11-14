@@ -81,7 +81,7 @@
           </div>
         </template>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3" role="navigation" aria-label="Quick actions">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" role="navigation" aria-label="Quick actions">
           <UButton
             color="primary"
             icon="i-lucide-plus"
@@ -135,6 +135,17 @@
           >
             <span class="hidden lg:inline">User Mappings</span>
             <span class="lg:hidden">Users</span>
+          </UButton>
+          <UButton
+            color="neutral"
+            variant="outline"
+            icon="i-lucide-inbox"
+            :to="`/dashboard/${currentTeam?.slug}/discubot/inbox`"
+            class="w-full justify-center sm:justify-start"
+            aria-label="View inbox messages"
+          >
+            <span class="hidden lg:inline">Email Inbox</span>
+            <span class="lg:hidden">Inbox</span>
           </UButton>
         </div>
 
