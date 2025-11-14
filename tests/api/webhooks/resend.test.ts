@@ -86,7 +86,7 @@ describe('/api/webhooks/resend', () => {
       const payload = {
         created_at: '2025-01-15T12:00:00.000Z',
         data: {
-          id: 'email-123',
+          email_id: 'email-123',
         },
       }
 
@@ -106,7 +106,7 @@ describe('/api/webhooks/resend', () => {
         type: 'email.sent',
         created_at: '2025-01-15T12:00:00.000Z',
         data: {
-          id: 'email-123',
+          email_id: 'email-123',
         },
       }
 
@@ -121,7 +121,7 @@ describe('/api/webhooks/resend', () => {
       expect(data.statusMessage).toContain('Invalid event type')
     })
 
-    it('should reject webhooks without data.id', async () => {
+    it('should reject webhooks without data.email_id', async () => {
       const payload = {
         type: 'email.received',
         created_at: '2025-01-15T12:00:00.000Z',
@@ -144,7 +144,7 @@ describe('/api/webhooks/resend', () => {
         type: 'email.received',
         created_at: '2025-01-15T12:00:00.000Z',
         data: {
-          id: 'email-123',
+          email_id: 'email-123',
           from: 'comments-abc123@email.figma.com',
           to: ['team-slug@discubot.example.com'],
           subject: 'Jane commented on Design File',
@@ -174,7 +174,7 @@ describe('/api/webhooks/resend', () => {
         type: 'email.received',
         created_at: '2025-01-15T12:00:00.000Z',
         data: {
-          id: 'email-123',
+          email_id: 'email-123',
         },
       }
 
@@ -199,7 +199,7 @@ describe('/api/webhooks/resend', () => {
         type: 'email.received',
         created_at: '2025-01-15T12:00:00.000Z',
         data: {
-          id: 'missing-email',
+          email_id: 'missing-email',
         },
       }
 
@@ -223,7 +223,7 @@ describe('/api/webhooks/resend', () => {
         type: 'email.received',
         created_at: '2025-01-15T12:00:00.000Z',
         data: {
-          id: 'email-123',
+          email_id: 'email-123',
         },
       }
 
@@ -247,7 +247,7 @@ describe('/api/webhooks/resend', () => {
         type: 'email.received',
         created_at: '2025-01-15T12:00:00.000Z',
         data: {
-          id: 'email-123',
+          email_id: 'email-123',
         },
       }
 
@@ -274,7 +274,7 @@ describe('/api/webhooks/resend', () => {
         type: 'email.received',
         created_at: '2025-01-15T12:00:00.000Z',
         data: {
-          id: 'email-123',
+          email_id: 'email-123',
           from: 'comments-abc123@email.figma.com',
           to: ['team-slug@discubot.example.com'],
           subject: 'Jane commented on Design File',
@@ -304,7 +304,7 @@ describe('/api/webhooks/resend', () => {
         type: 'email.received',
         created_at: '2025-01-15T12:00:00.000Z',
         data: {
-          id: 'email-123',
+          email_id: 'email-123',
         },
       }
 
@@ -331,7 +331,7 @@ describe('/api/webhooks/resend', () => {
         type: 'email.received',
         created_at: '2025-01-15T12:00:00.000Z',
         data: {
-          id: 'email-123',
+          email_id: 'email-123',
         },
       }
 
@@ -359,7 +359,7 @@ describe('/api/webhooks/resend', () => {
         type: 'email.received',
         created_at: '2025-01-15T12:00:00.000Z',
         data: {
-          id: 'email-123',
+          email_id: 'email-123',
         },
       }
 
@@ -386,7 +386,7 @@ describe('/api/webhooks/resend', () => {
         type: 'email.received',
         created_at: '2025-01-15T12:00:00.000Z',
         data: {
-          id: 'email-123',
+          email_id: 'email-123',
         },
       }
 

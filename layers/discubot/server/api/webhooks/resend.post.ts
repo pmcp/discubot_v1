@@ -25,10 +25,11 @@
  *   "type": "email.received",
  *   "created_at": "2025-01-15T12:00:00.000Z",
  *   "data": {
- *     "id": "49a3999c-0ce1-4ea6-ab68-afcd6dc2e794",
+ *     "email_id": "49a3999c-0ce1-4ea6-ab68-afcd6dc2e794",
  *     "from": "comments-abc123@email.figma.com",
  *     "to": ["team-slug@yourdomain.com"],
- *     "subject": "Jane commented on Design File"
+ *     "subject": "Jane commented on Design File",
+ *     "message_id": "<...@geopod-ismtpd-12>"
  *   }
  * }
  * ```
@@ -59,10 +60,11 @@ interface ResendWebhookPayload {
   type: 'email.sent' | 'email.delivered' | 'email.received' | 'email.bounced' | 'email.complained' | 'email.opened' | 'email.clicked'
   created_at: string
   data: {
-    id: string
+    email_id: string
     from?: string
     to?: string[]
     subject?: string
+    message_id?: string
     created_at?: string
     [key: string]: any
   }
@@ -86,8 +88,8 @@ function validateResendWebhook(payload: ResendWebhookPayload): void {
     errors.push('Missing or invalid data object')
   } else {
     // Check email ID
-    if (!payload.data.id) {
-      errors.push('Missing required field: data.id')
+    if (!payload.data.email_id) {
+      errors.push('Missing required field: data.email_id')
     }
   }
 
@@ -226,7 +228,7 @@ export default defineEventHandler(async (event) => {
 
     console.log('[Resend Webhook] Received webhook', {
       type: payload.type,
-      emailId: payload.data?.id,
+      emailId: payload.data?.email_id,
       from: payload.data?.from,
       to: payload.data?.to,
     })
@@ -267,7 +269,7 @@ export default defineEventHandler(async (event) => {
 
     let resendEmail
     try {
-      resendEmail = await fetchResendEmail(payload.data.id, resendApiToken)
+      resendEmail = await fetchResendEmail(payload.data.email_id, resendApiToken)
       console.log('[Resend Webhook] Fetched email content', {
         emailId: resendEmail.id,
         hasHtml: !!resendEmail.html,
