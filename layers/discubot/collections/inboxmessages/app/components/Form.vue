@@ -30,9 +30,9 @@
       </div>
 
       <div v-show="!tabs || activeSection === 'content'" class="flex flex-col gap-4 p-1">
-        <UFormField label="HtmlBody" name="htmlBody" class="not-last:pb-4">
-          <UTextarea v-model="state.htmlBody" class="w-full" size="xl" />
-        </UFormField>
+        <div v-html="state.htmlBody" label="HtmlBody" name="htmlBody" class="not-last:pb-4 overflow-scroll" />
+
+
         <UFormField label="TextBody" name="textBody" class="not-last:pb-4">
           <UTextarea v-model="state.textBody" class="w-full" size="xl" />
         </UFormField>

@@ -467,8 +467,10 @@ function getEmptyStateMessage() {
 
 // Actions
 function openEmailModal(message: any) {
+  console.log('[Inbox] Opening email modal', { messageId: message.id, subject: message.subject })
   selectedMessage.value = message
   isModalOpen.value = true
+  console.log('[Inbox] Modal state', { isOpen: isModalOpen.value })
 }
 
 async function markAsRead(message: any) {

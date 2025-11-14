@@ -13,6 +13,10 @@
         createButton
       />
     </template>
+    <template #htmlBody-cell="{ row }">
+      ...
+    </template>
+
     <template #configId-cell="{ row }">
       <CroutonItemCardMini
         v-if="row.original.configId"

@@ -156,7 +156,8 @@ function isComment(subject: string, from: string, content: string): boolean {
   ]
 
   // Check if from Figma comments domain
-  const isFromComments = from.includes('comments@') || from.includes('no-reply@figma.com')
+  // Figma uses: comments-{id}@email.figma.com for comment notifications
+  const isFromComments = from.includes('comments-') && from.includes('@email.figma.com')
 
   // Check subject/content for comment patterns
   const hasCommentPattern = commentPatterns.some(pattern =>
