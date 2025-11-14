@@ -13,6 +13,7 @@ export const env = createEnv({
     APP_DESCRIPTION: z.string(),
     LOGO_URL: z.string().url(),
     RESEND_API_TOKEN: z.string().min(1),
+    RESEND_WEBHOOK_SIGNING_SECRET: z.string().optional(), // Optional for development
     NUXT_OAUTH_GITHUB_CLIENT_ID: z.string().min(1),
     NUXT_OAUTH_GITHUB_CLIENT_SECRET: z.string().min(1),
     NUXT_OAUTH_GOOGLE_CLIENT_ID: z.string().min(1),

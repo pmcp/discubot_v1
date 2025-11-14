@@ -32,7 +32,8 @@ Complete guide to setting up Discubot for local development.
 - **Notion Integration** - [Create integration](https://www.notion.so/my-integrations)
 - **Figma API Token** (optional) - [Get token](https://www.figma.com/developers/api#access-tokens)
 - **Slack App** (optional) - [Create app](https://api.slack.com/apps)
-- **Mailgun Account** (optional, for Figma emails) - [Sign up](https://www.mailgun.com/)
+- **Resend Account** (recommended, for Figma emails) - [Sign up](https://resend.com/) - See [Resend Email Forwarding Guide](docs/guides/resend-email-forwarding.md)
+- **Mailgun Account** (legacy, for Figma emails) - [Sign up](https://www.mailgun.com/) - Prefer Resend instead
 
 ---
 
@@ -144,7 +145,16 @@ NOTION_DATABASE_ID=abc123def456...
 
 ### 3. Configure Optional Variables (for integrations)
 
-#### Figma Integration (via Mailgun)
+#### Figma Integration (via Resend - Recommended)
+```bash
+FIGMA_API_TOKEN=figd_...
+RESEND_API_TOKEN=re_...  # Already configured for email sending
+RESEND_WEBHOOK_SIGNING_SECRET=whsec_...  # Get from Resend webhook settings
+```
+
+**See**: [Resend Email Forwarding Guide](docs/guides/resend-email-forwarding.md) for complete setup.
+
+#### Figma Integration (via Mailgun - Legacy)
 ```bash
 FIGMA_API_TOKEN=figd_...
 MAILGUN_SIGNING_KEY=your-mailgun-signing-key
@@ -173,6 +183,8 @@ See **[CONFIGURATION.md](./CONFIGURATION.md)** for complete environment variable
 
 ## Figma Integration Setup
 
+**⚠️ Recommended**: Use **Resend** for email forwarding (consolidates sending + receiving). See [Resend Email Forwarding Guide](docs/guides/resend-email-forwarding.md) for complete setup.
+
 ### Step 1: Get Figma API Token
 
 1. Go to [Figma Account Settings](https://www.figma.com/settings)
@@ -181,12 +193,24 @@ See **[CONFIGURATION.md](./CONFIGURATION.md)** for complete environment variable
 4. Copy token (starts with `figd_`)
 5. Add to `.env`: `FIGMA_API_TOKEN=figd_...`
 
-### Step 2: Set Up Mailgun (for email webhooks)
+### Step 2: Set Up Email Forwarding
+
+**Option A: Resend (Recommended)**
+
+Follow the complete guide: [Resend Email Forwarding Guide](docs/guides/resend-email-forwarding.md)
+
+Quick summary:
+1. Verify domain in Resend dashboard
+2. Configure MX records for inbound email
+3. Create webhook endpoint: `https://yourdomain.com/api/webhooks/resend`
+4. Add `RESEND_WEBHOOK_SIGNING_SECRET` to `.env`
+
+**Option B: Mailgun (Legacy)**
 
 1. Create [Mailgun account](https://www.mailgun.com/)
 2. Get your webhook signing key from Mailgun dashboard
 3. Add to `.env`: `MAILGUN_SIGNING_KEY=your-key`
-4. Configure Mailgun to forward Figma notification emails to your webhook
+4. Configure Mailgun to forward Figma notification emails to `https://yourdomain.com/api/webhooks/mailgun`
 
 ### Step 3: Configure Figma in Admin UI
 

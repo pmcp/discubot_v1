@@ -69,7 +69,10 @@ export default defineNuxtConfig({
     slackClientSecret: process.env.SLACK_CLIENT_SECRET,
     // Webhook Security
     slackSigningSecret: process.env.SLACK_SIGNING_SECRET,
-    mailgunSigningKey: process.env.MAILGUN_SIGNING_KEY,
+    mailgunSigningKey: process.env.MAILGUN_SIGNING_KEY, // Legacy - can be removed if using Resend
+    resendWebhookSigningSecret: process.env.RESEND_WEBHOOK_SIGNING_SECRET,
+    // Email Configuration
+    resendApiToken: process.env.RESEND_API_TOKEN,
     email: {
       mock: process.env.MOCK_EMAIL,
       fromEmail: process.env.FROM_EMAIL,
