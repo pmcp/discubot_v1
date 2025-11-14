@@ -22,6 +22,7 @@ export const env = createEnv({
     NUXT_STRIPE_SECRET_KEY: z.string().min(1),
     NUXT_STRIPE_WEBHOOK_SECRET: z.string().min(1),
     FROM_EMAIL: z.string().email(),
+    EMAIL_DOMAIN: z.string().min(1), // Domain for config-specific email addresses (e.g., messages.friendlyinter.net)
     EMAIL_PROVIDER: z.enum([
       'resend',
       'mailgun',

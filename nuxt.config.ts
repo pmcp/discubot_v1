@@ -97,6 +97,7 @@ export default defineNuxtConfig({
       logoUrl: process.env.LOGO_URL,
       appName: process.env.APP_NAME,
       appDescription: process.env.APP_DESCRIPTION,
+      emailDomain: process.env.EMAIL_DOMAIN, // Domain for config-specific email addresses
     },
   },
   future: { compatibilityVersion: 4 },

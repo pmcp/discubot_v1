@@ -337,9 +337,44 @@ const sourceTypeOptions = [
   { label: 'Slack', value: 'slack' }
 ]
 
+// Get EMAIL_DOMAIN from runtime config
+const config = useRuntimeConfig()
+const EMAIL_DOMAIN = config.public.emailDomain || 'messages.friendlyinter.net'
+
 // Computed properties for conditional rendering
 const isFigmaSource = computed(() => state.value.sourceType === 'figma')
 const isSlackSource = computed(() => state.value.sourceType === 'slack')
+
+// Auto-generate email slug from name (kebab-case)
+const generateEmailSlug = (name: string): string => {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with hyphens
+    .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
+    .substring(0, 50) // Limit length
+}
+
+// Auto-generate email address from slug
+const generateEmailAddress = (slug: string): string => {
+  if (!slug) return ''
+  return `${slug}@${EMAIL_DOMAIN}`
+}
+
+// Watch for name changes to auto-generate slug and email (only for new configs)
+watch(() => state.value.name, (newName) => {
+  if (props.action === 'create' && isFigmaSource.value && newName) {
+    const slug = generateEmailSlug(newName)
+    state.value.emailSlug = slug
+    state.value.emailAddress = generateEmailAddress(slug)
+  }
+})
+
+// Watch for slug changes to update email address
+watch(() => state.value.emailSlug, (newSlug) => {
+  if (isFigmaSource.value && newSlug) {
+    state.value.emailAddress = generateEmailAddress(newSlug)
+  }
+})
 
 // Form layout configuration - dynamic based on source type
 const navigationItems = computed(() => {
