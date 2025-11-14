@@ -127,23 +127,43 @@ async function findConfigByRecipient(teamId: string, recipientEmail: string): Pr
   try {
     const configs = await getAllDiscubotConfigs(teamId)
 
+    console.log('[Resend Webhook] Looking for config', {
+      teamId,
+      recipientEmail,
+      totalConfigs: configs.length,
+    })
+
     // Filter to Figma configs only
     const figmaConfigs = configs.filter(c => c.sourceType === 'figma')
+
+    console.log('[Resend Webhook] Figma configs found', {
+      count: figmaConfigs.length,
+      configs: figmaConfigs.map(c => ({
+        id: c.id,
+        emailAddress: c.emailAddress,
+        emailSlug: c.emailSlug,
+        sourceType: c.sourceType,
+      })),
+    })
 
     // First try to match by emailAddress (exact match)
     const exactMatch = figmaConfigs.find(c => c.emailAddress === recipientEmail)
     if (exactMatch) {
+      console.log('[Resend Webhook] Found exact email match', { configId: exactMatch.id })
       return exactMatch.id
     }
 
     // Then try to match by emailSlug
     const emailSlug = extractTeamIdFromRecipient(recipientEmail)
+    console.log('[Resend Webhook] Trying slug match', { emailSlug })
     const slugMatch = figmaConfigs.find(c => c.emailSlug === emailSlug)
     if (slugMatch) {
+      console.log('[Resend Webhook] Found slug match', { configId: slugMatch.id })
       return slugMatch.id
     }
 
     // If no match found, return null
+    console.log('[Resend Webhook] No matching config found')
     return null
   } catch (error) {
     console.error('[Resend Webhook] Error finding config:', error)
