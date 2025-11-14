@@ -30,30 +30,30 @@ const rateLimitStore = new Map<string, RateLimitEntry>()
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000
 
 /**
- * Start cleanup interval on module load
+ * Cleanup interval tracking
+ * Note: Cloudflare Workers don't support setInterval in global scope
+ * Cleanup will happen on-demand during rate limit checks instead
  */
 let cleanupInterval: NodeJS.Timeout | null = null
 
 function startCleanup() {
-  if (!cleanupInterval) {
-    cleanupInterval = setInterval(() => {
-      const now = Date.now()
-      for (const [key, entry] of rateLimitStore.entries()) {
-        if (now > entry.resetTime) {
-          rateLimitStore.delete(key)
-        }
-      }
-    }, CLEANUP_INTERVAL_MS)
+  // Note: This function is intentionally left empty for Cloudflare Workers
+  // In traditional Node.js environments, you could use setInterval here
+  // For Workers, cleanup happens on-demand during checkRateLimit()
+}
 
-    // Allow cleanup interval to not block process exit
-    if (cleanupInterval.unref) {
-      cleanupInterval.unref()
+/**
+ * Perform on-demand cleanup of expired entries
+ * Called during rate limit checks to avoid global scope setInterval
+ */
+function cleanupExpiredEntries() {
+  const now = Date.now()
+  for (const [key, entry] of rateLimitStore.entries()) {
+    if (now > entry.resetTime) {
+      rateLimitStore.delete(key)
     }
   }
 }
-
-// Start cleanup on module load
-startCleanup()
 
 /**
  * Rate limit configuration

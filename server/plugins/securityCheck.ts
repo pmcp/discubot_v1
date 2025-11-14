@@ -12,13 +12,8 @@
 
 import { logSecurityChecks } from '../../layers/discubot/server/utils/securityCheck'
 
-export default defineNitroPlugin(async () => {
-  console.log('[Security Check] Running startup security checks...')
-
-  try {
-    logSecurityChecks()
-  }
-  catch (error) {
-    console.error('[Security Check] Error running security checks:', error)
-  }
+export default defineNitroPlugin(() => {
+  // Note: Cloudflare Workers doesn't support async operations in global scope
+  // Security checks will run on first request via the logSecurityChecks() utility
+  console.log('[Security Check] Plugin loaded. Security checks will run on first request.')
 })

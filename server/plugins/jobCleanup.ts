@@ -6,15 +6,13 @@ const RETENTION_DAYS = 30
 const RETENTION_MS = RETENTION_DAYS * 24 * 60 * 60 * 1000
 
 export default defineNitroPlugin(() => {
-  // Run cleanup on startup
-  cleanupOldJobs()
+  // Note: Cloudflare Workers doesn't support setInterval or async operations
+  // in global scope. Job cleanup should be triggered via:
+  // 1. Cloudflare Cron Triggers (configured in wrangler.toml)
+  // 2. NuxtHub scheduled tasks
+  // 3. Manual API endpoint calls
 
-  // Schedule periodic cleanup
-  setInterval(() => {
-    cleanupOldJobs()
-  }, CLEANUP_INTERVAL_MS)
-
-  console.log(`[Job Cleanup] Scheduler initialized. Will run every ${CLEANUP_INTERVAL_MS / 1000 / 60 / 60} hours.`)
+  console.log('[Job Cleanup] Plugin loaded. Use Cloudflare Cron Triggers or scheduled tasks for periodic cleanup.')
 })
 
 async function cleanupOldJobs() {
