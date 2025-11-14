@@ -21,6 +21,7 @@ export interface DiscubotConfig {
   aiTaskPrompt?: string
   autoSync: boolean
   postConfirmation: boolean
+  enableEmailForwarding: boolean
   active: boolean
   onboardingComplete: boolean
   sourceMetadata?: Record<string, any>

@@ -17,6 +17,7 @@ export const discubotConfigSchema = z.object({
   aiTaskPrompt: z.string().optional(),
   autoSync: z.boolean(),
   postConfirmation: z.boolean(),
+  enableEmailForwarding: z.boolean(),
   active: z.boolean(),
   onboardingComplete: z.boolean(),
   sourceMetadata: z.record(z.any()).optional()
@@ -39,6 +40,7 @@ export const discubotConfigsColumns = [
   { accessorKey: 'aiTaskPrompt', header: 'AiTaskPrompt' },
   { accessorKey: 'autoSync', header: 'AutoSync' },
   { accessorKey: 'postConfirmation', header: 'PostConfirmation' },
+  { accessorKey: 'enableEmailForwarding', header: 'EnableEmailForwarding' },
   { accessorKey: 'active', header: 'Active' },
   { accessorKey: 'onboardingComplete', header: 'OnboardingComplete' },
   { accessorKey: 'sourceMetadata', header: 'SourceMetadata' }
@@ -67,6 +69,7 @@ export const discubotConfigsConfig = {
     aiTaskPrompt: '',
     autoSync: false,
     postConfirmation: false,
+    enableEmailForwarding: false,
     active: false,
     onboardingComplete: false,
     sourceMetadata: {}

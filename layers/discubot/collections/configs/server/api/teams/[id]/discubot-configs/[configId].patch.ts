@@ -29,6 +29,7 @@ export default defineEventHandler(async (event) => {
     aiTaskPrompt: body.aiTaskPrompt,
     autoSync: body.autoSync,
     postConfirmation: body.postConfirmation,
+    enableEmailForwarding: body.enableEmailForwarding,
     active: body.active,
     onboardingComplete: body.onboardingComplete,
     sourceMetadata: body.sourceMetadata

@@ -38,6 +38,7 @@ export const discubotConfigs = sqliteTable('discubot_configs', {
   aiTaskPrompt: text('aiTaskPrompt'),
   autoSync: integer('autoSync', { mode: 'boolean' }).notNull().$default(() => false),
   postConfirmation: integer('postConfirmation', { mode: 'boolean' }).notNull().$default(() => false),
+  enableEmailForwarding: integer('enableEmailForwarding', { mode: 'boolean' }).notNull().$default(() => false),
   active: integer('active', { mode: 'boolean' }).notNull().$default(() => false),
   onboardingComplete: integer('onboardingComplete', { mode: 'boolean' }).notNull().$default(() => false),
   sourceMetadata: jsonColumn('sourceMetadata').$default(() => ({})),
