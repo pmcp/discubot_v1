@@ -107,6 +107,10 @@ export default defineNuxtConfig({
     },
     rollupConfig: {
       plugins: [vue()],
+      output: {
+        // Banner to inject reflect-metadata at the very beginning of the bundle
+        banner: `import 'reflect-metadata';`
+      }
     },
     experimental: {
       tasks: true,
@@ -114,17 +118,9 @@ export default defineNuxtConfig({
     devServer: {
       watch: [],
     },
-    // Import reflect-metadata polyfill before any other code
-    // Required by tsyringe (used by @peculiar/x509)
+    // Ensure reflect-metadata is inlined into the bundle
     externals: {
       inline: ['reflect-metadata']
-    },
-    moduleSideEffects: ['reflect-metadata'],
-    imports: {
-      presets: [{
-        from: 'reflect-metadata',
-        imports: ['default']
-      }]
     }
   },
   hub: {
