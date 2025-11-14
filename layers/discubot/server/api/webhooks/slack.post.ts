@@ -169,14 +169,29 @@ function validateSlackEvent(payload: SlackEventPayload): void {
 }
 
 export default defineEventHandler(async (event) => {
+  // DEBUG: Log immediately to see if request reaches handler
+  console.log('[Slack Webhook] ===== REQUEST RECEIVED =====', {
+    method: event.method,
+    path: event.path,
+    headers: Object.fromEntries(Object.entries(getHeaders(event))),
+  })
+
   const startTime = Date.now()
 
   try {
     // 0. Apply rate limiting (100 requests per minute)
+    console.log('[Slack Webhook] Step 0: Applying rate limiting...')
     await rateLimit(event, RateLimitPresets.WEBHOOK)
+    console.log('[Slack Webhook] Step 0: Rate limit check passed')
 
     // 1. Read incoming payload FIRST to check if it's URL verification
+    console.log('[Slack Webhook] Step 1: Reading request body...')
     const payload = await readBody<SlackEventPayload | SlackUrlVerificationPayload>(event)
+    console.log('[Slack Webhook] Step 1: Body read successfully', {
+      type: payload.type,
+      hasEvent: 'event' in payload,
+      hasChallenge: 'challenge' in payload,
+    })
 
     // 2. Handle URL verification challenge (one-time setup) - NO signature verification needed
     // Slack's URL verification challenges don't include signatures
@@ -317,14 +332,18 @@ export default defineEventHandler(async (event) => {
     }
   } catch (error) {
     // Handle all other unexpected errors
-    console.error('[Slack Webhook] Unexpected error:', error)
+    console.error('[Slack Webhook] ===== ERROR CAUGHT =====')
+    console.error('[Slack Webhook] Error:', error)
+    console.error('[Slack Webhook] Error stack:', (error as Error).stack)
 
     // If this is already a H3Error from createError(), re-throw it
     if ((error as any).statusCode) {
+      console.error('[Slack Webhook] Re-throwing H3Error with status:', (error as any).statusCode)
       throw error
     }
 
     // Otherwise, wrap in a generic error
+    console.error('[Slack Webhook] Wrapping in 500 error')
     throw createError({
       statusCode: 500,
       statusMessage: 'Internal server error',
