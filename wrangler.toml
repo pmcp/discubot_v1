@@ -1,6 +1,0 @@
-name = "discubot-v1"
-compatibility_date = "2024-09-23"
-compatibility_flags = ["nodejs_compat"]
-
-# This will be populated by NuxtHub deployment
-# For local dev with wrangler, this ensures nodejs_compat is enabled
