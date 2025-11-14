@@ -122,10 +122,11 @@ const state = reactive<Partial<Schema>>({
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   loading.value = true
   try {
-    const { error, emailVerified } = await register({
+    const payload = {
       ...event.data,
-      inviteToken: inviteToken.value,
-    })
+      ...(inviteToken.value && { inviteToken: inviteToken.value }),
+    }
+    const { error, emailVerified } = await register(payload)
     if (emailVerified && !error) {
       // If this registration was from an invite, set a cookie to track that
       if (inviteToken.value) {
