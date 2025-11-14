@@ -49,7 +49,7 @@ import { rateLimit, RateLimitPresets } from '../../utils/rateLimit'
 import { classifyFigmaEmail, shouldForwardEmail } from '../../utils/emailClassifier'
 import { forwardEmailToConfigOwner } from '../../utils/emailForwarding'
 import { createDiscubotInboxMessage } from '#layers/discubot/collections/inboxMessages/server/database/queries'
-import { getAllDiscubotConfigs } from '#layers/discubot/collections/configs/server/database/queries'
+import { findDiscubotConfigByEmail } from '#layers/discubot/collections/configs/server/database/queries'
 import { SYSTEM_USER_ID } from '../../utils/constants'
 
 /**
@@ -103,66 +103,30 @@ function validateResendWebhook(payload: ResendWebhookPayload): void {
 }
 
 /**
- * Extract team ID from recipient email
- * Format expected: <team-slug>@discubot.yourdomain.com
+ * Find config by recipient email address
+ * Searches globally across all teams by email address or email slug
  */
-function extractTeamIdFromRecipient(recipient: string): string {
-  // Extract the part before @ (e.g., "team1" from "team1@domain.com")
-  const match = recipient.match(/^([^@]+)@/)
-  if (!match) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Invalid recipient email format',
-      data: { recipient },
-    })
-  }
-  return match[1]
-}
-
-/**
- * Find config by team ID and recipient email
- * Matches against emailAddress or emailSlug fields
- */
-async function findConfigByRecipient(teamId: string, recipientEmail: string): Promise<string | null> {
+async function findConfigByRecipient(recipientEmail: string): Promise<{ config: any; teamId: string } | null> {
   try {
-    const configs = await getAllDiscubotConfigs(teamId)
-
-    console.log('[Resend Webhook] Looking for config', {
-      teamId,
+    console.log('[Resend Webhook] Looking for config by email', {
       recipientEmail,
-      totalConfigs: configs.length,
     })
 
-    // Filter to Figma configs only
-    const figmaConfigs = configs.filter(c => c.sourceType === 'figma')
+    const config = await findDiscubotConfigByEmail(recipientEmail)
 
-    console.log('[Resend Webhook] Figma configs found', {
-      count: figmaConfigs.length,
-      configs: figmaConfigs.map(c => ({
-        id: c.id,
-        emailAddress: c.emailAddress,
-        emailSlug: c.emailSlug,
-        sourceType: c.sourceType,
-      })),
-    })
-
-    // First try to match by emailAddress (exact match)
-    const exactMatch = figmaConfigs.find(c => c.emailAddress === recipientEmail)
-    if (exactMatch) {
-      console.log('[Resend Webhook] Found exact email match', { configId: exactMatch.id })
-      return exactMatch.id
+    if (config) {
+      console.log('[Resend Webhook] Found matching config', {
+        configId: config.id,
+        teamId: config.teamId,
+        emailAddress: config.emailAddress,
+        emailSlug: config.emailSlug,
+      })
+      return {
+        config,
+        teamId: config.teamId,
+      }
     }
 
-    // Then try to match by emailSlug
-    const emailSlug = extractTeamIdFromRecipient(recipientEmail)
-    console.log('[Resend Webhook] Trying slug match', { emailSlug })
-    const slugMatch = figmaConfigs.find(c => c.emailSlug === emailSlug)
-    if (slugMatch) {
-      console.log('[Resend Webhook] Found slug match', { configId: slugMatch.id })
-      return slugMatch.id
-    }
-
-    // If no match found, return null
     console.log('[Resend Webhook] No matching config found')
     return null
   } catch (error) {
@@ -348,14 +312,12 @@ export default defineEventHandler(async (event) => {
     // 5. Branch based on message type
     // If it's NOT a comment, store in inbox and return early
     if (classification.messageType !== 'comment') {
-      // Extract team ID and find matching config
+      // Find matching config by email address
       const recipient = resendEmail.to[0] || ''
-      const teamId = extractTeamIdFromRecipient(recipient)
-      const configId = await findConfigByRecipient(teamId, recipient)
+      const result = await findConfigByRecipient(recipient)
 
-      if (!configId) {
+      if (!result) {
         console.warn('[Resend Webhook] No matching config found for inbox message', {
-          teamId,
           recipient,
           messageType: classification.messageType,
         })
@@ -367,6 +329,9 @@ export default defineEventHandler(async (event) => {
           messageType: classification.messageType,
         }
       }
+
+      const { config, teamId } = result
+      const configId = config.id
 
       // Store in inbox
       try {
