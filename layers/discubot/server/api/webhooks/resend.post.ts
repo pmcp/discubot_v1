@@ -163,7 +163,7 @@ async function findConfigByRecipient(teamId: string, recipientEmail: string): Pr
  */
 async function verifyResendWebhookSignature(
   event: any,
-  payload: ResendWebhookPayload,
+  rawBody: string,
   signingSecret: string
 ): Promise<boolean> {
   const svixId = getHeader(event, 'svix-id')
@@ -177,18 +177,34 @@ async function verifyResendWebhookSignature(
 
   try {
     // Construct the signed content (Svix format)
-    // Format: "{svix-id}.{svix-timestamp}.{payload}"
-    const signedContent = `${svixId}.${svixTimestamp}.${JSON.stringify(payload)}`
+    // Format: "{svix-id}.{svix-timestamp}.{raw-body}"
+    // IMPORTANT: Must use raw body string, not parsed/re-stringified JSON
+    const signedContent = `${svixId}.${svixTimestamp}.${rawBody}`
 
-    // Svix uses base64-encoded HMAC-SHA256
+    // Decode the signing secret if it starts with whsec_
+    // Svix secrets starting with whsec_ are base64-encoded
+    let secretBytes: Uint8Array
+    if (signingSecret.startsWith('whsec_')) {
+      const base64Secret = signingSecret.substring(6) // Remove 'whsec_' prefix
+      const binaryString = atob(base64Secret)
+      secretBytes = new Uint8Array(binaryString.length)
+      for (let i = 0; i < binaryString.length; i++) {
+        secretBytes[i] = binaryString.charCodeAt(i)
+      }
+    } else {
+      // Plain text secret
+      const encoder = new TextEncoder()
+      secretBytes = encoder.encode(signingSecret)
+    }
+
+    // Prepare the signed content
     const encoder = new TextEncoder()
     const data = encoder.encode(signedContent)
-    const keyData = encoder.encode(signingSecret)
 
     // Import signing key
     const key = await crypto.subtle.importKey(
       'raw',
-      keyData,
+      secretBytes,
       { name: 'HMAC', hash: 'SHA-256' },
       false,
       ['sign']
@@ -223,8 +239,17 @@ export default defineEventHandler(async (event) => {
     // 0. Apply rate limiting (100 requests per minute)
     await rateLimit(event, RateLimitPresets.WEBHOOK)
 
-    // 1. Read and validate incoming webhook payload
-    const payload = await readBody<ResendWebhookPayload>(event)
+    // 1. Read raw body first (needed for signature verification)
+    const rawBody = await readRawBody(event)
+    if (!rawBody) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Missing request body',
+      })
+    }
+
+    // Parse the JSON payload
+    const payload = JSON.parse(rawBody) as ResendWebhookPayload
 
     console.log('[Resend Webhook] Received webhook', {
       type: payload.type,
@@ -241,7 +266,7 @@ export default defineEventHandler(async (event) => {
     const signingSecret = config.resendWebhookSigningSecret as string | undefined
 
     if (signingSecret) {
-      const isValid = await verifyResendWebhookSignature(event, payload, signingSecret)
+      const isValid = await verifyResendWebhookSignature(event, rawBody, signingSecret)
 
       if (!isValid) {
         console.warn('[Resend Webhook] Invalid signature detected')
