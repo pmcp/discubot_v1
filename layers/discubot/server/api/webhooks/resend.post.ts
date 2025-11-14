@@ -1,14 +1,23 @@
 /**
  * Resend Webhook Endpoint - Figma Email Handler
  *
- * Receives POST requests from Resend containing Figma comment email webhooks.
+ * Receives POST requests from Resend containing Figma emails.
  * Unlike Mailgun, Resend webhooks do NOT include the email body - we must fetch it separately.
  *
  * **Flow:**
  * 1. Receive Resend `email.received` webhook
  * 2. Fetch email content from Resend API
- * 3. Transform to Mailgun-compatible format
- * 4. Process using existing Figma adapter (no changes needed!)
+ * 3. Classify email type (comment vs inbox messages)
+ * 4. Branch based on email type:
+ *    - **Comment emails**: Transform to Mailgun format → Process via Figma adapter → Create Notion tasks
+ *    - **Inbox emails**: Store in inboxMessages collection for admin UI viewing
+ *
+ * **Inbox Message Types:**
+ * - account-verification: Figma account verification emails
+ * - password-reset: Password reset emails
+ * - invitation: Team/file invitation emails
+ * - notification: General notifications
+ * - other: Unclassified emails
  *
  * **Resend Webhook Payload Structure:**
  * ```json
@@ -36,6 +45,10 @@ import { getAdapter } from '../../adapters'
 import { processDiscussion } from '../../services/processor'
 import { fetchResendEmail, transformToMailgunFormat } from '../../utils/resendEmail'
 import { rateLimit, RateLimitPresets } from '../../utils/rateLimit'
+import { classifyFigmaEmail } from '../../utils/emailClassifier'
+import { createDiscubotInboxMessage } from '#layers/discubot/collections/inboxMessages/server/database/queries'
+import { getAllDiscubotConfigs } from '#layers/discubot/collections/configs/server/database/queries'
+import { SYSTEM_USER_ID } from '../../utils/constants'
 
 /**
  * Resend webhook payload structure
@@ -83,6 +96,55 @@ function validateResendWebhook(payload: ResendWebhookPayload): void {
       statusMessage: 'Invalid Resend webhook payload',
       data: { errors },
     })
+  }
+}
+
+/**
+ * Extract team ID from recipient email
+ * Format expected: <team-slug>@discubot.yourdomain.com
+ */
+function extractTeamIdFromRecipient(recipient: string): string {
+  // Extract the part before @ (e.g., "team1" from "team1@domain.com")
+  const match = recipient.match(/^([^@]+)@/)
+  if (!match) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Invalid recipient email format',
+      data: { recipient },
+    })
+  }
+  return match[1]
+}
+
+/**
+ * Find config by team ID and recipient email
+ * Matches against emailAddress or emailSlug fields
+ */
+async function findConfigByRecipient(teamId: string, recipientEmail: string): Promise<string | null> {
+  try {
+    const configs = await getAllDiscubotConfigs(teamId)
+
+    // Filter to Figma configs only
+    const figmaConfigs = configs.filter(c => c.sourceType === 'figma')
+
+    // First try to match by emailAddress (exact match)
+    const exactMatch = figmaConfigs.find(c => c.emailAddress === recipientEmail)
+    if (exactMatch) {
+      return exactMatch.id
+    }
+
+    // Then try to match by emailSlug
+    const emailSlug = extractTeamIdFromRecipient(recipientEmail)
+    const slugMatch = figmaConfigs.find(c => c.emailSlug === emailSlug)
+    if (slugMatch) {
+      return slugMatch.id
+    }
+
+    // If no match found, return null
+    return null
+  } catch (error) {
+    console.error('[Resend Webhook] Error finding config:', error)
+    return null
   }
 }
 
@@ -221,7 +283,95 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 4. Transform to Mailgun-compatible format
+    // 4. Classify the email to determine if it's a comment or inbox message
+    const classification = classifyFigmaEmail({
+      subject: resendEmail.subject,
+      from: resendEmail.from,
+      html: resendEmail.html,
+      text: resendEmail.text,
+    })
+
+    console.log('[Resend Webhook] Email classified', {
+      messageType: classification.messageType,
+      confidence: classification.confidence,
+      reason: classification.reason,
+    })
+
+    // 5. Branch based on message type
+    // If it's NOT a comment, store in inbox and return early
+    if (classification.messageType !== 'comment') {
+      // Extract team ID and find matching config
+      const recipient = resendEmail.to[0] || ''
+      const teamId = extractTeamIdFromRecipient(recipient)
+      const configId = await findConfigByRecipient(teamId, recipient)
+
+      if (!configId) {
+        console.warn('[Resend Webhook] No matching config found for inbox message', {
+          teamId,
+          recipient,
+          messageType: classification.messageType,
+        })
+        // Still return success to Resend, but log the issue
+        return {
+          success: true,
+          stored: false,
+          reason: 'No matching config found',
+          messageType: classification.messageType,
+        }
+      }
+
+      // Store in inbox
+      try {
+        const inboxMessage = await createDiscubotInboxMessage({
+          configId,
+          messageType: classification.messageType,
+          from: resendEmail.from,
+          to: recipient,
+          subject: resendEmail.subject,
+          htmlBody: resendEmail.html || undefined,
+          textBody: resendEmail.text || undefined,
+          receivedAt: new Date(payload.created_at),
+          read: false,
+          resendEmailId: resendEmail.id,
+          teamId,
+          owner: SYSTEM_USER_ID,
+          createdBy: SYSTEM_USER_ID,
+          updatedBy: SYSTEM_USER_ID,
+        })
+
+        const processingTime = Date.now() - startTime
+
+        console.log('[Resend Webhook] Inbox message stored', {
+          inboxMessageId: inboxMessage.id,
+          messageType: classification.messageType,
+          configId,
+          processingTime: `${processingTime}ms`,
+        })
+
+        return {
+          success: true,
+          stored: true,
+          data: {
+            inboxMessageId: inboxMessage.id,
+            messageType: classification.messageType,
+            configId,
+            processingTime,
+          },
+        }
+      } catch (error) {
+        console.error('[Resend Webhook] Failed to store inbox message:', error)
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'Failed to store inbox message',
+          data: {
+            error: (error as Error).message,
+          },
+        })
+      }
+    }
+
+    // 6. For comment emails, continue with existing processing flow
+    // Transform to Mailgun-compatible format
     // This allows us to reuse the existing Figma adapter without any changes!
     const mailgunFormat = transformToMailgunFormat(resendEmail)
 
@@ -231,7 +381,7 @@ export default defineEventHandler(async (event) => {
       subject: mailgunFormat.subject,
     })
 
-    // 5. Get Figma adapter and parse incoming email
+    // 7. Get Figma adapter and parse incoming email
     // Note: Currently hardcoded to 'figma' - could be made dynamic based on
     // recipient domain or other routing logic in the future
     const adapter = getAdapter('figma')
@@ -239,7 +389,7 @@ export default defineEventHandler(async (event) => {
     let parsed: ParsedDiscussion
     try {
       parsed = await adapter.parseIncoming(mailgunFormat)
-      console.log('[Resend Webhook] Successfully parsed email', {
+      console.log('[Resend Webhook] Successfully parsed comment email', {
         teamId: parsed.teamId,
         sourceThreadId: parsed.sourceThreadId,
         authorHandle: parsed.authorHandle,
@@ -255,22 +405,23 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 6. Process the discussion through the pipeline
+    // 8. Process the discussion through the pipeline
     try {
       const result = await processDiscussion(parsed)
 
       const processingTime = Date.now() - startTime
 
-      console.log('[Resend Webhook] Successfully processed discussion', {
+      console.log('[Resend Webhook] Successfully processed comment discussion', {
         discussionId: result.discussionId,
         notionTaskCount: result.notionTasks.length,
         isMultiTask: result.isMultiTask,
         processingTime: `${processingTime}ms`,
       })
 
-      // 7. Return success response
+      // 9. Return success response for comment processing
       return {
         success: true,
+        messageType: 'comment',
         data: {
           discussionId: result.discussionId,
           notionTasks: result.notionTasks.map(task => ({
