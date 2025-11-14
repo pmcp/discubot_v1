@@ -130,7 +130,7 @@ export default defineNuxtConfig({
     workers: true
   },
   auth: {
-    webAuthn: true,
+    webAuthn: false, // Disabled to avoid reflect-metadata/tsyringe dependency issues in Cloudflare Workers
   },
   eslint: {
     config: {
