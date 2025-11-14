@@ -107,10 +107,6 @@ export default defineNuxtConfig({
     },
     rollupConfig: {
       plugins: [vue()],
-      output: {
-        // Banner to inject reflect-metadata at the very beginning of the bundle
-        banner: `import 'reflect-metadata';`
-      }
     },
     experimental: {
       tasks: true,
@@ -118,9 +114,13 @@ export default defineNuxtConfig({
     devServer: {
       watch: [],
     },
-    // Ensure reflect-metadata is inlined into the bundle
+    // Ensure reflect-metadata is not externalized
     externals: {
       inline: ['reflect-metadata']
+    },
+    // Alias to ensure proper resolution
+    alias: {
+      'reflect-metadata': 'reflect-metadata'
     }
   },
   hub: {
