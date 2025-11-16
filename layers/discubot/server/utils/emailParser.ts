@@ -531,6 +531,20 @@ export function extractFigmaMetadata(parsed: ParsedEmail): FigmaEmailMetadata {
 }
 
 /**
+ * Normalize text for comparison
+ * Removes extra whitespace and converts to lowercase
+ *
+ * @param text - Text to normalize
+ * @returns Normalized text
+ */
+export function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
  * Fuzzy text matching - find best match for comment text in Figma API responses
  * Used when matching email content to actual Figma comments
  *
@@ -544,19 +558,13 @@ export function fuzzyFindText(
   haystack: string[],
   threshold = 0.8
 ): string | null {
-  const normalizedNeedle = needle
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim()
+  const normalizedNeedle = normalizeText(needle)
 
   let bestMatch: string | null = null
   let bestScore = 0
 
   for (const candidate of haystack) {
-    const normalizedCandidate = candidate
-      .toLowerCase()
-      .replace(/\s+/g, ' ')
-      .trim()
+    const normalizedCandidate = normalizeText(candidate)
 
     // Calculate similarity score (simple approach)
     const score = calculateSimilarity(normalizedNeedle, normalizedCandidate)
@@ -566,6 +574,47 @@ export function fuzzyFindText(
       bestMatch = candidate
     }
   }
+
+  return bestMatch
+}
+
+/**
+ * Find a comment by matching text content using fuzzy matching
+ * Used to correlate email content with Figma API comments
+ *
+ * @param searchText - Text to search for (from email)
+ * @param comments - Array of Figma comments with message field
+ * @param threshold - Minimum similarity score (0-1), default 0.8
+ * @returns Matching comment or null
+ */
+export function findCommentByText<T extends { message: string }>(
+  searchText: string,
+  comments: T[],
+  threshold = 0.8
+): T | null {
+  const normalizedSearchText = normalizeText(searchText)
+
+  let bestMatch: T | null = null
+  let bestScore = 0
+
+  for (const comment of comments) {
+    const normalizedMessage = normalizeText(comment.message)
+
+    // Calculate similarity score
+    const score = calculateSimilarity(normalizedSearchText, normalizedMessage)
+
+    if (score > bestScore && score >= threshold) {
+      bestScore = score
+      bestMatch = comment
+    }
+  }
+
+  console.log('[EmailParser] Fuzzy match result:', {
+    searchText: searchText.substring(0, 100),
+    bestScore,
+    found: !!bestMatch,
+    threshold,
+  })
 
   return bestMatch
 }

@@ -25,6 +25,7 @@ import { AdapterError } from './base'
 import {
   parseFigmaEmail,
   extractFileKeyFromUrl,
+  findCommentByText,
 } from '../utils/emailParser'
 
 /**
@@ -161,7 +162,12 @@ export class FigmaAdapter implements DiscussionSourceAdapter {
    * Uses GET /v1/files/:key/comments endpoint to retrieve all comments
    * on a file, then builds a thread structure with root comment and replies.
    *
-   * @param threadId - Figma file key or "fileKey:commentId" format
+   * Supported threadId formats:
+   * - "fileKey" - Finds most recent root comment
+   * - "fileKey:commentId" - Finds specific comment by ID
+   * - "fileKey:fuzzy:searchText" - Uses fuzzy matching to find best match (threshold 0.8)
+   *
+   * @param threadId - Figma file key or enhanced format
    * @param config - Source configuration with API token
    */
   async fetchThread(
@@ -169,8 +175,24 @@ export class FigmaAdapter implements DiscussionSourceAdapter {
     config: SourceConfig,
   ): Promise<DiscussionThread> {
     try {
-      // Extract file key from threadId (format: "fileKey" or "fileKey:commentId")
-      const [fileKey, targetCommentId] = threadId.split(':')
+      // Parse threadId format
+      const parts = threadId.split(':')
+      const fileKey = parts[0]
+
+      // Determine lookup strategy
+      let targetCommentId: string | undefined
+      let fuzzySearchText: string | undefined
+
+      if (parts.length === 1) {
+        // Format: "fileKey" - use most recent
+        targetCommentId = undefined
+      } else if (parts[1] === 'fuzzy' && parts.length >= 3) {
+        // Format: "fileKey:fuzzy:searchText"
+        fuzzySearchText = parts.slice(2).join(':') // Rejoin in case text contains colons
+      } else if (parts.length === 2) {
+        // Format: "fileKey:commentId"
+        targetCommentId = parts[1]
+      }
 
       // Fetch all comments from the file
       const url = `${FIGMA_API_BASE}/files/${fileKey}/comments`
@@ -187,11 +209,35 @@ export class FigmaAdapter implements DiscussionSourceAdapter {
 
       const data = await response.json() as FigmaCommentsResponse
 
-      // If targetCommentId is provided, find that specific comment thread
-      // Otherwise, use the most recent root comment
-      const rootComment = targetCommentId
-        ? data.comments.find(c => c.id === targetCommentId)
-        : this.findMostRecentRootComment(data.comments)
+      // Find the root comment using the appropriate strategy
+      let rootComment: FigmaComment | undefined
+
+      if (fuzzySearchText) {
+        // Use fuzzy matching to find comment by text content
+        console.log('[FigmaAdapter] Using fuzzy matching to find comment:', {
+          searchText: fuzzySearchText.substring(0, 100),
+          totalComments: data.comments.length,
+        })
+
+        const matchedComment = findCommentByText(
+          fuzzySearchText,
+          data.comments,
+          0.8 // 80% similarity threshold
+        )
+
+        rootComment = matchedComment || undefined
+
+        if (!rootComment) {
+          console.warn('[FigmaAdapter] Fuzzy match failed, falling back to most recent comment')
+          rootComment = this.findMostRecentRootComment(data.comments)
+        }
+      } else if (targetCommentId) {
+        // Find specific comment by ID
+        rootComment = data.comments.find(c => c.id === targetCommentId)
+      } else {
+        // Use most recent root comment
+        rootComment = this.findMostRecentRootComment(data.comments)
+      }
 
       if (!rootComment) {
         throw new AdapterError('Comment not found in file', {
