@@ -121,20 +121,95 @@
       </div>
 
       <div v-show="!tabs || activeSection === 'credentials'" class="flex flex-col gap-4 p-1">
+        <!-- Slack OAuth Section -->
+        <div v-if="isSlackSource" class="space-y-4">
+          <div class="mb-2 p-3 sm:p-4 bg-primary/5 rounded-lg border border-primary/20">
+            <div class="flex items-start gap-3">
+              <div class="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mt-0.5">
+                <svg class="w-4 h-4 text-primary" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5zm0 1c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5zm-5 0c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5zm0 1c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5z"/>
+                </svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <h4 class="text-sm font-semibold text-foreground mb-1">
+                  Connect with Slack (Recommended)
+                </h4>
+                <p class="text-xs text-muted-foreground mb-3">
+                  Authorize Discubot to access your Slack workspace. This will automatically configure your bot token and workspace settings.
+                </p>
+
+                <!-- OAuth Connection Status -->
+                <div v-if="hasOAuthConnection" class="space-y-2">
+                  <div class="flex items-center gap-2 text-xs">
+                    <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-success/10 text-success font-medium">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                      </svg>
+                      Connected via OAuth
+                    </span>
+                  </div>
+                  <p class="text-xs text-muted-foreground">
+                    <strong class="text-foreground">Workspace:</strong> {{ oauthWorkspaceName }}
+                  </p>
+                  <UButton
+                    :to="oauthInstallUrl"
+                    color="gray"
+                    variant="soft"
+                    size="sm"
+                    external
+                  >
+                    Reconnect Workspace
+                  </UButton>
+                </div>
+
+                <!-- OAuth Connect Button -->
+                <UButton
+                  v-else
+                  :to="oauthInstallUrl"
+                  color="primary"
+                  size="md"
+                  external
+                >
+                  <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5zm0 1c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5zm-5 0c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5zm0 1c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5z"/>
+                  </svg>
+                  Connect with Slack
+                </UButton>
+              </div>
+            </div>
+          </div>
+
+          <!-- Divider with "OR" -->
+          <div class="relative">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-border"></div>
+            </div>
+            <div class="relative flex justify-center text-xs">
+              <span class="px-2 bg-background text-muted-foreground">OR</span>
+            </div>
+          </div>
+        </div>
+
         <UFormField
           :label="state.sourceType === 'figma' ? 'Figma API Token' : 'Slack Bot Token'"
           name="apiToken"
-          :description="state.sourceType === 'figma' ? 'Personal access token from Figma account settings' : 'Bot User OAuth Token (starts with xoxb-)'"
-          :required="state.sourceType === 'figma' || state.sourceType === 'slack'"
+          :description="state.sourceType === 'figma' ? 'Personal access token from Figma account settings' : isSlackSource && !hasOAuthConnection ? 'Manually enter bot token (xoxb-...) or use OAuth above' : 'Bot User OAuth Token (starts with xoxb-)'"
+          :required="state.sourceType === 'figma' || (state.sourceType === 'slack' && !hasOAuthConnection)"
           class="not-last:pb-4"
         >
           <UInput
             v-model="state.apiToken"
             type="password"
             :placeholder="state.sourceType === 'figma' ? 'figd_...' : 'xoxb-...'"
+            :disabled="isSlackSource && hasOAuthConnection"
             class="w-full font-mono"
             size="xl"
           />
+          <template v-if="isSlackSource && hasOAuthConnection" #hint>
+            <p class="text-xs text-muted-foreground mt-1">
+              Token is managed via OAuth. Click "Reconnect Workspace" above to update.
+            </p>
+          </template>
         </UFormField>
         <UFormField
           label="Notion Integration Token"
@@ -222,7 +297,7 @@
           <UCollapsible class="mt-2">
             <UButton
               label="View default base prompt"
-              color="gray"
+              color="neutral"
               variant="ghost"
               size="xs"
               trailing-icon="i-lucide-chevron-down"
@@ -268,7 +343,7 @@ Respond in JSON format:
           <UCollapsible class="mt-2">
             <UButton
               label="View default base prompt"
-              color="gray"
+              color="neutral"
               variant="ghost"
               size="xs"
               trailing-icon="i-lucide-chevron-down"
@@ -310,6 +385,27 @@ Respond in JSON format:
             </template>
           </UCollapsible>
         </UFormField>
+
+        <!-- Preview Final Prompt Button -->
+        <div class="mt-6 p-4 bg-muted/30 rounded-lg border border-gray-200 dark:border-gray-800">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <h4 class="text-sm font-semibold">Preview Final Prompt</h4>
+              <p class="text-xs text-muted-foreground mt-1">
+                See exactly what will be sent to Claude
+              </p>
+            </div>
+          </div>
+          <UButton
+            color="primary"
+            variant="outline"
+            icon="i-lucide-eye"
+            label="Preview Prompts"
+            @click="openPromptPreview"
+            class="mt-3"
+            size="md"
+          />
+        </div>
       </div>
       </template>
 
@@ -406,12 +502,25 @@ Respond in JSON format:
       </template>
     </CroutonFormLayout>
   </UForm>
+
+  <!-- Prompt Preview Modal -->
+  <PromptPreviewModal
+    v-model="showPromptPreview"
+    :preview="promptPreview"
+    :custom-summary-prompt="state.aiSummaryPrompt"
+    :custom-task-prompt="state.aiTaskPrompt"
+  />
 </template>
 
 <script setup lang="ts">
 import type { DiscubotConfigFormProps, DiscubotConfigFormData } from '../../types'
+import type { PromptPreview } from '#layers/discubot/app/composables/usePromptPreview'
+import PromptPreviewModal from './PromptPreviewModal.vue'
 
 const props = defineProps<DiscubotConfigFormProps>()
+
+// Get current team for OAuth flow
+const { currentTeam } = useTeam()
 const { defaultValue, schema, collection } = useDiscubotConfigs()
 
 // Source type options
@@ -488,9 +597,37 @@ const initialValues = props.action === 'update' && props.activeItem?.id
 
 const state = ref<DiscubotConfigFormData & { id?: string | null }>(initialValues)
 
+// Prompt preview state
+const { buildPreview } = usePromptPreview()
+const showPromptPreview = ref(false)
+const promptPreview = ref<PromptPreview>(buildPreview())
+
+// Open prompt preview modal
+const openPromptPreview = () => {
+  promptPreview.value = buildPreview(state.value.aiSummaryPrompt, state.value.aiTaskPrompt)
+  showPromptPreview.value = true
+}
+
 // Computed properties for conditional rendering (must be after state definition)
 const isFigmaSource = computed(() => state.value.sourceType === 'figma')
 const isSlackSource = computed(() => state.value.sourceType === 'slack')
+
+// OAuth computed properties
+const hasOAuthConnection = computed(() => {
+  return isSlackSource.value &&
+         state.value.sourceMetadata &&
+         (state.value.sourceMetadata as any)?.slackTeamId
+})
+
+const oauthWorkspaceName = computed(() => {
+  if (!hasOAuthConnection.value) return null
+  return (state.value.sourceMetadata as any)?.slackTeamName || 'Connected Workspace'
+})
+
+const oauthInstallUrl = computed(() => {
+  if (!currentTeam.value?.id) return '#'
+  return `/api/oauth/slack/install?teamId=${currentTeam.value.id}`
+})
 
 // Form layout configuration - dynamic based on source type
 const navigationItems = computed(() => {

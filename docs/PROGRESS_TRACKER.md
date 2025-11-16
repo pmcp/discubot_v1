@@ -2,8 +2,8 @@
 
 **Project Start Date**: 2025-11-11
 **Expected Completion**: 2025-12-16 (5 weeks)
-**Current Phase**: Phase 12 - Custom AI Prompts Enhancement 🤖
-**Overall Progress**: 93% (70/75 tasks complete)
+**Current Phase**: Phase 13 - OAuth UI Integration 🔗
+**Overall Progress**: 89% (71/80 tasks complete)
 
 ---
 
@@ -11,11 +11,11 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 70 / 75 |
-| Hours Logged | 140.25 / 163.5 |
-| Current Phase | Phase 12 - Custom AI Prompts Enhancement 🤖 |
+| Tasks Completed | 71 / 80 |
+| Hours Logged | 143.25 / 167 |
+| Current Phase | Phase 13 - OAuth UI Integration 🔗 |
 | Days Elapsed | 6 / 21 |
-| Blockers | 0 (Plaintext whitespace issue resolved) |
+| Blockers | 0 |
 | Tests Passing | 366+ / 440+ (83%+ - 42 expected API key failures) |
 
 ---
@@ -470,8 +470,8 @@
 
 ### Phase 12: Custom AI Prompts Enhancement 🤖
 **Status**: In Progress
-**Progress**: 3/8 tasks (38%)
-**Time**: 3.5h / 13h estimated
+**Progress**: 4/8 tasks (50%)
+**Time**: 6.5h / 13h estimated
 **Target**: Week 2, Day 7
 
 **⚠️ DISCOVERED**: During analysis comparing Discubot v1 with the Figno prototype (`/Users/pmcp/Projects/fyit-tools/layers/figno`), discovered that custom AI prompts are stored in the database and displayed in the UI, but the Summary Prompt is never actually used by the AI service. The Figno prototype had this working correctly.
@@ -516,7 +516,7 @@
   - Run `npx nuxt typecheck` to verify
   - Fix any type errors
 
-- [ ] Task 12.4: Add Prompt Preview Feature (3h)
+- [x] Task 12.4: Add Prompt Preview Feature (3h) ✅
   - Add "Preview Final Prompt" button to config form
   - Create modal/slideover showing complete prompt sent to Claude
   - Highlight where custom text is inserted
@@ -559,6 +559,62 @@
   - Update architecture docs
 
 **Checkpoint**: Custom AI prompts fully functional, users can customize summary and task detection behavior per-config, matches Figno prototype functionality
+
+---
+
+### Phase 13: OAuth UI Integration 🔗
+**Status**: In Progress
+**Progress**: 0/5 tasks (0%)
+**Time**: 0h / 3.5h estimated
+**Target**: Day 6, Week 1
+
+**⚠️ DISCOVERED**: OAuth backend endpoints (Task 4.3) are complete and functional, but there's no UI to trigger the OAuth flow. Users must manually visit `/api/oauth/slack/install` URL. Need to add "Connect with Slack" button and complete the user experience.
+
+**Current Gaps:**
+- No "Connect with Slack" button in config form
+- In-memory state storage (not production-ready for Cloudflare Workers)
+- No OAuth error page
+- Success page doesn't redirect to config form
+- No OAuth connection status indicators
+
+- [ ] Task 13.1: Add "Connect with Slack" Button (1.5h)
+  - Import `useTeam()` composable in Form.vue
+  - Add conditional OAuth section for Slack source type
+  - Show OAuth button instead of manual token field
+  - Compute OAuth URL with Crouton team ID
+  - Display connection status for OAuth configs
+  - Show "Reconnect" button for existing OAuth connections
+  - File: `layers/discubot/collections/configs/app/components/Form.vue`
+
+- [ ] Task 13.2: Create OAuth Error Page (0.5h)
+  - Create error page with query param parsing
+  - Handle common errors (denied, invalid state, expired)
+  - Add "Try Again" and "Contact Support" buttons
+  - Display user-friendly error messages
+  - File: `app/pages/oauth/error.vue` (new)
+
+- [ ] Task 13.3: Improve OAuth Success Page (0.5h)
+  - Add auto-redirect to config list (3 second timer)
+  - Add manual "Continue Setup" button
+  - Display next steps (Notion credentials needed)
+  - Show which workspace was connected
+  - File: `app/pages/oauth/success.vue`
+
+- [ ] Task 13.4: Replace In-Memory State with KV (0.75h)
+  - Replace Map() with hubKV() in install endpoint
+  - Replace Map() with hubKV() in callback endpoint
+  - Set 5-minute TTL on state tokens
+  - Delete state after successful validation
+  - Production-ready for Cloudflare Workers (stateless)
+  - Files: `install.get.ts`, `callback.get.ts`
+
+- [ ] Task 13.5: Show OAuth Status in Config List (0.25h)
+  - Add "OAuth Connected" badge
+  - Display workspace name from sourceMetadata
+  - Show last updated date
+  - File: `layers/discubot/collections/configs/app/components/List.vue` (optional)
+
+**Checkpoint**: OAuth flow fully usable through UI, production-ready KV storage, clear user feedback and error handling
 
 ---
 
@@ -1050,6 +1106,43 @@ Track items deferred to future phases:
   - Ensured backward compatibility with existing code using `customPrompt`
 - **Type Safety**: Ran `npx nuxt typecheck` - no new errors in discubot layer (pre-existing app layer errors unrelated)
 - **Next Steps**: Task 12.4 - Add Prompt Preview Feature to allow users to see the final prompt before sending
+
+---
+
+### 2025-11-16 - Day 6 (Phase 12 Task 12.4)
+**Focus**: Phase 12 - Custom AI Prompts Enhancement (Task 12.4)
+**Hours**: 3h
+**Completed**:
+- [x] Task 12.4: Add Prompt Preview Feature ✅
+
+**Blockers**: None
+**Notes**:
+- **Implementation**: Created comprehensive prompt preview feature for config form
+- **New Files Created**:
+  - `layers/discubot/app/composables/usePromptPreview.ts` - Composable for building prompt previews client-side
+  - `layers/discubot/collections/configs/app/components/PromptPreviewModal.vue` - Modal component for displaying preview
+- **Form Updates**:
+  - Added "Preview Prompts" button to config form AI section
+  - Button triggers modal showing both Summary and Task Detection prompts
+  - Modal highlights custom prompt text with background color
+  - Displays character counts and token estimates for each prompt
+  - Shows total counts at bottom
+- **Features Implemented**:
+  - Client-side prompt building logic matching server-side implementation
+  - Sample discussion for preview context
+  - HTML escaping to prevent XSS
+  - Custom prompt highlighting in final prompt
+  - Character count tracking
+  - Token estimation (~4 chars per token)
+  - Shows both Summary and Task Detection prompts side-by-side
+- **UI/UX**:
+  - Clean Nuxt UI 4 modal design
+  - Info banner explaining what users are seeing
+  - Icons for each prompt type (sparkles for Summary, list-checks for Tasks)
+  - Responsive layout with max-height scrolling
+  - Proper color usage (neutral instead of gray for Nuxt UI 4)
+- **Type Safety**: Ran `npx nuxt typecheck` - no new errors introduced, all type checks pass
+- **Next Steps**: Task 12.5 - Add Preset Examples Library for common prompt templates
 
 ---
 
