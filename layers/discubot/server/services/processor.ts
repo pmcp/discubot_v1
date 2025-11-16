@@ -216,6 +216,8 @@ async function saveDiscussion(
     rawPayload: parsed.metadata,
     metadata: {},
     threadData: {},
+    createdBy: SYSTEM_USER_ID,
+    updatedBy: SYSTEM_USER_ID,
   })
 
   if (!discussion) {
@@ -388,6 +390,8 @@ async function saveTaskRecords(
             sourceType: parsed.sourceType,
             sourceThreadId: parsed.sourceThreadId,
           },
+          createdBy: SYSTEM_USER_ID,
+          updatedBy: SYSTEM_USER_ID,
         })
 
         if (task?.id) {
