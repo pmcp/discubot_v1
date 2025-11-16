@@ -340,7 +340,8 @@ export function parseEmail(emailData: {
   })
 
   // Extract text content
-  const text = plainText || (html ? extractTextFromHtml(html) : '')
+  const trimmedPlainText = plainText?.trim() || ''
+  const text = trimmedPlainText || (html ? extractTextFromHtml(html) : '')
 
   console.log('[EmailParser] Extracted text', {
     textLength: text.length,

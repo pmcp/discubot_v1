@@ -2,8 +2,8 @@
 
 **Project Start Date**: 2025-11-11
 **Expected Completion**: 2025-12-16 (5 weeks)
-**Current Phase**: Phase 10 - Email Inbox Feature 📥 ✅
-**Overall Progress**: 100% (59/59 tasks complete)
+**Current Phase**: Phase 11 - Figma Email Parser Enhancement 🔧
+**Overall Progress**: 90% (60/67 tasks complete)
 
 ---
 
@@ -11,11 +11,11 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 59 / 59 |
-| Hours Logged | 128.75 / 142.5 |
-| Current Phase | Phase 10 - Email Inbox Feature 📥 ✅ |
-| Days Elapsed | 5 / 21 |
-| Blockers | 0 |
+| Tasks Completed | 60 / 67 |
+| Hours Logged | 129.25 / 150.5 |
+| Current Phase | Phase 11 - Figma Email Parser Enhancement 🔧 |
+| Days Elapsed | 6 / 21 |
+| Blockers | 0 (Plaintext whitespace issue resolved) |
 | Tests Passing | 278+ / 352+ (79%+ - 42 expected API key failures) |
 
 ---
@@ -378,6 +378,93 @@
   - No new type errors introduced (verified with typecheck)
 
 **Checkpoint**: ✅ Users can view Figma account emails in admin UI, manage bot account setup, optional forwarding for critical emails
+
+---
+
+### Phase 11: Figma Email Parser Enhancement 🔧
+**Status**: In Progress
+**Progress**: 1/8 tasks (12.5%)
+**Time**: 0.5h / 8h estimated
+**Target**: Day 6
+
+**⚠️ DISCOVERED**: During production testing, Figma comment email parsing is failing with "No comment text found in email" errors. Investigation revealed:
+- Root cause: Resend returns plaintext as single space (" "), HTML parsing never attempted
+- Analyzed original prototype at `/Users/pmcp/Projects/fyit-tools/layers/figno`
+- Prototype has battle-tested features missing in current implementation
+- Created comprehensive briefing document: `docs/briefings/email-parser-enhancement-brief.md`
+
+**Critical Missing Features from Prototype**:
+- @mention extraction with CSS rule filtering (removes @font-face, @media, @import)
+- click.figma.com redirect handling (follows redirects to extract file keys)
+- Sender email file key extraction (most reliable source: `comments-[KEY]@email.figma.com`)
+- Fuzzy comment matching for API correlation (Levenshtein distance, 80% threshold)
+- Comprehensive HTML selectors optimized for Figma's email structure
+- Link extraction for "View in Figma" button URLs
+- Footer/boilerplate text filtering (prevents false extraction)
+
+- [x] ✅ Task 11.1: Fix Plaintext Whitespace Handling (0.5h)
+  - Trim plaintext before checking if truthy
+  - Only use plaintext if substantial content after trimming
+  - Ensure HTML parsing is attempted when plaintext is whitespace-only
+
+- [ ] Task 11.2: Port @Mention Extraction Logic (1.5h)
+  - Add extractFigbotMentions() function for @Figbot/@user detection
+  - Add filterCSSRules() to exclude @font-face, @media, @import
+  - Add extractTableCellMentions() for Figma's table structure
+  - Add context extraction (100 chars before/after mentions)
+  - Update extractTextFromHtml() to prioritize @mentions
+
+- [ ] Task 11.3: Port File Key Extraction Priority System (1h)
+  - Priority 1: Extract from sender email (`comments-[KEY]@email.figma.com`)
+  - Priority 2: click.figma.com redirects (Task 11.4)
+  - Priority 3: Direct Figma links (existing logic)
+  - Priority 4: Upload URL patterns
+  - Priority 5: 40-char hash fallback
+
+- [ ] Task 11.4: Port Click.figma.com Redirect Handling (1h)
+  - Add followClickFigmaRedirect() function
+  - Perform HEAD request with redirect:'manual'
+  - Extract location header and decode URL
+  - Extract file key from decoded destination
+  - Add 3-second timeout for external requests
+  - Integrate into file key priority system
+
+- [ ] Task 11.5: Add Figma Link Extraction (0.5h)
+  - Add extractFigmaLink() function
+  - Find <a> tags with universal="true" attribute
+  - Extract href for "View in Figma" button
+  - Return as figmaLink field in parsed result
+  - Handle click.figma.com URLs
+
+- [ ] Task 11.6: Port Fuzzy Comment Matching (1.5h)
+  - Add normalizeText() for text comparison
+  - Add levenshteinDistance() calculation
+  - Add calculateSimilarity() with threshold (0.8)
+  - Add findCommentByText() for Figma API correlation
+  - Update fetchThread() in Figma adapter to use fuzzy matching
+  - Handle footer/boilerplate text differences
+
+- [ ] Task 11.7: Testing & Validation (1.5h)
+  - Test plaintext whitespace fix
+  - Test @mention extraction with real Figma HTML
+  - Test file key priority (verify sender email priority)
+  - Test click redirect following (mock redirects)
+  - Test link extraction from "View in Figma" button
+  - Test fuzzy matching with similarity thresholds
+  - Integration test with actual Figma HTML from production
+  - Run npx nuxt typecheck
+  - Verify no new type errors
+
+- [ ] Task 11.8: Documentation (0.5h)
+  - Create docs/guides/email-parser-advanced.md
+  - Document priority systems (file key, text extraction)
+  - Document @mention extraction strategy
+  - Document click redirect handling
+  - Document fuzzy matching algorithm
+  - Update docs/guides/figma-integration.md
+  - Add troubleshooting section
+
+**Checkpoint**: Email parsing robust with battle-tested logic, handles real Figma HTML, extracts comment text, file keys, and links reliably
 
 ---
 
@@ -779,5 +866,36 @@ Track items deferred to future phases:
 
 ---
 
-**Last Updated**: 2025-11-14
+### 2025-11-16 - Day 6
+**Focus**: Phase 11 - Email Parser Enhancement (Investigation & Implementation)
+**Hours**: 2.5h
+**Completed**:
+- [x] Discovered email parsing failure in production
+- [x] Investigated root cause (plaintext whitespace handling)
+- [x] Analyzed original prototype at `/Users/pmcp/Projects/fyit-tools/layers/figno`
+- [x] Created comprehensive feature comparison (prototype vs current)
+- [x] Created briefing document: `docs/briefings/email-parser-enhancement-brief.md`
+- [x] Updated PROGRESS_TRACKER.md with Phase 11 (8 new tasks)
+- [x] Task 11.1: Fixed plaintext whitespace handling in emailParser.ts
+
+**Blockers**: None
+**Notes**:
+- **Production Issue**: Figma comment emails failing to parse with error "No comment text found in email". Logs show HTML content is 40,389 characters but only 1 character of plaintext extracted (a space).
+- **Root Cause Analysis**: Email parser (emailParser.ts:343) prioritizes plainText over HTML extraction. When Resend returns `plainText=" "` (single space), it's truthy and HTML parsing is never attempted: `const text = plainText || (html ? extractTextFromHtml(html) : '')`.
+- **Prototype Analysis**: Analyzed original production-tested implementation at `/Users/pmcp/Projects/fyit-tools/layers/figno`. Discovered ~425 lines of sophisticated parsing logic with battle-tested features missing from current implementation.
+- **Critical Missing Features Identified**:
+  1. @mention extraction with CSS rule filtering (Lines 19-153 in prototype)
+  2. File key extraction priority system with sender email as #1 source (Lines 227-357)
+  3. click.figma.com redirect handling (Lines 244-267, 289-331)
+  4. Fuzzy comment matching using Levenshtein distance (Lines 383-494 in figma.ts)
+  5. Comprehensive HTML selectors for Figma's email structure (Lines 155-184)
+  6. Link extraction for "View in Figma" button URLs (missing entirely)
+  7. Footer/boilerplate filtering (Lines 78-95, 120-137)
+- **Briefing Document Created**: Comprehensive 250+ line briefing with detailed feature comparison, implementation plan for 8 tasks (8 hours estimated), success criteria, risk assessment, performance considerations, rollback plan, and references to both prototype and current code locations.
+- **Real Figma Email Data**: User provided actual failing HTML (40KB) with comment text "@testfigma this is task 2", file key "5MPYq7URiGotXahjbW3Nve" in sender email, and click-tracked "View in Figma" link.
+- **Next Steps**: Begin Task 11.1 (Fix Plaintext Whitespace Handling) to address immediate issue, then systematically port battle-tested features from prototype.
+
+---
+
+**Last Updated**: 2025-11-16
 **Next Review**: Post-deployment (after production launch)
