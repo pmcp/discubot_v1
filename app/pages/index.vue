@@ -172,11 +172,6 @@ const scrollToSection = (sectionId: string) => {
       <LandingFeatureGrid />
     </div>
 
-    <!-- Use Cases -->
-    <div id="use-cases">
-      <LandingUseCases />
-    </div>
-
     <!-- FAQ -->
     <div id="faq">
       <LandingFAQ />
