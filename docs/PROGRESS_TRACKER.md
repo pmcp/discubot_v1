@@ -783,8 +783,9 @@
 Track items deferred to future phases:
 
 - [ ] **Circuit Breaker Pattern** - When: API outage patterns emerge
-- [ ] **Token Encryption (AES-256-GCM)** - When: SOC2/ISO27001 compliance needed
+- [ ] **Token Encryption (AES-256-GCM)** - When: SOC2/ISO27001 compliance needed (NOTE: SQLite encryption at rest already enabled via Cloudflare D1)
 - [ ] **KV-Based AI Caching** - When: Multi-region deployment needed
+- [ ] **API Key Masking in Responses** - Security: Prevent API keys from being sent to frontend in GET responses. Currently all keys (apiToken, notionToken, anthropicApiKey, webhookSecret) are returned in plaintext to browser when fetching configs. Should be server-side masked (e.g., `'••••••••'`) or omitted entirely. Keys should only exist server-side for making external API calls. Form should handle partial updates (empty = keep existing, new value = update). Priority: Medium-High (XSS risk, browser exposure, client logs). Affects: `layers/discubot/collections/configs/server/api/teams/[id]/discubot-configs/index.get.ts`, `[configId].patch.ts`, `layers/discubot/collections/configs/app/components/Form.vue`
 
 ---
 
