@@ -154,6 +154,7 @@ function filterCSSRules(mentions: string[]): string[] {
   return mentions.filter(mention => {
     const mentionLower = mention.toLowerCase()
     return !mentionLower.startsWith('@font-face') &&
+           !mentionLower.startsWith('@font') && // Catch @font before hyphen
            !mentionLower.startsWith('@media') &&
            !mentionLower.startsWith('@import') &&
            !mentionLower.startsWith('@keyframes') &&
@@ -227,6 +228,7 @@ function extractMentionWithContext(html: string, mention: string): string | null
       fullText.length < 500 &&
       !fullText.includes('font-family') &&
       !fullText.includes('font-size') &&
+      !fullText.includes('font-face') && // Filter CSS @font-face rules
       !fullText.includes('padding') &&
       !fullText.includes('margin') &&
       !fullText.includes('unsubscribe') &&
