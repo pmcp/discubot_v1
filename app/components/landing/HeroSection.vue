@@ -135,20 +135,21 @@ const integrations = [
             <!-- Source Tools (Left) -->
             <div class="w-full space-y-4 lg:w-auto lg:min-w-[200px]">
               <!-- Figma -->
-              <div
-                class="group relative overflow-hidden rounded-xl border-2 border-gray-200 bg-white/80 p-4 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-purple-300 hover:shadow-2xl dark:border-gray-700 dark:bg-gray-900/80 dark:hover:border-purple-600"
-                :style="{ transitionDelay: '600ms' }"
-              >
-                <div class="flex items-center gap-3">
-                  <div class="flex size-10 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 p-2 transition-transform duration-300 group-hover:rotate-12">
-                    <UIcon name="i-simple-icons-figma" class="size-full text-white" />
-                  </div>
-                  <span class="font-bold text-gray-900 dark:text-white">Figma</span>
-                  <div class="ml-auto">
-                    <div class="size-2 rounded-full bg-green-500" />
+              <div class="relative">
+                <div
+                  class="group rounded-xl border-2 border-gray-200 bg-white/80 p-4 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-purple-300 hover:shadow-2xl dark:border-gray-700 dark:bg-gray-900/80 dark:hover:border-purple-600"
+                  :style="{ transitionDelay: '600ms' }"
+                >
+                  <div class="flex items-center gap-3">
+                    <div class="flex size-10 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 p-2 transition-transform duration-300 group-hover:rotate-12">
+                      <UIcon name="i-simple-icons-figma" class="size-full text-white" />
+                    </div>
+                    <span class="font-bold text-gray-900 dark:text-white">Figma</span>
+                    <div class="ml-auto">
+                      <div class="size-2 rounded-full bg-green-500" />
+                    </div>
                   </div>
                 </div>
-
                 <!-- Connection arrow to AI -->
                 <div class="absolute -right-14 top-1/2 hidden -translate-y-1/2 lg:block">
                   <div class="flex items-center gap-1">
@@ -163,20 +164,21 @@ const integrations = [
               </div>
 
               <!-- Slack -->
-              <div
-                class="group relative overflow-hidden rounded-xl border-2 border-gray-200 bg-white/80 p-4 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-green-300 hover:shadow-2xl dark:border-gray-700 dark:bg-gray-900/80 dark:hover:border-green-600"
-                :style="{ transitionDelay: '700ms' }"
-              >
-                <div class="flex items-center gap-3">
-                  <div class="flex size-10 items-center justify-center rounded-lg bg-gradient-to-br from-green-500 to-teal-500 p-2 transition-transform duration-300 group-hover:rotate-12">
-                    <UIcon name="i-simple-icons-slack" class="size-full text-white" />
-                  </div>
-                  <span class="font-bold text-gray-900 dark:text-white">Slack</span>
-                  <div class="ml-auto">
-                    <div class="size-2 rounded-full bg-green-500" />
+              <div class="relative">
+                <div
+                  class="group rounded-xl border-2 border-gray-200 bg-white/80 p-4 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-green-300 hover:shadow-2xl dark:border-gray-700 dark:bg-gray-900/80 dark:hover:border-green-600"
+                  :style="{ transitionDelay: '700ms' }"
+                >
+                  <div class="flex items-center gap-3">
+                    <div class="flex size-10 items-center justify-center rounded-lg bg-gradient-to-br from-green-500 to-teal-500 p-2 transition-transform duration-300 group-hover:rotate-12">
+                      <UIcon name="i-simple-icons-slack" class="size-full text-white" />
+                    </div>
+                    <span class="font-bold text-gray-900 dark:text-white">Slack</span>
+                    <div class="ml-auto">
+                      <div class="size-2 rounded-full bg-green-500" />
+                    </div>
                   </div>
                 </div>
-
                 <!-- Connection arrow to AI -->
                 <div class="absolute -right-14 top-1/2 hidden -translate-y-1/2 lg:block">
                   <div class="flex items-center gap-1">
@@ -191,20 +193,21 @@ const integrations = [
               </div>
 
               <!-- Email (Coming Soon) -->
-              <div
-                class="group relative overflow-hidden rounded-xl border-2 border-dashed border-gray-300 bg-white/50 p-4 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 dark:border-gray-700 dark:bg-gray-900/50"
-                :style="{ transitionDelay: '800ms' }"
-              >
-                <div class="flex items-center gap-3">
-                  <div class="flex size-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 p-2 opacity-60 transition-transform duration-300 group-hover:rotate-12">
-                    <UIcon name="i-lucide-mail" class="size-full animate-pulse text-white" />
+              <div class="relative">
+                <div
+                  class="group rounded-xl border-2 border-dashed border-gray-300 bg-white/50 p-4 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 dark:border-gray-700 dark:bg-gray-900/50"
+                  :style="{ transitionDelay: '800ms' }"
+                >
+                  <div class="flex items-center gap-3">
+                    <div class="flex size-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 p-2 opacity-60 transition-transform duration-300 group-hover:rotate-12">
+                      <UIcon name="i-lucide-mail" class="size-full animate-pulse text-white" />
+                    </div>
+                    <span class="font-bold text-gray-500 dark:text-gray-400">Email</span>
+                    <UBadge color="primary" variant="subtle" size="xs" class="ml-auto animate-bounce">
+                      Soon
+                    </UBadge>
                   </div>
-                  <span class="font-bold text-gray-500 dark:text-gray-400">Email</span>
-                  <UBadge color="primary" variant="subtle" size="xs" class="ml-auto animate-bounce">
-                    Soon
-                  </UBadge>
                 </div>
-
                 <!-- Connection arrow to AI (disabled/grayed out) -->
                 <div class="absolute -right-14 top-1/2 hidden -translate-y-1/2 opacity-30 lg:block">
                   <div class="flex items-center gap-1">
