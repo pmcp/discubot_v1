@@ -23,6 +23,8 @@ export interface ParsedEmail {
   author?: string
   /** All extracted links */
   links: string[]
+  /** Direct "View in Figma" link (from universal="true" button) */
+  figmaLink?: string
   /** Subject line */
   subject?: string
   /** Timestamp from email headers */
@@ -398,6 +400,86 @@ export function extractLinksFromHtml(html: string): string[] {
 }
 
 /**
+ * Extract the "View in Figma" link from email HTML
+ *
+ * Figma emails include a special universal link with the attribute universal="true"
+ * that points directly to the file. This is often a click.figma.com tracking URL
+ * that redirects to the actual Figma file.
+ *
+ * @param html - The HTML content of the email
+ * @returns The Figma link URL if found, null otherwise
+ *
+ * @example
+ * const figmaLink = extractFigmaLink(html)
+ * // Returns: 'https://click.figma.com/...' or 'https://www.figma.com/file/...'
+ */
+export function extractFigmaLink(html: string): string | null {
+  const $ = cheerio.load(html)
+
+  // Priority 1: Look for <a> tags with universal="true" attribute
+  // This is the "View in Figma" button that Figma includes in emails
+  const universalLink = $('a[universal="true"]').attr('href')
+  if (universalLink && universalLink.startsWith('http')) {
+    console.log('[EmailParser] Found universal Figma link:', universalLink)
+    return universalLink
+  }
+
+  // Priority 2: Look for links with text "View in Figma"
+  let viewInFigmaLink: string | null = null
+  $('a[href]').each((_, element) => {
+    const text = $(element).text().trim()
+    const href = $(element).attr('href')
+
+    if (
+      href &&
+      href.startsWith('http') &&
+      (text.toLowerCase().includes('view in figma') ||
+        text.toLowerCase().includes('open in figma'))
+    ) {
+      viewInFigmaLink = href
+      return false // Break the loop
+    }
+  })
+
+  if (viewInFigmaLink) {
+    console.log('[EmailParser] Found "View in Figma" link:', viewInFigmaLink)
+    return viewInFigmaLink
+  }
+
+  // Priority 3: Look for click.figma.com or direct figma.com links
+  let figmaComLink: string | null = null
+  $('a[href]').each((_, element) => {
+    const href = $(element).attr('href')
+
+    if (href && href.startsWith('http')) {
+      // Prefer click.figma.com tracking links (official email links)
+      if (href.includes('click.figma.com')) {
+        figmaComLink = href
+        return false // Break the loop
+      }
+
+      // Fallback to direct figma.com links
+      if (
+        !figmaComLink &&
+        (href.includes('figma.com/file/') ||
+          href.includes('figma.com/design/') ||
+          href.includes('figma.com/proto/'))
+      ) {
+        figmaComLink = href
+      }
+    }
+  })
+
+  if (figmaComLink) {
+    console.log('[EmailParser] Found Figma.com link:', figmaComLink)
+    return figmaComLink
+  }
+
+  console.log('[EmailParser] No Figma link found')
+  return null
+}
+
+/**
  * Determine email type based on content and links
  */
 export function determineEmailType(subject: string, html: string): FigmaEmailMetadata['emailType'] {
@@ -677,6 +759,9 @@ export async function parseEmailAsync(emailData: {
     }
   }
 
+  // Extract "View in Figma" link
+  const figmaLink = html ? extractFigmaLink(html) : undefined
+
   // Parse timestamp
   const timestamp = emailData.timestamp
     ? new Date(emailData.timestamp * 1000)
@@ -688,6 +773,7 @@ export async function parseEmailAsync(emailData: {
     fileKey,
     author: emailData.from,
     links,
+    figmaLink: figmaLink || undefined,
     subject: emailData.subject,
     timestamp,
   }
@@ -830,6 +916,9 @@ export function parseEmail(emailData: {
     }
   }
 
+  // Extract "View in Figma" link
+  const figmaLink = html ? extractFigmaLink(html) : undefined
+
   // Parse timestamp
   const timestamp = emailData.timestamp
     ? new Date(emailData.timestamp * 1000)
@@ -841,6 +930,7 @@ export function parseEmail(emailData: {
     fileKey,
     author: emailData.from,
     links,
+    figmaLink: figmaLink || undefined,
     subject: emailData.subject,
     timestamp,
   }
