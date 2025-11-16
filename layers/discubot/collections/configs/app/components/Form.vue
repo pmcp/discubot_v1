@@ -209,7 +209,7 @@
         <UFormField
           label="Summary Prompt Template"
           name="aiSummaryPrompt"
-          description="Custom prompt for AI summarization. Leave empty for default."
+          description="Additional instructions added to the base prompt. Leave empty to use default only."
           class="not-last:pb-4"
         >
           <UTextarea
@@ -219,11 +219,43 @@
             :rows="4"
             size="xl"
           />
+          <UCollapsible class="mt-2">
+            <UButton
+              label="View default base prompt"
+              color="gray"
+              variant="ghost"
+              size="xs"
+              trailing-icon="i-lucide-chevron-down"
+              :ui="{
+                trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200'
+              }"
+            />
+            <template #content>
+              <div class="mt-2 p-3 bg-gray-50 dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-800">
+                <pre class="text-xs font-mono whitespace-pre-wrap">Analyze this discussion thread and provide:
+
+1. A concise summary (2-3 sentences)
+2. 3-5 key points or decisions
+3. Overall sentiment (positive, neutral, or negative)
+
+Discussion:
+{discussion messages}
+
+Respond in JSON format:
+{
+  "summary": "...",
+  "keyPoints": ["...", "...", "..."],
+  "sentiment": "positive|neutral|negative",
+  "confidence": 0.0-1.0
+}</pre>
+              </div>
+            </template>
+          </UCollapsible>
         </UFormField>
         <UFormField
           label="Task Detection Prompt"
           name="aiTaskPrompt"
-          description="Custom prompt for task extraction. Leave empty for default."
+          description="Additional instructions added to the base prompt. Leave empty to use default only."
           class="not-last:pb-4"
         >
           <UTextarea
@@ -233,6 +265,50 @@
             :rows="4"
             size="xl"
           />
+          <UCollapsible class="mt-2">
+            <UButton
+              label="View default base prompt"
+              color="gray"
+              variant="ghost"
+              size="xs"
+              trailing-icon="i-lucide-chevron-down"
+              :ui="{
+                trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200'
+              }"
+            />
+            <template #content>
+              <div class="mt-2 p-3 bg-gray-50 dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-800">
+                <pre class="text-xs font-mono whitespace-pre-wrap">Analyze this discussion and identify actionable tasks.
+
+Discussion:
+{discussion messages}
+
+<span class="text-primary-600 dark:text-primary-400 font-semibold">← Your custom prompt is inserted here</span>
+
+Instructions:
+- Identify specific, actionable tasks mentioned or implied
+- Extract title, description, and priority for each task
+- Determine if there are multiple distinct tasks (isMultiTask: true/false)
+- Maximum 5 tasks
+- If no clear tasks, return empty array
+
+Respond in JSON format:
+{
+  "isMultiTask": true|false,
+  "tasks": [
+    {
+      "title": "...",
+      "description": "...",
+      "priority": "low|medium|high|urgent",
+      "assignee": "...",
+      "tags": ["..."]
+    }
+  ],
+  "confidence": 0.0-1.0
+}</pre>
+              </div>
+            </template>
+          </UCollapsible>
         </UFormField>
       </div>
       </template>
