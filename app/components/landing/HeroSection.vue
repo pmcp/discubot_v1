@@ -127,13 +127,13 @@ const integrations = [
         </p>
 
         <!-- Flow Container -->
-        <div class="relative mx-auto mt-12 max-w-5xl">
+        <div class="relative mx-auto mt-12 max-w-6xl">
           <!-- Animated background glow -->
           <div class="absolute left-1/2 top-1/2 -z-10 size-96 -translate-x-1/2 -translate-y-1/2 animate-pulse-glow rounded-full bg-primary-400/10 blur-3xl" />
 
-          <div class="grid grid-cols-1 gap-8 lg:grid-cols-7 lg:items-center">
+          <div class="flex flex-col items-center gap-8 lg:flex-row lg:justify-center">
             <!-- Source Tools (Left) -->
-            <div class="space-y-4 lg:col-span-2">
+            <div class="w-full space-y-4 lg:w-auto lg:min-w-[200px]">
               <!-- Figma -->
               <div
                 class="group relative overflow-hidden rounded-xl border-2 border-gray-200 bg-white/80 p-4 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-purple-300 hover:shadow-2xl dark:border-gray-700 dark:bg-gray-900/80 dark:hover:border-purple-600"
@@ -146,10 +146,6 @@ const integrations = [
                   <span class="font-bold text-gray-900 dark:text-white">Figma</span>
                   <div class="ml-auto size-3 rounded-full bg-green-500" />
                   <div class="absolute -right-1 -top-1 size-3 animate-ping rounded-full bg-green-400" />
-                </div>
-                <!-- Flowing particles to AI -->
-                <div class="absolute -right-4 top-1/2 hidden h-0.5 w-8 -translate-y-1/2 lg:block">
-                  <div class="animate-flow-right h-full w-full bg-gradient-to-r from-purple-400 to-transparent" />
                 </div>
               </div>
 
@@ -165,10 +161,6 @@ const integrations = [
                   <span class="font-bold text-gray-900 dark:text-white">Slack</span>
                   <div class="ml-auto size-3 rounded-full bg-green-500" />
                   <div class="absolute -right-1 -top-1 size-3 animate-ping rounded-full bg-green-400" />
-                </div>
-                <!-- Flowing particles to AI -->
-                <div class="absolute -right-4 top-1/2 hidden h-0.5 w-8 -translate-y-1/2 lg:block">
-                  <div class="animation-delay-1000 animate-flow-right h-full w-full bg-gradient-to-r from-green-400 to-transparent" />
                 </div>
               </div>
 
@@ -189,8 +181,21 @@ const integrations = [
               </div>
             </div>
 
+            <!-- Connector: Sources → AI -->
+            <div class="hidden lg:flex lg:flex-col lg:items-center lg:gap-2">
+              <div class="flex items-center gap-1">
+                <div class="h-0.5 w-12 bg-gradient-to-r from-primary-400 to-primary-500">
+                  <div class="relative h-full w-full">
+                    <div class="absolute left-0 top-1/2 size-1.5 -translate-y-1/2 animate-flow-dot rounded-full bg-primary-500" />
+                    <div class="animation-delay-1000 absolute left-0 top-1/2 size-1.5 -translate-y-1/2 animate-flow-dot rounded-full bg-primary-500" />
+                  </div>
+                </div>
+                <div class="border-y-[6px] border-l-[10px] border-y-transparent border-l-primary-500" />
+              </div>
+            </div>
+
             <!-- AI Hub (Center) -->
-            <div class="flex justify-center lg:col-span-3">
+            <div class="flex justify-center">
               <div
                 class="group relative overflow-hidden rounded-2xl border-2 border-primary-300 bg-gradient-to-br from-primary-50 to-purple-50 p-8 shadow-2xl transition-all duration-500 hover:scale-110 hover:shadow-primary-500/20 dark:border-primary-600 dark:from-primary-950/40 dark:to-purple-950/40"
                 :style="{ transitionDelay: '900ms' }"
@@ -221,16 +226,24 @@ const integrations = [
                     <div class="size-2 animate-bounce rounded-full bg-primary-500" style="animation-delay: 300ms" />
                   </div>
                 </div>
+              </div>
+            </div>
 
-                <!-- Connection lines -->
-                <div class="absolute -right-4 top-1/2 hidden h-0.5 w-8 -translate-y-1/2 lg:block">
-                  <div class="animation-delay-2000 animate-flow-right h-full w-full bg-gradient-to-r from-primary-400 to-transparent" />
+            <!-- Connector: AI → Notion -->
+            <div class="hidden lg:flex lg:flex-col lg:items-center lg:gap-2">
+              <div class="flex items-center gap-1">
+                <div class="h-0.5 w-12 bg-gradient-to-r from-primary-400 to-primary-500">
+                  <div class="relative h-full w-full">
+                    <div class="animation-delay-500 absolute left-0 top-1/2 size-1.5 -translate-y-1/2 animate-flow-dot rounded-full bg-primary-500" />
+                    <div class="animation-delay-1500 absolute left-0 top-1/2 size-1.5 -translate-y-1/2 animate-flow-dot rounded-full bg-primary-500" />
+                  </div>
                 </div>
+                <div class="border-y-[6px] border-l-[10px] border-y-transparent border-l-primary-500" />
               </div>
             </div>
 
             <!-- Notion Destination (Right) -->
-            <div class="flex justify-center lg:col-span-2">
+            <div class="w-full lg:w-auto lg:min-w-[200px]">
               <div
                 class="group relative w-full overflow-hidden rounded-xl border-2 border-gray-200 bg-white/80 p-6 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-gray-400 hover:shadow-2xl dark:border-gray-700 dark:bg-gray-900/80 dark:hover:border-gray-500"
                 :style="{ transitionDelay: '1000ms' }"
@@ -321,6 +334,27 @@ const integrations = [
   }
 }
 
+@keyframes flow-dot {
+  0% {
+    left: 0%;
+    opacity: 0;
+    scale: 0.5;
+  }
+  10% {
+    opacity: 1;
+    scale: 1;
+  }
+  90% {
+    opacity: 1;
+    scale: 1;
+  }
+  100% {
+    left: 100%;
+    opacity: 0;
+    scale: 0.5;
+  }
+}
+
 @keyframes pulse-glow {
   0%, 100% {
     opacity: 0.3;
@@ -350,8 +384,16 @@ const integrations = [
   animation: blob 7s infinite;
 }
 
+.animation-delay-500 {
+  animation-delay: 0.5s;
+}
+
 .animation-delay-1000 {
   animation-delay: 1s;
+}
+
+.animation-delay-1500 {
+  animation-delay: 1.5s;
 }
 
 .animation-delay-2000 {
@@ -380,5 +422,9 @@ const integrations = [
 
 .animate-pulse-slow {
   animation: pulse-slow 3s ease-in-out infinite;
+}
+
+.animate-flow-dot {
+  animation: flow-dot 3s ease-in-out infinite;
 }
 </style>
