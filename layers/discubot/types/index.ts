@@ -95,8 +95,12 @@ export type DiscussionStatus =
 export interface AIAnalysisOptions {
   /** Skip cache and force fresh analysis */
   skipCache?: boolean
-  /** Custom prompt additions */
+  /** Custom prompt additions (legacy - use customSummaryPrompt/customTaskPrompt) */
   customPrompt?: string
+  /** Custom summary prompt template */
+  customSummaryPrompt?: string
+  /** Custom task detection prompt */
+  customTaskPrompt?: string
   /** Source type for context-aware prompts */
   sourceType?: string
   /** Maximum number of tasks to detect */

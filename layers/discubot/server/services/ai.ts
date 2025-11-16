@@ -213,14 +213,17 @@ async function generateSummary(
 ): Promise<AISummary> {
   const client = getAnthropicClient()
 
-  const { sourceType, customPrompt } = options
+  const { sourceType, customSummaryPrompt, customPrompt } = options
+
+  // Use customSummaryPrompt if available, fallback to customPrompt for backward compatibility
+  const summaryPrompt = customSummaryPrompt || customPrompt
 
   // Build prompt with optional custom prompt (similar to Figno prototype)
-  const prompt = buildSummaryPrompt(thread, sourceType, customPrompt)
+  const prompt = buildSummaryPrompt(thread, sourceType, summaryPrompt)
 
   console.log('[AI Service] Built summary prompt:', {
-    hasCustomPrompt: !!customPrompt,
-    customPromptLength: customPrompt?.length,
+    hasCustomPrompt: !!summaryPrompt,
+    customPromptLength: summaryPrompt?.length,
     promptLength: prompt.length,
   })
 
@@ -295,12 +298,15 @@ async function detectTasks(
 
   const maxTasks = options.maxTasks || 5
 
+  // Use customTaskPrompt if available, fallback to customPrompt for backward compatibility
+  const taskPrompt = options.customTaskPrompt || options.customPrompt
+
   const prompt = `Analyze this discussion and identify actionable tasks.
 
 Discussion:
 ${messages}
 
-${options.customPrompt || ''}
+${taskPrompt || ''}
 
 Instructions:
 - Identify specific, actionable tasks mentioned or implied

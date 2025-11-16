@@ -706,8 +706,20 @@ export async function processDiscussion(
       }
     }
     else {
+      const customSummaryPrompt = config.aiSummaryPrompt || undefined
+      const customTaskPrompt = config.aiTaskPrompt || undefined
+
+      console.log('[Processor] Using custom prompts:', {
+        hasSummaryPrompt: !!customSummaryPrompt,
+        hasTaskPrompt: !!customTaskPrompt,
+        summaryPromptLength: customSummaryPrompt?.length,
+        taskPromptLength: customTaskPrompt?.length,
+      })
+
       aiAnalysis = await analyzeDiscussion(thread, {
         sourceType: parsed.sourceType,
+        customSummaryPrompt,
+        customTaskPrompt,
       })
 
       console.log('[Processor] AI analysis complete:', {

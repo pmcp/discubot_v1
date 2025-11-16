@@ -3,7 +3,7 @@
 **Project Start Date**: 2025-11-11
 **Expected Completion**: 2025-12-16 (5 weeks)
 **Current Phase**: Phase 12 - Custom AI Prompts Enhancement 🤖
-**Overall Progress**: 91% (68/75 tasks complete)
+**Overall Progress**: 93% (70/75 tasks complete)
 
 ---
 
@@ -11,8 +11,8 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 68 / 75 |
-| Hours Logged | 138.75 / 163.5 |
+| Tasks Completed | 70 / 75 |
+| Hours Logged | 140.25 / 163.5 |
 | Current Phase | Phase 12 - Custom AI Prompts Enhancement 🤖 |
 | Days Elapsed | 6 / 21 |
 | Blockers | 0 (Plaintext whitespace issue resolved) |
@@ -470,8 +470,8 @@
 
 ### Phase 12: Custom AI Prompts Enhancement 🤖
 **Status**: In Progress
-**Progress**: 1/8 tasks (13%)
-**Time**: 2h / 13h estimated
+**Progress**: 3/8 tasks (38%)
+**Time**: 3.5h / 13h estimated
 **Target**: Week 2, Day 7
 
 **⚠️ DISCOVERED**: During analysis comparing Discubot v1 with the Figno prototype (`/Users/pmcp/Projects/fyit-tools/layers/figno`), discovered that custom AI prompts are stored in the database and displayed in the UI, but the Summary Prompt is never actually used by the AI service. The Figno prototype had this working correctly.
@@ -502,14 +502,14 @@
   - Ensure custom prompt is prepended/appended correctly
   - Test with sample custom prompts
 
-- [ ] Task 12.2: Wire Up Custom Prompts in Processor (1h)
+- [x] Task 12.2: Wire Up Custom Prompts in Processor (1h) ✅
   - Update `/layers/discubot/server/services/processor.ts` line ~709
   - Pass `config.aiSummaryPrompt` and `config.aiTaskPrompt` to `analyzeDiscussion()`
   - Add custom prompts to function signature
   - Ensure proper fallback to defaults when prompts are empty/null
   - Update all call sites
 
-- [ ] Task 12.3: Update Type Definitions (0.5h)
+- [x] Task 12.3: Update Type Definitions (0.5h) ✅
   - Add `customSummaryPrompt?: string` to `AIAnalysisOptions` interface
   - Add `customTaskPrompt?: string` to `AIAnalysisOptions` interface
   - Update related types in `/layers/discubot/types/`
@@ -1022,6 +1022,34 @@ Track items deferred to future phases:
   - Added logging for custom prompt usage
 - **Type Safety**: Ran `npx nuxt typecheck` - no new errors in discubot layer (pre-existing app layer errors unrelated)
 - **Next Steps**: Task 12.2 - Wire up custom prompts in processor.ts to pass config prompts to analyzeDiscussion()
+
+---
+
+### 2025-11-16 - Day 6 (Phase 12 Continued)
+**Focus**: Phase 12 - Custom AI Prompts Enhancement (Tasks 12.2 & 12.3)
+**Hours**: 1.5h
+**Completed**:
+- [x] Task 12.2: Wire Up Custom Prompts in Processor ✅
+- [x] Task 12.3: Update Type Definitions ✅
+
+**Blockers**: None
+**Notes**:
+- **Implementation**: Completed both tasks together as they were tightly coupled
+- **Type Definitions** (Task 12.3):
+  - Added `customSummaryPrompt?: string` to `AIAnalysisOptions` interface
+  - Added `customTaskPrompt?: string` to `AIAnalysisOptions` interface
+  - Kept legacy `customPrompt` field for backward compatibility
+- **Processor Updates** (Task 12.2):
+  - Updated processor.ts line 709-723 to pass both prompts from config
+  - Added `customSummaryPrompt: config.aiSummaryPrompt || undefined`
+  - Added `customTaskPrompt: config.aiTaskPrompt || undefined`
+  - Added logging for custom prompt usage with prompt lengths
+- **AI Service Updates**:
+  - Updated `generateSummary()` to use `customSummaryPrompt` (fallback to `customPrompt`)
+  - Updated `detectTasks()` to use `customTaskPrompt` (fallback to `customPrompt`)
+  - Ensured backward compatibility with existing code using `customPrompt`
+- **Type Safety**: Ran `npx nuxt typecheck` - no new errors in discubot layer (pre-existing app layer errors unrelated)
+- **Next Steps**: Task 12.4 - Add Prompt Preview Feature to allow users to see the final prompt before sending
 
 ---
 
