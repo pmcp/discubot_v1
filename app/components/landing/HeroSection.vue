@@ -144,8 +144,21 @@ const integrations = [
                     <UIcon name="i-simple-icons-figma" class="size-full text-white" />
                   </div>
                   <span class="font-bold text-gray-900 dark:text-white">Figma</span>
-                  <div class="ml-auto size-3 rounded-full bg-green-500" />
-                  <div class="absolute -right-1 -top-1 size-3 animate-ping rounded-full bg-green-400" />
+                  <div class="ml-auto">
+                    <div class="size-2 rounded-full bg-green-500" />
+                  </div>
+                </div>
+
+                <!-- Connection arrow to AI -->
+                <div class="absolute -right-14 top-1/2 hidden -translate-y-1/2 lg:block">
+                  <div class="flex items-center gap-1">
+                    <div class="h-0.5 w-10 bg-gradient-to-r from-purple-400 to-primary-500">
+                      <div class="relative h-full w-full">
+                        <div class="absolute left-0 top-1/2 size-1.5 -translate-y-1/2 animate-flow-dot rounded-full bg-purple-500" />
+                      </div>
+                    </div>
+                    <div class="border-y-[5px] border-l-[8px] border-y-transparent border-l-primary-500" />
+                  </div>
                 </div>
               </div>
 
@@ -159,8 +172,21 @@ const integrations = [
                     <UIcon name="i-simple-icons-slack" class="size-full text-white" />
                   </div>
                   <span class="font-bold text-gray-900 dark:text-white">Slack</span>
-                  <div class="ml-auto size-3 rounded-full bg-green-500" />
-                  <div class="absolute -right-1 -top-1 size-3 animate-ping rounded-full bg-green-400" />
+                  <div class="ml-auto">
+                    <div class="size-2 rounded-full bg-green-500" />
+                  </div>
+                </div>
+
+                <!-- Connection arrow to AI -->
+                <div class="absolute -right-14 top-1/2 hidden -translate-y-1/2 lg:block">
+                  <div class="flex items-center gap-1">
+                    <div class="h-0.5 w-10 bg-gradient-to-r from-green-400 to-primary-500">
+                      <div class="relative h-full w-full">
+                        <div class="animation-delay-500 absolute left-0 top-1/2 size-1.5 -translate-y-1/2 animate-flow-dot rounded-full bg-green-500" />
+                      </div>
+                    </div>
+                    <div class="border-y-[5px] border-l-[8px] border-y-transparent border-l-primary-500" />
+                  </div>
                 </div>
               </div>
 
@@ -178,21 +204,21 @@ const integrations = [
                     Soon
                   </UBadge>
                 </div>
+
+                <!-- Connection arrow to AI (disabled/grayed out) -->
+                <div class="absolute -right-14 top-1/2 hidden -translate-y-1/2 opacity-30 lg:block">
+                  <div class="flex items-center gap-1">
+                    <div class="h-0.5 w-10 bg-gradient-to-r from-blue-300 to-gray-400">
+                      <div class="relative h-full w-full" />
+                    </div>
+                    <div class="border-y-[5px] border-l-[8px] border-y-transparent border-l-gray-400" />
+                  </div>
+                </div>
               </div>
             </div>
 
-            <!-- Connector: Sources → AI -->
-            <div class="hidden lg:flex lg:flex-col lg:items-center lg:gap-2">
-              <div class="flex items-center gap-1">
-                <div class="h-0.5 w-12 bg-gradient-to-r from-primary-400 to-primary-500">
-                  <div class="relative h-full w-full">
-                    <div class="absolute left-0 top-1/2 size-1.5 -translate-y-1/2 animate-flow-dot rounded-full bg-primary-500" />
-                    <div class="animation-delay-1000 absolute left-0 top-1/2 size-1.5 -translate-y-1/2 animate-flow-dot rounded-full bg-primary-500" />
-                  </div>
-                </div>
-                <div class="border-y-[6px] border-l-[10px] border-y-transparent border-l-primary-500" />
-              </div>
-            </div>
+            <!-- Spacer for layout -->
+            <div class="hidden lg:block lg:w-12" />
 
             <!-- AI Hub (Center) -->
             <div class="flex justify-center">
@@ -230,15 +256,15 @@ const integrations = [
             </div>
 
             <!-- Connector: AI → Notion -->
-            <div class="hidden lg:flex lg:flex-col lg:items-center lg:gap-2">
+            <div class="hidden lg:flex lg:items-center">
               <div class="flex items-center gap-1">
-                <div class="h-0.5 w-12 bg-gradient-to-r from-primary-400 to-primary-500">
+                <div class="h-0.5 w-10 bg-gradient-to-r from-primary-400 to-primary-500">
                   <div class="relative h-full w-full">
                     <div class="animation-delay-500 absolute left-0 top-1/2 size-1.5 -translate-y-1/2 animate-flow-dot rounded-full bg-primary-500" />
-                    <div class="animation-delay-1500 absolute left-0 top-1/2 size-1.5 -translate-y-1/2 animate-flow-dot rounded-full bg-primary-500" />
+                    <div class="animation-delay-1000 absolute left-0 top-1/2 size-1.5 -translate-y-1/2 animate-flow-dot rounded-full bg-primary-500" />
                   </div>
                 </div>
-                <div class="border-y-[6px] border-l-[10px] border-y-transparent border-l-primary-500" />
+                <div class="border-y-[5px] border-l-[8px] border-y-transparent border-l-primary-500" />
               </div>
             </div>
 
