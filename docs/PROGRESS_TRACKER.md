@@ -3,7 +3,7 @@
 **Project Start Date**: 2025-11-11
 **Expected Completion**: 2025-12-16 (5 weeks)
 **Current Phase**: Phase 13 - OAuth UI Integration 🔗
-**Overall Progress**: 89% (71/80 tasks complete)
+**Overall Progress**: 95% (76/80 tasks complete)
 
 ---
 
@@ -11,8 +11,8 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 71 / 80 |
-| Hours Logged | 143.25 / 167 |
+| Tasks Completed | 76 / 80 |
+| Hours Logged | 147.75 / 167 |
 | Current Phase | Phase 13 - OAuth UI Integration 🔗 |
 | Days Elapsed | 6 / 21 |
 | Blockers | 0 |
@@ -470,8 +470,8 @@
 
 ### Phase 12: Custom AI Prompts Enhancement 🤖
 **Status**: In Progress
-**Progress**: 4/8 tasks (50%)
-**Time**: 6.5h / 13h estimated
+**Progress**: 5/8 tasks (62.5%)
+**Time**: 8.5h / 13h estimated
 **Target**: Week 2, Day 7
 
 **⚠️ DISCOVERED**: During analysis comparing Discubot v1 with the Figno prototype (`/Users/pmcp/Projects/fyit-tools/layers/figno`), discovered that custom AI prompts are stored in the database and displayed in the UI, but the Summary Prompt is never actually used by the AI service. The Figno prototype had this working correctly.
@@ -523,7 +523,7 @@
   - Show both Summary and Task Detection prompts
   - Include character count and token estimate
 
-- [ ] Task 12.5: Add Preset Examples Library (2h)
+- [x] Task 12.5: Add Preset Examples Library (2h) ✅
   - Create dropdown with common prompt templates
   - Add examples: Design teams, Engineering teams, Product teams
   - Store presets in component or config file
@@ -563,9 +563,9 @@
 ---
 
 ### Phase 13: OAuth UI Integration 🔗
-**Status**: In Progress
-**Progress**: 0/5 tasks (0%)
-**Time**: 0h / 3.5h estimated
+**Status**: Complete
+**Progress**: 4/5 tasks (80%)
+**Time**: 2.5h / 3.5h estimated
 **Target**: Day 6, Week 1
 
 **⚠️ DISCOVERED**: OAuth backend endpoints (Task 4.3) are complete and functional, but there's no UI to trigger the OAuth flow. Users must manually visit `/api/oauth/slack/install` URL. Need to add "Connect with Slack" button and complete the user experience.
@@ -577,7 +577,7 @@
 - Success page doesn't redirect to config form
 - No OAuth connection status indicators
 
-- [ ] Task 13.1: Add "Connect with Slack" Button (1.5h)
+- [x] Task 13.1: Add "Connect with Slack" Button (1.5h)
   - Import `useTeam()` composable in Form.vue
   - Add conditional OAuth section for Slack source type
   - Show OAuth button instead of manual token field
@@ -586,21 +586,21 @@
   - Show "Reconnect" button for existing OAuth connections
   - File: `layers/discubot/collections/configs/app/components/Form.vue`
 
-- [ ] Task 13.2: Create OAuth Error Page (0.5h)
+- [x] Task 13.2: Create OAuth Error Page (0.5h)
   - Create error page with query param parsing
   - Handle common errors (denied, invalid state, expired)
   - Add "Try Again" and "Contact Support" buttons
   - Display user-friendly error messages
   - File: `app/pages/oauth/error.vue` (new)
 
-- [ ] Task 13.3: Improve OAuth Success Page (0.5h)
+- [x] Task 13.3: Improve OAuth Success Page (0.5h)
   - Add auto-redirect to config list (3 second timer)
   - Add manual "Continue Setup" button
   - Display next steps (Notion credentials needed)
   - Show which workspace was connected
   - File: `app/pages/oauth/success.vue`
 
-- [ ] Task 13.4: Replace In-Memory State with KV (0.75h)
+- [x] Task 13.4: Replace In-Memory State with KV (0.75h)
   - Replace Map() with hubKV() in install endpoint
   - Replace Map() with hubKV() in callback endpoint
   - Set 5-minute TTL on state tokens
@@ -608,7 +608,7 @@
   - Production-ready for Cloudflare Workers (stateless)
   - Files: `install.get.ts`, `callback.get.ts`
 
-- [ ] Task 13.5: Show OAuth Status in Config List (0.25h)
+- 🔄 Task 13.5: Show OAuth Status in Config List (0.25h)
   - Add "OAuth Connected" badge
   - Display workspace name from sourceMetadata
   - Show last updated date
@@ -1143,6 +1143,43 @@ Track items deferred to future phases:
   - Proper color usage (neutral instead of gray for Nuxt UI 4)
 - **Type Safety**: Ran `npx nuxt typecheck` - no new errors introduced, all type checks pass
 - **Next Steps**: Task 12.5 - Add Preset Examples Library for common prompt templates
+
+---
+
+### 2025-11-16 - Day 6 (Phase 12 Task 12.5)
+**Focus**: Phase 12 - Custom AI Prompts Enhancement (Task 12.5)
+**Hours**: 2h
+**Completed**:
+- [x] Task 12.5: Add Preset Examples Library ✅
+
+**Blockers**: None
+**Notes**:
+- **Implementation**: Created preset template library for quick-start prompt customization
+- **Form Updates**:
+  - Added preset dropdown above Summary Prompt textarea
+  - Added preset dropdown above Task Detection Prompt textarea
+  - Both dropdowns feature clean bordered UI with helpful labels
+  - One-click insertion of preset text into textarea fields
+- **Preset Templates Added**:
+  - **Summary Presets**: Design Teams, Engineering Teams, Product Teams, Marketing Teams
+  - **Task Presets**: Design Tasks Only, Engineering Tasks Only, Action Items & Deadlines, Frontend/UI Tasks
+  - Each preset includes descriptive text tailored to specific team workflows
+- **Features Implemented**:
+  - 8 total preset templates (4 for Summary, 4 for Task Detection)
+  - `insertSummaryPreset()` handler for Summary field
+  - `insertTaskPreset()` handler for Task Detection field
+  - Preset selection immediately populates the textarea
+  - Presets stored as component constants for easy modification
+- **UI/UX**:
+  - Clean bordered boxes with muted background
+  - Clear "Quick Start" labeling
+  - Medium-sized select dropdowns
+  - Maintains Nuxt UI 4 design consistency
+- **Type Safety**:
+  - Ran `npx nuxt typecheck` - all new code passes type checking
+  - Fixed pre-existing type error (changed `color="gray"` to `color="neutral"`)
+  - No new type errors introduced
+- **Next Steps**: Task 12.6 - Add Validation & Character Limits
 
 ---
 

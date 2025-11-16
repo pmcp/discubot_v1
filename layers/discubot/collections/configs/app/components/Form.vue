@@ -153,7 +153,7 @@
                   </p>
                   <UButton
                     :to="oauthInstallUrl"
-                    color="gray"
+                    color="neutral"
                     variant="soft"
                     size="sm"
                     external
@@ -287,6 +287,20 @@
           description="Additional instructions added to the base prompt. Leave empty to use default only."
           class="not-last:pb-4"
         >
+          <!-- Preset Examples Dropdown -->
+          <div class="mb-3 p-3 bg-muted/30 rounded-lg border border-gray-200 dark:border-gray-800">
+            <label class="block text-xs font-medium text-muted-foreground mb-2">
+              Quick Start: Choose a Preset Template
+            </label>
+            <USelect
+              :model-value="undefined"
+              :items="summaryPresets"
+              placeholder="Select a preset template..."
+              size="md"
+              @update:model-value="(value) => insertSummaryPreset(value)"
+            />
+          </div>
+
           <UTextarea
             v-model="state.aiSummaryPrompt"
             placeholder="Summarize this discussion focusing on..."
@@ -333,6 +347,20 @@ Respond in JSON format:
           description="Additional instructions added to the base prompt. Leave empty to use default only."
           class="not-last:pb-4"
         >
+          <!-- Preset Examples Dropdown -->
+          <div class="mb-3 p-3 bg-muted/30 rounded-lg border border-gray-200 dark:border-gray-800">
+            <label class="block text-xs font-medium text-muted-foreground mb-2">
+              Quick Start: Choose a Preset Template
+            </label>
+            <USelect
+              :model-value="undefined"
+              :items="taskPresets"
+              placeholder="Select a preset template..."
+              size="md"
+              @update:model-value="(value) => insertTaskPreset(value)"
+            />
+          </div>
+
           <UTextarea
             v-model="state.aiTaskPrompt"
             placeholder="Extract actionable tasks from..."
@@ -596,6 +624,72 @@ const initialValues = props.action === 'update' && props.activeItem?.id
   : { ...defaultValue }
 
 const state = ref<DiscubotConfigFormData & { id?: string | null }>(initialValues)
+
+// Preset templates for Summary prompts
+const summaryPresets = [
+  {
+    label: 'Design Teams',
+    value: 'design',
+    description: 'Focus on design decisions, visual feedback, and UI/UX considerations. Prioritize color, layout, typography, and user experience feedback.'
+  },
+  {
+    label: 'Engineering Teams',
+    value: 'engineering',
+    description: 'Focus on technical implementation details, bug reports, and performance considerations. Extract specific technical requirements and code-related decisions.'
+  },
+  {
+    label: 'Product Teams',
+    value: 'product',
+    description: 'Emphasize product decisions, feature requests, and user feedback. Highlight strategic direction and product roadmap implications.'
+  },
+  {
+    label: 'Marketing Teams',
+    value: 'marketing',
+    description: 'Focus on messaging, brand voice, campaign feedback, and customer-facing content. Extract insights about positioning and communication strategy.'
+  }
+]
+
+// Preset templates for Task Detection prompts
+const taskPresets = [
+  {
+    label: 'Design Tasks Only',
+    value: 'design-tasks',
+    description: 'Extract only design-related tasks: UI updates, visual changes, mockup creation, design system updates, and accessibility improvements.'
+  },
+  {
+    label: 'Engineering Tasks Only',
+    value: 'engineering-tasks',
+    description: 'Extract only technical tasks: bug fixes, feature implementation, refactoring, technical debt, performance optimization, and code reviews.'
+  },
+  {
+    label: 'Action Items & Deadlines',
+    value: 'action-deadlines',
+    description: 'Focus on actionable items with clear owners and deadlines. Prioritize tasks marked as urgent or time-sensitive. Extract due dates and assignees.'
+  },
+  {
+    label: 'Frontend/UI Tasks',
+    value: 'frontend-tasks',
+    description: 'Extract frontend and UI-specific tasks only. Focus on component updates, styling changes, responsive design, and user interface improvements.'
+  }
+]
+
+// Insert selected summary preset into the textarea
+const insertSummaryPreset = (value: string | null) => {
+  if (!value) return
+  const preset = summaryPresets.find(p => p.value === value)
+  if (preset) {
+    state.value.aiSummaryPrompt = preset.description
+  }
+}
+
+// Insert selected task preset into the textarea
+const insertTaskPreset = (value: string | null) => {
+  if (!value) return
+  const preset = taskPresets.find(p => p.value === value)
+  if (preset) {
+    state.value.aiTaskPrompt = preset.description
+  }
+}
 
 // Prompt preview state
 const { buildPreview } = usePromptPreview()
