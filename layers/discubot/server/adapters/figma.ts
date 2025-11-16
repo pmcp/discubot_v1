@@ -90,8 +90,8 @@ export class FigmaAdapter implements DiscussionSourceAdapter {
    */
   async parseIncoming(payload: any): Promise<ParsedDiscussion> {
     try {
-      // Parse the Mailgun email payload
-      const parsed = parseFigmaEmail(payload)
+      // Parse the Mailgun email payload (with redirect following)
+      const parsed = await parseFigmaEmail(payload)
 
       // Validate required fields
       if (!parsed.fileKey) {

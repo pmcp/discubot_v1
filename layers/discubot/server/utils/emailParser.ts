@@ -41,6 +41,68 @@ export interface FigmaEmailMetadata {
 }
 
 /**
+ * Follow a click.figma.com redirect to extract the file key from the destination URL
+ *
+ * This function performs a HEAD request to follow the redirect and extract the
+ * Figma file key from the final destination URL.
+ *
+ * @param url - The click.figma.com tracking URL
+ * @returns File key if found, null otherwise
+ * @throws Error if request times out or fails
+ *
+ * @example
+ * const fileKey = await followClickFigmaRedirect('https://click.figma.com/...')
+ * // Returns: 'abc123def456' from the redirect destination
+ */
+export async function followClickFigmaRedirect(url: string): Promise<string | null> {
+  try {
+    // Create abort controller for 3-second timeout
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 3000)
+
+    try {
+      // Perform HEAD request with manual redirect handling
+      const response = await fetch(url, {
+        method: 'HEAD',
+        redirect: 'manual',
+        signal: controller.signal,
+      })
+
+      // Extract location header from redirect response
+      const location = response.headers.get('location')
+      if (!location) {
+        console.log('[EmailParser] No location header in redirect response')
+        return null
+      }
+
+      console.log('[EmailParser] Redirect location:', location)
+
+      // Decode the URL (may be URL-encoded)
+      const decoded = decodeURIComponent(location)
+
+      // Extract file key from decoded destination URL
+      const fileMatch = decoded.match(/figma\.com\/(?:file|design|proto)\/([a-zA-Z0-9]+)/)
+      if (fileMatch?.[1]) {
+        console.log('[EmailParser] Extracted file key from redirect:', fileMatch[1])
+        return fileMatch[1]
+      }
+
+      console.log('[EmailParser] No file key found in redirect destination')
+      return null
+    } finally {
+      clearTimeout(timeoutId)
+    }
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      console.log('[EmailParser] Redirect request timed out after 3s')
+    } else {
+      console.error('[EmailParser] Error following redirect:', error.message)
+    }
+    return null
+  }
+}
+
+/**
  * Extract Figma file key from a URL
  *
  * Examples:
@@ -483,7 +545,159 @@ function levenshteinDistance(str1: string, str2: string): number {
 }
 
 /**
- * Main email parsing function
+ * Async version of email parsing with redirect following support
+ *
+ * This version supports following click.figma.com redirects to extract file keys.
+ * Use this in async contexts (like webhook handlers) for more accurate file key extraction.
+ *
+ * @param emailData - Raw email data from Mailgun webhook
+ * @returns Parsed email with extracted information
+ */
+export async function parseEmailAsync(emailData: {
+  subject?: string
+  from?: string
+  'body-html'?: string
+  'body-plain'?: string
+  'stripped-text'?: string
+  timestamp?: number
+  recipient?: string
+}): Promise<ParsedEmail> {
+  const html = emailData['body-html'] || ''
+  const plainText = emailData['stripped-text'] || emailData['body-plain'] || ''
+
+  console.log('[EmailParser] Parsing email (async)', {
+    hasHtml: !!html,
+    hasPlainText: !!plainText,
+    htmlLength: html.length,
+    plainTextLength: plainText.length,
+    plainTextPreview: plainText.substring(0, 200),
+  })
+
+  // Extract text content
+  const trimmedPlainText = plainText?.trim() || ''
+  const text = trimmedPlainText || (html ? extractTextFromHtml(html) : '')
+
+  console.log('[EmailParser] Extracted text', {
+    textLength: text.length,
+    textPreview: text.substring(0, 200),
+  })
+
+  // Extract links
+  const links = html ? extractLinksFromHtml(html) : []
+
+  // ========================================
+  // FILE KEY EXTRACTION - Priority System (Async)
+  // ========================================
+  // Priority 1: Sender email (most reliable!)
+  // Priority 2: click.figma.com redirects (FOLLOW redirect with HEAD request)
+  // Priority 3: Direct Figma file links
+  // Priority 4: Upload URL patterns
+  // Priority 5: 40-char hash fallback
+  // ========================================
+
+  let fileKey: string | undefined
+
+  // Priority 1: Extract from sender email address
+  // Format: comments-[FILEKEY]@email.figma.com
+  if (emailData.from) {
+    const emailKeyMatch = emailData.from.match(/comments-([a-zA-Z0-9]+)@/i)
+    if (emailKeyMatch) {
+      fileKey = emailKeyMatch[1]
+      console.log('[EmailParser] Priority 1: Extracted file key from sender email:', fileKey)
+    }
+  }
+
+  // Priority 2: click.figma.com redirect links (FOLLOW redirect with HEAD request)
+  if (!fileKey && html) {
+    const clickFigmaLink = html.match(/href="(https?:\/\/click\.figma\.com[^"]+)"/)
+    if (clickFigmaLink?.[1]) {
+      const redirectUrl = clickFigmaLink[1]
+      console.log('[EmailParser] Priority 2: Found click.figma.com redirect URL, following...')
+
+      // Follow the redirect to get the actual file key
+      const extractedKey = await followClickFigmaRedirect(redirectUrl)
+      if (extractedKey) {
+        fileKey = extractedKey
+        console.log('[EmailParser] Priority 2: Extracted file key from redirect:', fileKey)
+      }
+    }
+  }
+
+  // Priority 3: Direct Figma file links
+  if (!fileKey) {
+    for (const link of links) {
+      const extracted = extractFileKeyFromUrl(link)
+      if (extracted) {
+        fileKey = extracted
+        console.log('[EmailParser] Priority 3: Extracted file key from direct link:', fileKey)
+        break
+      }
+    }
+  }
+
+  // Priority 4: Upload URL patterns
+  // Look for file keys in upload URLs (fonts, images, etc)
+  // Pattern: /uploads/[40-char-hash]
+  if (!fileKey && html) {
+    const uploadPattern = /figma\.com\/uploads\/([a-zA-Z0-9]+)/gi
+    const uploadMatches = Array.from(html.matchAll(uploadPattern))
+
+    for (const match of uploadMatches) {
+      const uploadHash = match[1]
+      // Figma file keys in upload URLs are typically 40 characters
+      if (uploadHash && uploadHash.length >= 40) {
+        // File keys are alphanumeric and typically 22-40 characters
+        const potentialKey = uploadHash.match(/^[a-zA-Z0-9]{22,40}/)
+        if (potentialKey) {
+          fileKey = potentialKey[0]
+          console.log('[EmailParser] Priority 4: Extracted file key from upload URL:', fileKey)
+          break
+        }
+      }
+    }
+  }
+
+  // Priority 5: 40-char hash fallback
+  // Last resort: Look for any 40-character hex string (common Figma file key format)
+  if (!fileKey && html) {
+    const keyPattern = /[a-f0-9]{40}/gi
+    const keyMatches = html.match(keyPattern)
+    if (keyMatches && keyMatches.length > 0) {
+      fileKey = keyMatches[0]
+      console.log('[EmailParser] Priority 5: Found potential file key from 40-char hash:', fileKey)
+    }
+  }
+
+  // Debug: Log if still no file key found
+  if (!fileKey && html) {
+    console.log('[EmailParser] No file key found. Looking for any Figma URLs...')
+    const anyFigmaUrl = html.match(/figma\.com[^"'\s]*/gi)
+    if (anyFigmaUrl) {
+      console.log('[EmailParser] Found Figma URLs:', anyFigmaUrl.slice(0, 5))
+    }
+  }
+
+  // Parse timestamp
+  const timestamp = emailData.timestamp
+    ? new Date(emailData.timestamp * 1000)
+    : undefined
+
+  return {
+    text,
+    html: html || undefined,
+    fileKey,
+    author: emailData.from,
+    links,
+    subject: emailData.subject,
+    timestamp,
+  }
+}
+
+/**
+ * Main email parsing function (synchronous version)
+ *
+ * This version uses inline URL decoding for click.figma.com links but doesn't
+ * follow redirects. For better file key extraction, use parseEmailAsync() instead.
  *
  * @param emailData - Raw email data from Mailgun webhook
  * @returns Parsed email with extracted information
@@ -634,8 +848,11 @@ export function parseEmail(emailData: {
 
 /**
  * Full email parsing with Figma-specific metadata extraction
+ *
+ * This async version supports following click.figma.com redirects for accurate
+ * file key extraction using HEAD requests with 3-second timeout.
  */
-export function parseFigmaEmail(emailData: {
+export async function parseFigmaEmail(emailData: {
   subject?: string
   from?: string
   'body-html'?: string
@@ -643,8 +860,8 @@ export function parseFigmaEmail(emailData: {
   'stripped-text'?: string
   timestamp?: number
   recipient?: string
-}): ParsedEmail & FigmaEmailMetadata {
-  const parsed = parseEmail(emailData)
+}): Promise<ParsedEmail & FigmaEmailMetadata> {
+  const parsed = await parseEmailAsync(emailData)
   const metadata = extractFigmaMetadata(parsed)
 
   return {
