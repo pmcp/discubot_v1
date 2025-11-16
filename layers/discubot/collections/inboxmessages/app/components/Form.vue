@@ -30,8 +30,24 @@
       </div>
 
       <div v-show="!tabs || activeSection === 'content'" class="flex flex-col gap-4 p-1">
-        <div v-html="state.htmlBody" label="HtmlBody" name="htmlBody" class="not-last:pb-4 overflow-scroll" />
-
+        <div class="not-last:pb-4">
+          <div class="flex items-center justify-between mb-2">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">
+              HTML Body
+            </label>
+            <UButton
+              icon="i-heroicons-clipboard-document"
+              size="xs"
+              color="gray"
+              variant="ghost"
+              :disabled="!state.htmlBody"
+              @click="copyHtmlBody"
+            >
+              {{ htmlBodyCopied ? 'Copied!' : 'Copy HTML' }}
+            </UButton>
+          </div>
+          <div v-html="state.htmlBody" class="overflow-scroll border border-gray-200 dark:border-gray-800 rounded-md p-4 bg-gray-50 dark:bg-gray-900" />
+        </div>
 
         <UFormField label="TextBody" name="textBody" class="not-last:pb-4">
           <UTextarea v-model="state.textBody" class="w-full" size="xl" />
@@ -174,6 +190,15 @@ if (props.action === 'update' && props.activeItem?.id) {
 }
 
 const state = ref<DiscubotInboxMessageFormData & { id?: string | null }>(initialValues)
+
+// Clipboard functionality for HTML body
+const { copy: copyToClipboard, copied: htmlBodyCopied } = useClipboard()
+
+const copyHtmlBody = async () => {
+  if (state.value.htmlBody) {
+    await copyToClipboard(state.value.htmlBody)
+  }
+}
 
 const handleSubmit = async () => {
   try {
