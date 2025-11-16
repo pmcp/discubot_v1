@@ -3,7 +3,7 @@
 **Project Start Date**: 2025-11-11
 **Expected Completion**: 2025-12-16 (5 weeks)
 **Current Phase**: Phase 13 - OAuth UI Integration 🔗
-**Overall Progress**: 95% (76/80 tasks complete)
+**Overall Progress**: 96% (77/80 tasks complete)
 
 ---
 
@@ -11,8 +11,8 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 76 / 80 |
-| Hours Logged | 147.75 / 167 |
+| Tasks Completed | 77 / 80 |
+| Hours Logged | 148 / 167 |
 | Current Phase | Phase 13 - OAuth UI Integration 🔗 |
 | Days Elapsed | 6 / 21 |
 | Blockers | 0 |
@@ -564,8 +564,8 @@
 
 ### Phase 13: OAuth UI Integration 🔗
 **Status**: Complete
-**Progress**: 4/5 tasks (80%)
-**Time**: 2.5h / 3.5h estimated
+**Progress**: 5/5 tasks (100%)
+**Time**: 2.75h / 3.5h estimated
 **Target**: Day 6, Week 1
 
 **⚠️ DISCOVERED**: OAuth backend endpoints (Task 4.3) are complete and functional, but there's no UI to trigger the OAuth flow. Users must manually visit `/api/oauth/slack/install` URL. Need to add "Connect with Slack" button and complete the user experience.
@@ -608,7 +608,7 @@
   - Production-ready for Cloudflare Workers (stateless)
   - Files: `install.get.ts`, `callback.get.ts`
 
-- 🔄 Task 13.5: Show OAuth Status in Config List (0.25h)
+- [x] ✅ Task 13.5: Show OAuth Status in Config List (0.25h)
   - Add "OAuth Connected" badge
   - Display workspace name from sourceMetadata
   - Show last updated date
