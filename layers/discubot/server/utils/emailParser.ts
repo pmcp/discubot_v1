@@ -71,10 +71,179 @@ export function extractFileKeyFromUrl(url: string): string | null {
 }
 
 /**
+ * Extract @Figbot mentions from HTML with context
+ * Priority 1: These are the most reliable indicators of actual comment text
+ */
+function extractFigbotMentions(html: string): string[] {
+  const figbotPattern = /@[Ff]igbot(?:\s+[^<>@]*)?/gi
+  const matches = html.match(figbotPattern) || []
+
+  // Sort by length to get the most complete comment (not just "@Figbot" but "@Figbot some text")
+  return matches.sort((a, b) => b.length - a.length)
+}
+
+/**
+ * Filter out CSS @rules from mention arrays
+ * CSS rules like @font-face, @media, @import are not user mentions
+ */
+function filterCSSRules(mentions: string[]): string[] {
+  return mentions.filter(mention => {
+    const mentionLower = mention.toLowerCase()
+    return !mentionLower.startsWith('@font-face') &&
+           !mentionLower.startsWith('@media') &&
+           !mentionLower.startsWith('@import') &&
+           !mentionLower.startsWith('@keyframes') &&
+           !mentionLower.startsWith('@charset') &&
+           !mentionLower.startsWith('@supports') &&
+           !mention.includes('@mentions') && // Filter out footer text
+           !mention.includes('@email') &&    // Filter out email addresses
+           !mention.includes('@mail')
+  })
+}
+
+/**
+ * Extract mentions from table cells (Figma's common HTML structure)
+ * Figma emails usually put the comment in a specific table cell
+ */
+function extractTableCellMentions(html: string): { text: string; mention: string } | null {
+  const tdPattern = /<td[^>]*>([^<]*@[A-Za-z0-9_]+[^<]*)<\/td>/gi
+  const tdMatches = Array.from(html.matchAll(tdPattern))
+
+  for (const tdMatch of tdMatches) {
+    const cellContent = tdMatch[1]
+      .replace(/&[a-z]+;/gi, ' ') // Remove HTML entities
+      .replace(/\s+/g, ' ')         // Normalize whitespace
+      .trim()
+
+    // Check if this cell contains a mention and isn't just navigation/UI text
+    if (
+      cellContent.includes('@') &&
+      !cellContent.toLowerCase().includes('mobile app') &&
+      !cellContent.toLowerCase().includes('stay on top') &&
+      !cellContent.includes('unsubscribe') &&
+      !cellContent.includes('privacy') &&
+      !cellContent.includes('View in Figma') &&
+      cellContent.length < 500 // Comments are usually not super long
+    ) {
+      // Extract the mention from the cell content
+      const cellMentionMatch = cellContent.match(/@[A-Za-z0-9_]+/)
+      if (cellMentionMatch) {
+        return {
+          text: cellContent,
+          mention: cellMentionMatch[0].replace('@', '').trim()
+        }
+      }
+    }
+  }
+
+  return null
+}
+
+/**
+ * Extract mention with surrounding context (100 chars before/after)
+ * Used when mentions are found but need more context
+ */
+function extractMentionWithContext(html: string, mention: string): string | null {
+  // Look for the mention with surrounding text (up to 100 chars before/after)
+  const escapedMention = mention.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const contextPattern = new RegExp(`(.{0,100})(${escapedMention})(.{0,100})`, 'i')
+  const contextMatch = html.match(contextPattern)
+
+  if (contextMatch) {
+    // Clean up the extracted text
+    const fullText = (contextMatch[1] + contextMatch[2] + contextMatch[3])
+      .replace(/<[^>]*>/g, ' ')    // Remove HTML tags
+      .replace(/&[a-z]+;/gi, ' ')  // Remove HTML entities
+      .replace(/\s+/g, ' ')         // Normalize whitespace
+      .trim()
+
+    // If this looks like actual comment content (not CSS or navigation)
+    if (
+      fullText.length > 5 &&
+      fullText.length < 500 &&
+      !fullText.includes('font-family') &&
+      !fullText.includes('font-size') &&
+      !fullText.includes('padding') &&
+      !fullText.includes('margin') &&
+      !fullText.includes('unsubscribe') &&
+      !fullText.includes('Figma, Inc') &&
+      !fullText.includes('View in Figma') &&
+      !fullText.includes('commented on')
+    ) {
+      return fullText
+    }
+  }
+
+  return null
+}
+
+/**
  * Parse HTML email body to extract plain text content
  * Handles various HTML structures that Figma might use (Mailgun, Resend, etc.)
+ *
+ * Priority system:
+ * 1. @Figbot mentions (most reliable)
+ * 2. Table cell mentions (Figma's common structure)
+ * 3. Other @mentions with context
+ * 4. Cheerio selector-based extraction
+ * 5. Substantial lines fallback
  */
 export function extractTextFromHtml(html: string): string {
+  // Priority 1: Look for @Figbot mentions
+  const figbotMentions = extractFigbotMentions(html)
+
+  if (figbotMentions.length > 0) {
+    // Use the longest @Figbot mention (most complete comment)
+    for (const mention of figbotMentions) {
+      if (mention.length > 7) { // More than just "@Figbot"
+        console.log('[EmailParser] Found @Figbot comment:', mention.trim())
+        return mention.trim()
+      }
+    }
+
+    // If we only found bare "@Figbot" mentions, use the first one
+    if (figbotMentions.length > 0) {
+      console.log('[EmailParser] Found bare @Figbot mention:', figbotMentions[0].trim())
+      return figbotMentions[0].trim()
+    }
+  }
+
+  // Priority 2: Look for mentions in table cells (Figma's structure)
+  const tableCellResult = extractTableCellMentions(html)
+  if (tableCellResult) {
+    console.log('[EmailParser] Found comment in table cell:', tableCellResult.text)
+    return tableCellResult.text
+  }
+
+  // Priority 3: Look for other @mentions with context
+  const mentionPattern = /@[A-Za-z0-9_]+(?:\s+[^<>@]*)?/gi
+  let allMentions = html.match(mentionPattern) || []
+
+  // Filter out CSS rules and email addresses
+  allMentions = filterCSSRules(allMentions)
+
+  if (allMentions.length > 0) {
+    console.log('[EmailParser] Found non-CSS mentions:', allMentions.length)
+
+    // Try to extract each mention with context
+    for (const mention of allMentions) {
+      const contextText = extractMentionWithContext(html, mention)
+      if (contextText) {
+        console.log('[EmailParser] Extracted mention with context:', contextText)
+        return contextText
+      }
+    }
+
+    // Fallback: Use the first valid mention
+    for (const mention of allMentions) {
+      if (mention.length > 2) { // More than just "@"
+        console.log('[EmailParser] Using mention as fallback:', mention.trim())
+        return mention.trim()
+      }
+    }
+  }
+
+  // Priority 4: Use Cheerio for selector-based extraction
   const $ = cheerio.load(html)
 
   // Remove script, style, and other non-content elements
