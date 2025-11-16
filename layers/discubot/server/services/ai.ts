@@ -131,18 +131,15 @@ function getAnthropicClient(): Anthropic {
 }
 
 /**
- * Generate a summary of a discussion thread
- *
- * Model: claude-sonnet-4-5-20250929 (active until at least Sept 29, 2026)
- * See: https://docs.anthropic.com/en/docs/resources/model-deprecations
+ * Build the summary prompt with optional custom prompt
+ * Similar to Figno prototype's buildPrompt() function
  */
-async function generateSummary(
+function buildSummaryPrompt(
   thread: DiscussionThread,
   sourceType?: string,
-): Promise<AISummary> {
-  const client = getAnthropicClient()
-
-  // Build conversation history for Claude
+  customPrompt?: string,
+): string {
+  // Build conversation history
   const messages = [
     `Root message by ${thread.rootMessage.authorHandle}:`,
     thread.rootMessage.content,
@@ -155,7 +152,35 @@ async function generateSummary(
 
   const sourceContext = sourceType ? ` from ${sourceType}` : ''
 
-  const prompt = `Analyze this discussion thread${sourceContext} and provide:
+  let prompt = ''
+
+  // If custom prompt is provided, use it with context
+  if (customPrompt) {
+    console.log('[AI Service] Using custom prompt template:', customPrompt)
+
+    // First, provide the custom instructions
+    prompt = `${customPrompt}\n\n`
+
+    // Add context about the source
+    if (sourceContext) {
+      prompt += `Context: This discussion is${sourceContext}.\n\n`
+    }
+
+    // Add the thread content
+    prompt += `Discussion:\n${messages}\n\n`
+
+    // Request JSON format for parsing
+    prompt += `Please respond in JSON format:
+{
+  "summary": "...",
+  "keyPoints": ["...", "...", "..."],
+  "sentiment": "positive|neutral|negative",
+  "confidence": 0.0-1.0
+}`
+  }
+  else {
+    // Default prompt structure
+    prompt = `Analyze this discussion thread${sourceContext} and provide:
 
 1. A concise summary (2-3 sentences)
 2. 3-5 key points or decisions
@@ -171,6 +196,33 @@ Respond in JSON format:
   "sentiment": "positive|neutral|negative",
   "confidence": 0.0-1.0
 }`
+  }
+
+  return prompt
+}
+
+/**
+ * Generate a summary of a discussion thread
+ *
+ * Model: claude-sonnet-4-5-20250929 (active until at least Sept 29, 2026)
+ * See: https://docs.anthropic.com/en/docs/resources/model-deprecations
+ */
+async function generateSummary(
+  thread: DiscussionThread,
+  options: AIAnalysisOptions = {},
+): Promise<AISummary> {
+  const client = getAnthropicClient()
+
+  const { sourceType, customPrompt } = options
+
+  // Build prompt with optional custom prompt (similar to Figno prototype)
+  const prompt = buildSummaryPrompt(thread, sourceType, customPrompt)
+
+  console.log('[AI Service] Built summary prompt:', {
+    hasCustomPrompt: !!customPrompt,
+    customPromptLength: customPrompt?.length,
+    promptLength: prompt.length,
+  })
 
   const startTime = Date.now()
 
@@ -345,7 +397,7 @@ export async function analyzeDiscussion(
   console.log(`[AI Service] Analyzing thread ${thread.id}...`)
 
   const [summary, taskDetection] = await Promise.all([
-    generateSummary(thread, options.sourceType),
+    generateSummary(thread, options),
     detectTasks(thread, options),
   ])
 

@@ -2,8 +2,8 @@
 
 **Project Start Date**: 2025-11-11
 **Expected Completion**: 2025-12-16 (5 weeks)
-**Current Phase**: Phase 11 - Figma Email Parser Enhancement 🔧 ✅ COMPLETE
-**Overall Progress**: 100% (67/67 tasks complete)
+**Current Phase**: Phase 12 - Custom AI Prompts Enhancement 🤖
+**Overall Progress**: 91% (68/75 tasks complete)
 
 ---
 
@@ -11,9 +11,9 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 67 / 67 |
-| Hours Logged | 136.75 / 150.5 |
-| Current Phase | Phase 11 - Figma Email Parser Enhancement 🔧 |
+| Tasks Completed | 68 / 75 |
+| Hours Logged | 138.75 / 163.5 |
+| Current Phase | Phase 12 - Custom AI Prompts Enhancement 🤖 |
 | Days Elapsed | 6 / 21 |
 | Blockers | 0 (Plaintext whitespace issue resolved) |
 | Tests Passing | 366+ / 440+ (83%+ - 42 expected API key failures) |
@@ -468,6 +468,100 @@
 
 ---
 
+### Phase 12: Custom AI Prompts Enhancement 🤖
+**Status**: In Progress
+**Progress**: 1/8 tasks (13%)
+**Time**: 2h / 13h estimated
+**Target**: Week 2, Day 7
+
+**⚠️ DISCOVERED**: During analysis comparing Discubot v1 with the Figno prototype (`/Users/pmcp/Projects/fyit-tools/layers/figno`), discovered that custom AI prompts are stored in the database and displayed in the UI, but the Summary Prompt is never actually used by the AI service. The Figno prototype had this working correctly.
+
+**Current Implementation Issues**:
+- `aiSummaryPrompt` stored in DB and shown in UI, but never injected into AI service
+- `aiTaskPrompt` partially working (code exists but not fully wired)
+- Config form shows prompt fields with examples, but customization doesn't affect AI behavior
+- Hardcoded prompts in ai.ts prevent per-config customization
+- No validation, preview, or preset examples for users
+
+**Root Cause**:
+- Database schema created with `aiSummaryPrompt` and `aiTaskPrompt` fields
+- Config form properly displays and saves these fields
+- Processor loads prompts from DB but never passes them to AI service
+- AI service functions don't accept custom prompt parameters
+
+**Figno Prototype Comparison**:
+- Figno's `buildPrompt()` accepts `customPrompt` parameter
+- Custom prompts properly injected into AI requests
+- Per-team API keys supported
+- Flexible prompt architecture
+
+- [x] Task 12.1: Fix Summary Prompt Implementation (2h) ✅
+  - Update `generateSummary()` in `/layers/discubot/server/services/ai.ts` to accept `customPrompt` parameter
+  - Implement prompt building logic similar to Figno prototype
+  - Handle both custom and default prompts with proper fallback
+  - Ensure custom prompt is prepended/appended correctly
+  - Test with sample custom prompts
+
+- [ ] Task 12.2: Wire Up Custom Prompts in Processor (1h)
+  - Update `/layers/discubot/server/services/processor.ts` line ~709
+  - Pass `config.aiSummaryPrompt` and `config.aiTaskPrompt` to `analyzeDiscussion()`
+  - Add custom prompts to function signature
+  - Ensure proper fallback to defaults when prompts are empty/null
+  - Update all call sites
+
+- [ ] Task 12.3: Update Type Definitions (0.5h)
+  - Add `customSummaryPrompt?: string` to `AIAnalysisOptions` interface
+  - Add `customTaskPrompt?: string` to `AIAnalysisOptions` interface
+  - Update related types in `/layers/discubot/types/`
+  - Run `npx nuxt typecheck` to verify
+  - Fix any type errors
+
+- [ ] Task 12.4: Add Prompt Preview Feature (3h)
+  - Add "Preview Final Prompt" button to config form
+  - Create modal/slideover showing complete prompt sent to Claude
+  - Highlight where custom text is inserted
+  - Show both Summary and Task Detection prompts
+  - Include character count and token estimate
+
+- [ ] Task 12.5: Add Preset Examples Library (2h)
+  - Create dropdown with common prompt templates
+  - Add examples: Design teams, Engineering teams, Product teams
+  - Store presets in component or config file
+  - Allow one-click insertion of preset
+  - Examples:
+    - "Focus on design decisions only"
+    - "Extract frontend/UI tasks only"
+    - "Emphasize action items and deadlines"
+
+- [ ] Task 12.6: Add Validation & Character Limits (1.5h)
+  - Add 500 character limit to prompt fields
+  - Show character counter in UI
+  - Warn if prompt contains conflicting keywords ("JSON", "format")
+  - Validate prompt doesn't break expected response structure
+  - Add helpful error messages
+
+- [ ] Task 12.7: Integration Testing (2h)
+  - Test custom summary prompts end-to-end
+  - Test custom task detection prompts
+  - Test fallback to defaults when fields empty
+  - Test with various preset examples
+  - Verify prompts actually affect AI output
+  - Test character limit validation
+  - Run full test suite
+
+- [ ] Task 12.8: Documentation (1h)
+  - Update config form labels/descriptions for clarity
+  - Add inline help tooltips
+  - Create `docs/guides/custom-ai-prompts.md`
+  - Document best practices for writing custom prompts
+  - Add examples of effective prompts
+  - Document differences from Figno prototype
+  - Update architecture docs
+
+**Checkpoint**: Custom AI prompts fully functional, users can customize summary and task detection behavior per-config, matches Figno prototype functionality
+
+---
+
 ## Current Sprint (Update Weekly)
 
 **Week**: 1
@@ -903,6 +997,31 @@ Track items deferred to future phases:
 - **Briefing Document Created**: Comprehensive 250+ line briefing with detailed feature comparison, implementation plan for 8 tasks (8 hours estimated), success criteria, risk assessment, performance considerations, rollback plan, and references to both prototype and current code locations.
 - **Real Figma Email Data**: User provided actual failing HTML (40KB) with comment text "@testfigma this is task 2", file key "5MPYq7URiGotXahjbW3Nve" in sender email, and click-tracked "View in Figma" link.
 - **Next Steps**: Begin Task 11.1 (Fix Plaintext Whitespace Handling) to address immediate issue, then systematically port battle-tested features from prototype.
+
+---
+
+### 2025-11-16 - Day 6 (Phase 12 Start)
+**Focus**: Phase 12 - Custom AI Prompts Enhancement (Task 12.1)
+**Hours**: 2h
+**Completed**:
+- [x] Task 12.1: Fix Summary Prompt Implementation ✅
+
+**Blockers**: None
+**Notes**:
+- **Issue**: Custom AI prompts stored in DB but never injected into AI service (discovered via Figno prototype comparison)
+- **Implementation**: Updated `generateSummary()` in `/layers/discubot/server/services/ai.ts`
+  - Added `buildSummaryPrompt()` helper function (similar to Figno prototype's buildPrompt())
+  - Changed signature from `(thread, sourceType?)` to `(thread, options: AIAnalysisOptions)`
+  - Custom prompt prepended to conversation context when provided
+  - Default prompt used as fallback when no custom prompt
+  - Full AIAnalysisOptions support (customPrompt, sourceType, skipCache, maxTasks)
+- **Changes Made**:
+  - Created `buildSummaryPrompt(thread, sourceType?, customPrompt?)` function with conditional logic
+  - Updated `generateSummary()` to accept `AIAnalysisOptions` instead of separate parameters
+  - Updated `analyzeDiscussion()` to pass full options object to both `generateSummary()` and `detectTasks()`
+  - Added logging for custom prompt usage
+- **Type Safety**: Ran `npx nuxt typecheck` - no new errors in discubot layer (pre-existing app layer errors unrelated)
+- **Next Steps**: Task 12.2 - Wire up custom prompts in processor.ts to pass config prompts to analyzeDiscussion()
 
 ---
 
