@@ -2,7 +2,7 @@
 import { eq, and, desc, inArray } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/sqlite-core'
 import * as tables from './schema'
-import type { DiscubotUserMapping, NewDiscubotUserMapping } from '../../types'
+import type { DiscubotUserMapping, NewDiscubotUserMapping } from '#layers/discubot/types'
 import { users } from '~~/server/database/schema'
 
 export async function getAllDiscubotUserMappings(teamId: string) {

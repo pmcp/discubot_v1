@@ -19,7 +19,7 @@ import type {
   CacheEntry,
   DiscussionThread,
   TaskDetectionResult,
-} from '../../types'
+} from '#layers/discubot/types'
 import { retryWithBackoff } from '../utils/retry'
 
 /**

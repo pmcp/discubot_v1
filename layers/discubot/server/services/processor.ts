@@ -33,7 +33,7 @@ import type {
   NotionTaskResult,
   NotionTaskConfig,
   SourceConfig,
-} from '../../types'
+} from '#layers/discubot/types'
 import { analyzeDiscussion } from './ai'
 import { createNotionTask, createNotionTasks } from './notion'
 import { retryWithBackoff } from '../utils/retry'

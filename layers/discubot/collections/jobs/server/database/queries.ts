@@ -2,9 +2,9 @@
 import { eq, and, desc, inArray } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/sqlite-core'
 import * as tables from './schema'
-import type { DiscubotJob, NewDiscubotJob } from '../../types'
-import * as discussionsSchema from '../../../discussions/server/database/schema'
-import * as configsSchema from '../../../configs/server/database/schema'
+import type { DiscubotJob, NewDiscubotJob } from '#layers/discubot/types'
+import * as discussionsSchema from '#layers/discubot-discussions/server/database/schema'
+import * as configsSchema from '#layers/discubot-configs/server/database/schema'
 import { users } from '~~/server/database/schema'
 
 export async function getAllDiscubotJobs(teamId: string) {

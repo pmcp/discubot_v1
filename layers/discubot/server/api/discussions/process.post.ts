@@ -56,7 +56,7 @@ import {
   processDiscussion,
   processDiscussionById,
   retryFailedDiscussion,
-} from '../../services/processor'
+} from '#layers/discubot/server/services/processor'
 
 /**
  * Request payload for direct processing

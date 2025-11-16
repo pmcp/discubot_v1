@@ -42,15 +42,15 @@
  */
 
 import type { ParsedDiscussion } from '~/layers/discubot/types'
-import { getAdapter } from '../../adapters'
-import { processDiscussion } from '../../services/processor'
-import { fetchResendEmail, transformToMailgunFormat } from '../../utils/resendEmail'
-import { rateLimit, RateLimitPresets } from '../../utils/rateLimit'
-import { classifyFigmaEmail, shouldForwardEmail } from '../../utils/emailClassifier'
-import { forwardEmailToConfigOwner } from '../../utils/emailForwarding'
+import { getAdapter } from '#layers/discubot/server/adapters'
+import { processDiscussion } from '#layers/discubot/server/services/processor'
+import { fetchResendEmail, transformToMailgunFormat } from '#layers/discubot/server/utils/resendEmail'
+import { rateLimit, RateLimitPresets } from '#layers/discubot/server/utils/rateLimit'
+import { classifyFigmaEmail, shouldForwardEmail } from '#layers/discubot/server/utils/emailClassifier'
+import { forwardEmailToConfigOwner } from '#layers/discubot/server/utils/emailForwarding'
 import { createDiscubotInboxMessage } from '#layers/discubot/collections/inboxMessages/server/database/queries'
 import { findDiscubotConfigByEmail } from '#layers/discubot/collections/configs/server/database/queries'
-import { SYSTEM_USER_ID } from '../../utils/constants'
+import { SYSTEM_USER_ID } from '#layers/discubot/server/utils/constants'
 
 /**
  * Resend webhook payload structure

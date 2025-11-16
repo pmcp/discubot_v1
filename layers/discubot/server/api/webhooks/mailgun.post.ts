@@ -30,10 +30,10 @@
  */
 
 import type { ParsedDiscussion } from '~/layers/discubot/types'
-import { getAdapter } from '../../adapters'
-import { processDiscussion } from '../../services/processor'
-import { verifyMailgunSignature } from '../../utils/webhookSecurity'
-import { rateLimit, RateLimitPresets } from '../../utils/rateLimit'
+import { getAdapter } from '#layers/discubot/server/adapters'
+import { processDiscussion } from '#layers/discubot/server/services/processor'
+import { verifyMailgunSignature } from '#layers/discubot/server/utils/webhookSecurity'
+import { rateLimit, RateLimitPresets } from '#layers/discubot/server/utils/rateLimit'
 
 /**
  * Mailgun webhook payload structure

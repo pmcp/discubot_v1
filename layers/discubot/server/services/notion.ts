@@ -22,7 +22,7 @@ import type {
   DiscussionThread,
   NotionTaskConfig,
   NotionTaskResult,
-} from '../../types'
+} from '#layers/discubot/types'
 import { retryWithBackoff } from '../utils/retry'
 
 /**

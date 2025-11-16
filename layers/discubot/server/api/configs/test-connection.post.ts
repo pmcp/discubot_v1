@@ -48,9 +48,9 @@
  * ```
  */
 
-import type { SourceConfig } from '../../../types'
-import { getAdapter } from '../../adapters'
-import { testNotionConnection } from '../../services/notion'
+import type { SourceConfig } from '#layers/discubot/types'
+import { getAdapter } from '#layers/discubot/server/adapters'
+import { testNotionConnection } from '#layers/discubot/server/services/notion'
 
 /**
  * Request to test by config ID
