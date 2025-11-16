@@ -203,7 +203,7 @@ const copyHtmlBody = async () => {
 const handleSubmit = async () => {
   try {
     // Serialize Date objects to ISO strings for API submission
-    const serializedData = { ...state.value }
+    const serializedData: any = { ...state.value }
     if (serializedData.receivedAt instanceof Date) {
       serializedData.receivedAt = serializedData.receivedAt.toISOString()
     }
