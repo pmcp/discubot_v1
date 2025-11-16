@@ -11,8 +11,8 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 61 / 67 |
-| Hours Logged | 130.75 / 150.5 |
+| Tasks Completed | 62 / 67 |
+| Hours Logged | 131.75 / 150.5 |
 | Current Phase | Phase 11 - Figma Email Parser Enhancement 🔧 |
 | Days Elapsed | 6 / 21 |
 | Blockers | 0 (Plaintext whitespace issue resolved) |
@@ -383,8 +383,8 @@
 
 ### Phase 11: Figma Email Parser Enhancement 🔧
 **Status**: In Progress
-**Progress**: 2/8 tasks (25%)
-**Time**: 2h / 8h estimated
+**Progress**: 3/8 tasks (38%)
+**Time**: 3h / 8h estimated
 **Target**: Day 6
 
 **⚠️ DISCOVERED**: During production testing, Figma comment email parsing is failing with "No comment text found in email" errors. Investigation revealed:
@@ -414,9 +414,9 @@
   - Add context extraction (100 chars before/after mentions)
   - Update extractTextFromHtml() to prioritize @mentions
 
-- [ ] Task 11.3: Port File Key Extraction Priority System (1h)
+- [x] ✅ Task 11.3: Port File Key Extraction Priority System (1h)
   - Priority 1: Extract from sender email (`comments-[KEY]@email.figma.com`)
-  - Priority 2: click.figma.com redirects (Task 11.4)
+  - Priority 2: click.figma.com redirects (inline URL decoding)
   - Priority 3: Direct Figma links (existing logic)
   - Priority 4: Upload URL patterns
   - Priority 5: 40-char hash fallback
@@ -868,7 +868,7 @@ Track items deferred to future phases:
 
 ### 2025-11-16 - Day 6
 **Focus**: Phase 11 - Email Parser Enhancement (Investigation & Implementation)
-**Hours**: 2.5h
+**Hours**: 5h
 **Completed**:
 - [x] Discovered email parsing failure in production
 - [x] Investigated root cause (plaintext whitespace handling)
@@ -877,6 +877,8 @@ Track items deferred to future phases:
 - [x] Created briefing document: `docs/briefings/email-parser-enhancement-brief.md`
 - [x] Updated PROGRESS_TRACKER.md with Phase 11 (8 new tasks)
 - [x] Task 11.1: Fixed plaintext whitespace handling in emailParser.ts
+- [x] Task 11.2: Ported @mention extraction logic with CSS filtering and context extraction
+- [x] Task 11.3: Ported file key extraction priority system (5 priorities: sender email, click redirects, direct links, upload URLs, 40-char hashes)
 
 **Blockers**: None
 **Notes**:

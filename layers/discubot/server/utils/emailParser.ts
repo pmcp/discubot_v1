@@ -520,26 +520,99 @@ export function parseEmail(emailData: {
   // Extract links
   const links = html ? extractLinksFromHtml(html) : []
 
-  // Try to extract file key from sender email address FIRST (most reliable!)
-  // Format: comments-[FILEKEY]@email.figma.com
+  // ========================================
+  // FILE KEY EXTRACTION - Priority System
+  // ========================================
+  // Priority 1: Sender email (most reliable!)
+  // Priority 2: click.figma.com redirects (decode URL inline)
+  // Priority 3: Direct Figma file links
+  // Priority 4: Upload URL patterns
+  // Priority 5: 40-char hash fallback
+  // ========================================
+
   let fileKey: string | undefined
+
+  // Priority 1: Extract from sender email address
+  // Format: comments-[FILEKEY]@email.figma.com
   if (emailData.from) {
     const emailKeyMatch = emailData.from.match(/comments-([a-zA-Z0-9]+)@/i)
     if (emailKeyMatch) {
       fileKey = emailKeyMatch[1]
-      console.log('[EmailParser] Extracted file key from sender email:', fileKey)
+      console.log('[EmailParser] Priority 1: Extracted file key from sender email:', fileKey)
     }
   }
 
-  // Fallback: Try to extract file key from links
+  // Priority 2: click.figma.com redirect links (decode URL to find embedded file key)
+  if (!fileKey && html) {
+    const clickFigmaLink = html.match(/href="(https?:\/\/click\.figma\.com[^"]+)"/)
+    if (clickFigmaLink?.[1]) {
+      const redirectUrl = clickFigmaLink[1]
+      console.log('[EmailParser] Priority 2: Found click.figma.com redirect URL')
+
+      try {
+        const decoded = decodeURIComponent(redirectUrl)
+        const fileMatch = decoded.match(/figma\.com\/file\/([a-zA-Z0-9]+)/)
+        if (fileMatch?.[1]) {
+          fileKey = fileMatch[1]
+          console.log('[EmailParser] Priority 2: Extracted file key from redirect URL:', fileKey)
+        }
+      } catch (e) {
+        console.log('[EmailParser] Priority 2: Could not decode redirect URL')
+      }
+    }
+  }
+
+  // Priority 3: Direct Figma file links
   if (!fileKey) {
     for (const link of links) {
       const extracted = extractFileKeyFromUrl(link)
       if (extracted) {
         fileKey = extracted
-        console.log('[EmailParser] Extracted file key from link:', fileKey)
+        console.log('[EmailParser] Priority 3: Extracted file key from direct link:', fileKey)
         break
       }
+    }
+  }
+
+  // Priority 4: Upload URL patterns
+  // Look for file keys in upload URLs (fonts, images, etc)
+  // Pattern: /uploads/[40-char-hash]
+  if (!fileKey && html) {
+    const uploadPattern = /figma\.com\/uploads\/([a-zA-Z0-9]+)/gi
+    const uploadMatches = Array.from(html.matchAll(uploadPattern))
+
+    for (const match of uploadMatches) {
+      const uploadHash = match[1]
+      // Figma file keys in upload URLs are typically 40 characters
+      if (uploadHash && uploadHash.length >= 40) {
+        // File keys are alphanumeric and typically 22-40 characters
+        const potentialKey = uploadHash.match(/^[a-zA-Z0-9]{22,40}/)
+        if (potentialKey) {
+          fileKey = potentialKey[0]
+          console.log('[EmailParser] Priority 4: Extracted file key from upload URL:', fileKey)
+          break
+        }
+      }
+    }
+  }
+
+  // Priority 5: 40-char hash fallback
+  // Last resort: Look for any 40-character hex string (common Figma file key format)
+  if (!fileKey && html) {
+    const keyPattern = /[a-f0-9]{40}/gi
+    const keyMatches = html.match(keyPattern)
+    if (keyMatches && keyMatches.length > 0) {
+      fileKey = keyMatches[0]
+      console.log('[EmailParser] Priority 5: Found potential file key from 40-char hash:', fileKey)
+    }
+  }
+
+  // Debug: Log if still no file key found
+  if (!fileKey && html) {
+    console.log('[EmailParser] No file key found. Looking for any Figma URLs...')
+    const anyFigmaUrl = html.match(/figma\.com[^"'\s]*/gi)
+    if (anyFigmaUrl) {
+      console.log('[EmailParser] Found Figma URLs:', anyFigmaUrl.slice(0, 5))
     }
   }
 
