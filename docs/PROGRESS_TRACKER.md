@@ -373,11 +373,12 @@
 
 ### 2025-11-17 - Day 7
 **Focus**: Phase 15 - OAuth Audit Fields Quick Fix (All Tasks)
-**Hours**: 0.25h (15 min)
+**Hours**: 0.33h (20 min)
 **Completed**:
 - [x] Task 15.1: Add audit fields to OAuth callback ✅
 - [x] Task 15.2: Test and deploy ✅
 - [x] Task 15.3: Document decision ✅
+- [x] Issue 003: Fix NuxtHub KV API method ✅
 
 **Notes**:
 - **KISS Principle in Action**: Chose quick fix over service layer architecture
@@ -390,6 +391,9 @@
 - Updated briefing with decision record
 - Added Decision 004 to Decisions Log
 - Added Config Service Layer to Deferred Items (when 3+ code paths exist)
+- **Discovered Issue 003**: OAuth callback used wrong KV API method (`.delete()` instead of `.del()`)
+- Fixed KV API call on line 94 - changed to `hubKV().del()`
+- Added Issue 003 and Key Learning #6 about NuxtHub KV API
 - **Phase 15 is now 100% complete (3/3 tasks) - BLOCKER REMOVED!**
 - **Overall project progress: 95% (80/84 tasks)**
 
@@ -482,6 +486,18 @@
 
 ---
 
+### Issue 003: NuxtHub KV Delete Method Error
+**Date**: 2025-11-17
+**Problem**: OAuth callback failing with `TypeError: a(...).delete is not a function`
+**Root Cause**: Used wrong NuxtHub KV API method - `.delete()` instead of `.del()`
+**Solution**: Changed `hubKV().delete()` to `hubKV().del()` on line 94
+**Status**: ✅ Resolved (Phase 15, 2025-11-17)
+**Time Lost**: ~5 min (discovered during OAuth testing)
+**Context**: Discovered during Phase 15 production testing after fixing audit fields issue
+**Fix**: Updated `/layers/discubot/server/api/oauth/slack/callback.get.ts` line 94
+
+---
+
 ## Key Learnings
 
 1. **nuxt-crouton Composables**: Always use generated queries from Crouton collections. Never create duplicate database operations.
@@ -493,6 +509,8 @@
 4. **Custom AI Prompts**: Test prompt injection early. Don't assume DB storage = actual usage. Verify data flows from DB → Processor → AI Service.
 
 5. **Cloudflare Workers Constraints**: No global timers, no reflect-metadata, async plugins problematic. Design for stateless from start.
+
+6. **NuxtHub KV API**: Use `.del()` not `.delete()` to remove keys. Methods are: `.get()`, `.set()`, `.del()`, `.list()`. Always test KV operations in production environment.
 
 ---
 

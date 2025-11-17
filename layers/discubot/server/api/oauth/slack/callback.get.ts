@@ -91,7 +91,7 @@ export default defineEventHandler(async (event) => {
     const { teamId } = stateData
 
     // Delete state token (single use) from KV
-    await hubKV().delete(`oauth:state:${state}`)
+    await hubKV().del(`oauth:state:${state}`)
 
     // Get environment variables
     const config = useRuntimeConfig(event)
