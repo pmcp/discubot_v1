@@ -203,6 +203,7 @@ export default defineEventHandler(async (event) => {
               botUserId: tokenData.bot_user_id,
               scopes: tokenData.scope,
             },
+            updatedBy: SYSTEM_USER_ID, // OAuth is a system operation
           },
         )
       }
@@ -211,6 +212,7 @@ export default defineEventHandler(async (event) => {
 
         // Create new config with placeholder Notion values
         // User must complete setup in admin UI before config becomes active
+        // TODO: Consider service layer if we add 3+ config creation code paths
         await createDiscubotConfig({
           teamId,
           owner: SYSTEM_USER_ID,
@@ -231,6 +233,8 @@ export default defineEventHandler(async (event) => {
           enableEmailForwarding: false,
           active: false, // Requires completion of Notion setup
           onboardingComplete: false, // User must complete setup
+          createdBy: SYSTEM_USER_ID, // OAuth is a system operation
+          updatedBy: SYSTEM_USER_ID,
         })
 
         console.log('[OAuth] Config created successfully')
