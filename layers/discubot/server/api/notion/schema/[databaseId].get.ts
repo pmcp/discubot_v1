@@ -33,27 +33,99 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Validate token format (Notion tokens start with 'secret_')
-    if (!notionToken.startsWith('secret_')) {
+    // Validate token format (Notion tokens start with 'secret_' or 'ntn_')
+    if (!notionToken.startsWith('secret_') && !notionToken.startsWith('ntn_')) {
       throw createError({
         statusCode: 422,
-        statusMessage: 'Invalid Notion token format. Token must start with "secret_"'
+        statusMessage: 'Invalid Notion token format. Token must start with "secret_" or "ntn_"'
       })
     }
 
-    // Initialize Notion client
-    const notion = new Client({ auth: notionToken })
+    // Initialize Notion client with older API version to get properties
+    const notion = new Client({
+      auth: notionToken,
+      notionVersion: '2022-06-28' // Use older version that includes properties in database response
+    })
 
     // Fetch database schema
     console.log(`[Notion Schema] Fetching schema for database ${databaseId}`)
+
+    // Get database metadata (contains data_sources)
     const database = await notion.databases.retrieve({
       database_id: databaseId
     })
 
+    console.log(`[Notion Schema] Database metadata:`, JSON.stringify(database, null, 2))
+
+    // Handle both old format (properties directly on database) and new format (data_sources)
+    let dataSourceProperties: Record<string, any>
+
+    // Check if database has properties directly (old format with API version 2022-06-28)
+    if ((database as any).properties) {
+      console.log('[Notion Schema] Using old format - properties found directly on database')
+      dataSourceProperties = (database as any).properties
+    }
+    // Check if database uses new data sources format
+    else if ((database as any).data_sources && (database as any).data_sources.length > 0) {
+      console.log('[Notion Schema] Using new format - fetching from data sources')
+      const dataSources = (database as any).data_sources
+      const dataSourceId = dataSources[0].id
+
+      try {
+        const dataSource = await $fetch(`https://api.notion.com/v1/data_sources/${dataSourceId}`, {
+          headers: {
+            'Authorization': `Bearer ${notionToken}`,
+            'Notion-Version': '2022-06-28',
+            'Content-Type': 'application/json'
+          }
+        })
+        dataSourceProperties = (dataSource as any).properties
+      } catch (fetchError: any) {
+        console.error('[Notion Schema] Data source fetch failed, falling back to query')
+
+        // Fallback: query database for schema
+        const queryResponse = await notion.databases.query({
+          database_id: databaseId,
+          page_size: 1
+        })
+
+        if (!queryResponse.results || queryResponse.results.length === 0) {
+          throw createError({
+            statusCode: 400,
+            statusMessage: 'Database is empty. Cannot extract schema.'
+          })
+        }
+
+        const firstPage = queryResponse.results[0] as any
+        dataSourceProperties = {}
+        for (const [name, value] of Object.entries(firstPage.properties)) {
+          const propValue = value as any
+          dataSourceProperties[name] = {
+            id: propValue.id,
+            type: propValue.type
+          }
+        }
+      }
+    }
+    // No properties found at all
+    else {
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Cannot find database properties in either old or new format'
+      })
+    }
+
+    if (!dataSourceProperties) {
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Data source has no properties'
+      })
+    }
+
     // Parse properties into a simpler format
     const properties: Record<string, any> = {}
 
-    for (const [name, prop] of Object.entries(database.properties as Record<string, any>)) {
+    for (const [name, prop] of Object.entries(dataSourceProperties as Record<string, any>)) {
       // Extract property type
       const propertyType = prop.type
 
@@ -98,6 +170,8 @@ export default defineEventHandler(async (event) => {
     }
   } catch (error: any) {
     console.error('[Notion Schema] Error:', error)
+    console.error('[Notion Schema] Error stack:', error.stack)
+    console.error('[Notion Schema] Error details:', JSON.stringify(error, null, 2))
 
     // Handle Notion API errors
     if (error.code === 'unauthorized') {
