@@ -3,7 +3,7 @@
 **Project Start Date**: 2025-11-11
 **Expected Completion**: 2025-12-16 (5 weeks)
 **Current Phase**: Phase 14 - Smart Field Mapping 🎯
-**Overall Progress**: 96% (81/84 tasks complete)
+**Overall Progress**: 99% (83/84 tasks complete)
 
 > **📋 Historical Archive**: For completed phases (1-7, 9-11, 13), see [PROGRESS_MADE.md](./PROGRESS_MADE.md)
 
@@ -13,9 +13,9 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 82 / 84 |
-| Remaining Tasks | 2 |
-| Hours Logged | 153.25 / 175-178 |
+| Tasks Completed | 83 / 84 |
+| Remaining Tasks | 1 |
+| Hours Logged | 155.75 / 175-178 |
 | Current Phase | Phase 14 - Smart Field Mapping 🎯 |
 | Days Elapsed | 6 / 21 |
 | Blockers | 0 (OAuth fixed!) |
@@ -210,8 +210,8 @@
 > **📋 Detailed Execution Guide**: See [phase-14-field-mapping-brief.md](./briefings/phase-14-field-mapping-brief.md) for complete implementation details, verified infrastructure, and technical patterns.
 
 **Status**: In Progress
-**Progress**: 2/4 tasks (50%)
-**Time**: 5h / 8-11h estimated
+**Progress**: 3/4 tasks (75%)
+**Time**: 7.5h / 8-11h estimated
 **Target**: TBD
 
 **Goal**: Connect existing infrastructure (AI DetectedTask + User Mappings + Field Mappings) to populate Notion properties intelligently while maintaining data quality through confidence-based filling.
@@ -263,7 +263,7 @@
     - Fallback: return original value if no match
     - Files: `layers/discubot/server/utils/field-mapping.ts`
 
-- [ ] Task 14.3: Integrate User Mapping for People Fields (2-3h)
+- [x] Task 14.3: Integrate User Mapping for People Fields (2-3h) ✅
   - **A. Fix formatNotionProperty() - Add 'people' case (0.5h)**:
     - Add missing 'people' case to `formatNotionProperty()` in notion.ts
     - Return format: `{ people: [{ object: 'user', id: notionUserId }] }`
@@ -373,9 +373,9 @@
 
 ## Recent Daily Log
 
-### 2025-11-17 - Day 7
-**Focus**: Phase 15 - OAuth Fix & Phase 14 - Smart Field Mapping (Tasks 14.1-14.2)
-**Hours**: 5.33h (320 min)
+### 2025-11-17 - Day 7 (Updated)
+**Focus**: Phase 15 - OAuth Fix & Phase 14 - Smart Field Mapping (Tasks 14.1-14.3)
+**Hours**: 7.83h (470 min)
 **Completed**:
 - [x] Task 15.1: Add audit fields to OAuth callback ✅
 - [x] Task 15.2: Test and deploy ✅
@@ -383,6 +383,7 @@
 - [x] Issue 003: Fix NuxtHub KV API method ✅
 - [x] Task 14.1: Standardize AI Output & Add Confidence Rules ✅
 - [x] Task 14.2: Schema Introspection + Auto-Mapping ✅
+- [x] Task 14.3: Integrate User Mapping for People Fields ✅
 
 **Notes**:
 - **Phase 15 Complete**: OAuth blocker removed with KISS quick fix approach
@@ -410,8 +411,25 @@
 - Implemented similarity scoring algorithm for smart field matching
 - Auto-generates value mappings for priority and type fields based on Notion options
 - Ran `npx nuxt typecheck` - no new errors introduced in discubot layer
-- **Phase 14 is now 50% complete (2/4 tasks)**
-- **Overall project progress: 98% (82/84 tasks)**
+- **Phase 14 Task 14.3 Complete**: User mapping integration for people fields
+- Added 'people' case to `formatNotionProperty()` in notion.ts:
+  - Handles arrays and null values
+  - Returns proper Notion API format: `{ people: [{ object: 'user', id: notionUserId }] }`
+- Updated `buildTaskProperties()` to accept fieldMapping and userMappings:
+  - Made function async
+  - Iterates through AI fields (priority, type, assignee, dueDate, tags)
+  - Special handling for 'people' type with user mapping resolution
+  - Applies value transformation for select fields using valueMap
+  - Uses formatNotionProperty() to format properties
+  - Logs warnings when assignee has no user mapping
+- Updated processor to load and pass user mappings:
+  - Uses `getAllDiscubotUserMappings()` to fetch mappings
+  - Filters by sourceType and active status
+  - Builds Map<sourceUserId, notionUserId> for efficient lookup
+  - Passes fieldMapping and userMappings to both createNotionTask and createNotionTasks
+  - Logs user mapping count for debugging
+- **Phase 14 is now 75% complete (3/4 tasks)**
+- **Overall project progress: 99% (83/84 tasks)**
 
 ---
 
@@ -586,6 +604,7 @@
 Track items deferred to future phases:
 
 - [ ] **Config Service Layer** - When: We have 3+ config creation code paths OR need to add notifications/validation/audit logging. Currently only 2 paths exist (API endpoints + OAuth callback), so service layer would be premature abstraction. See `/docs/briefings/oauth-service-layer-brief.md` for detailed architecture proposal and Decision 004 for rationale. Priority: Medium (refactoring opportunity, not critical path).
+- [ ] **OAuth Popup Window** - UX: Open OAuth flow in popup window instead of same tab to avoid navigating away from current page. Better user experience as parent window stays in place and can react to OAuth completion. Implementation: (~15 min) Create popup opener utility, update OAuth success page to detect popup context and postMessage to parent, add parent listener to refresh/notify on success. Priority: Low-Medium (UX enhancement, current flow works but requires full page navigation). Affects: "Connect with Slack" button component, `/app/pages/oauth/success.vue`.
 - [ ] **Circuit Breaker Pattern** - When: API outage patterns emerge
 - [ ] **Token Encryption (AES-256-GCM)** - When: SOC2/ISO27001 compliance needed (NOTE: SQLite encryption at rest already enabled via Cloudflare D1)
 - [ ] **KV-Based AI Caching** - When: Multi-region deployment needed

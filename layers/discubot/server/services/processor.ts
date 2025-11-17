@@ -753,6 +753,23 @@ export async function processDiscussion(
         sourceUrl: parsed.sourceUrl,
       }
 
+      // Load user mappings for assignee field resolution
+      const { getAllDiscubotUserMappings } = await import('#layers/discubot/collections/usermappings/server/database/queries')
+      const allUserMappings = await getAllDiscubotUserMappings(parsed.teamId)
+
+      // Filter by sourceType and active status, then build Map for efficient lookup
+      const userMappings = new Map<string, string>()
+      for (const mapping of allUserMappings) {
+        if (mapping.sourceType === parsed.sourceType && mapping.active) {
+          userMappings.set(String(mapping.sourceUserId), String(mapping.notionUserId))
+        }
+      }
+
+      console.log(`[Processor] Loaded ${userMappings.size} user mappings for ${parsed.sourceType}`)
+
+      // Get field mapping configuration
+      const fieldMapping = config.notionFieldMapping || {}
+
       const tasks = aiAnalysis.taskDetection.tasks
 
       if (tasks.length === 0) {
@@ -761,16 +778,24 @@ export async function processDiscussion(
       else if (tasks.length === 1) {
         // Single task
         const task = tasks[0]
-        console.log('[Processor] Creating single Notion task')
+        if (!task) {
+          console.log('[Processor] Task is undefined, skipping')
+        }
+        else {
+          console.log('[Processor] Creating single Notion task')
 
-        const result = await createNotionTask(
-          task,
-          thread,
-          aiAnalysis.summary,
-          notionConfig,
-        )
+          const result = await createNotionTask(
+            task,
+            thread,
+            aiAnalysis.summary,
+            notionConfig,
+            undefined, // userMentions (for @mentions in content)
+            fieldMapping,
+            userMappings,
+          )
 
-        notionTasks.push(result)
+          notionTasks.push(result)
+        }
       }
       else {
         // Multiple tasks
@@ -781,6 +806,9 @@ export async function processDiscussion(
           thread,
           aiAnalysis.summary,
           notionConfig,
+          undefined, // userMentions (for @mentions in content)
+          fieldMapping,
+          userMappings,
         )
       }
 

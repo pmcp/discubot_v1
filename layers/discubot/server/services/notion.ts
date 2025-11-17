@@ -58,11 +58,19 @@ function getNotionClient(apiKey?: string): Client {
 /**
  * Build Notion properties from task data
  *
- * Strategy: Only use "Name" (title) property to avoid errors.
- * All other data goes into the page content blocks.
+ * Strategy: Use "Name" (title) property + apply field mappings for other properties.
+ * Field mappings allow smart population of Notion database properties like Priority, Assignee, etc.
+ *
+ * @param task - Detected task with AI-generated fields
+ * @param fieldMapping - Optional field mapping configuration from config.notionFieldMapping
+ * @param userMappings - Optional map of source user IDs to Notion user IDs for assignee field
  */
-function buildTaskProperties(task: DetectedTask): Record<string, any> {
-  return {
+async function buildTaskProperties(
+  task: DetectedTask,
+  fieldMapping?: Record<string, any>,
+  userMappings?: Map<string, string>,
+): Promise<Record<string, any>> {
+  const properties: Record<string, any> = {
     Name: {
       title: [
         {
@@ -71,6 +79,80 @@ function buildTaskProperties(task: DetectedTask): Record<string, any> {
       ],
     },
   }
+
+  // If no field mapping provided, return basic properties
+  if (!fieldMapping || Object.keys(fieldMapping).length === 0) {
+    return properties
+  }
+
+  // Import transformValue utility for select field value transformation
+  const { transformValue } = await import('../utils/field-mapping')
+
+  // Map AI fields to Notion properties based on field mapping
+  const aiFieldValues: Record<string, any> = {
+    priority: task.priority,
+    type: task.type,
+    assignee: task.assignee,
+    dueDate: task.dueDate,
+    tags: task.tags,
+  }
+
+  for (const [aiField, value] of Object.entries(aiFieldValues)) {
+    // Skip if value is null/undefined
+    if (value == null) {
+      continue
+    }
+
+    // Check if this field has a mapping
+    const mapping = fieldMapping[aiField]
+    if (!mapping || !mapping.notionProperty) {
+      continue
+    }
+
+    const { notionProperty, propertyType, valueMap } = mapping
+
+    // Special handling for 'people' type (assignee field)
+    if (propertyType === 'people') {
+      if (!userMappings) {
+        console.warn(`[Notion] No user mappings provided for assignee field: ${value}`)
+        continue
+      }
+
+      // Resolve source user ID to Notion user ID
+      const notionUserId = userMappings.get(String(value))
+
+      if (!notionUserId) {
+        console.warn(`[Notion] No user mapping found for assignee: ${value}`)
+        continue
+      }
+
+      const formattedProperty = formatNotionProperty(notionUserId, propertyType)
+      if (formattedProperty) {
+        properties[notionProperty] = formattedProperty
+        console.log(`[Notion] Mapped assignee: ${value} -> ${notionUserId}`)
+      }
+      continue
+    }
+
+    // Handle value transformation for select/multi_select/status fields
+    let transformedValue = value
+    if (propertyType === 'select' || propertyType === 'multi_select' || propertyType === 'status') {
+      // For these types, we need to transform the AI value to match Notion's options
+      // The valueMap in the mapping config provides explicit transformations
+      if (typeof value === 'string') {
+        transformedValue = transformValue(value, undefined, valueMap) || value
+      }
+    }
+
+    // Format and add the property
+    const formattedProperty = formatNotionProperty(transformedValue, propertyType)
+    if (formattedProperty) {
+      properties[notionProperty] = formattedProperty
+      console.log(`[Notion] Mapped ${aiField}: ${value} -> ${notionProperty} (${propertyType})`)
+    }
+  }
+
+  return properties
 }
 
 /**
@@ -337,6 +419,8 @@ export async function createNotionTask(
   aiSummary: AISummary,
   config: NotionTaskConfig,
   userMentions?: Map<string, string>,
+  fieldMapping?: Record<string, any>,
+  userMappings?: Map<string, string>,
 ): Promise<NotionTaskResult> {
   console.log('[Notion Service] Creating task:', {
     title: task.title,
@@ -345,7 +429,7 @@ export async function createNotionTask(
   })
 
   const notion = getNotionClient(config.apiKey)
-  const properties = buildTaskProperties(task)
+  const properties = await buildTaskProperties(task, fieldMapping, userMappings)
   const children = buildTaskContent(task, thread, aiSummary, config, userMentions)
 
   const startTime = Date.now()
@@ -386,6 +470,8 @@ export async function createNotionTask(
  * Fails fast - stops on first error to avoid partial imports.
  *
  * @param userMentions - Optional map of source user IDs to Notion user IDs for @mentions
+ * @param fieldMapping - Optional field mapping configuration from config.notionFieldMapping
+ * @param userMappings - Optional map of source user IDs to Notion user IDs for assignee field
  */
 export async function createNotionTasks(
   tasks: DetectedTask[],
@@ -393,6 +479,8 @@ export async function createNotionTasks(
   aiSummary: AISummary,
   config: NotionTaskConfig,
   userMentions?: Map<string, string>,
+  fieldMapping?: Record<string, any>,
+  userMappings?: Map<string, string>,
 ): Promise<NotionTaskResult[]> {
   console.log('[Notion Service] Creating batch of tasks:', {
     taskCount: tasks.length,
@@ -407,7 +495,7 @@ export async function createNotionTasks(
     if (!task) continue
 
     try {
-      const result = await createNotionTask(task, thread, aiSummary, config, userMentions)
+      const result = await createNotionTask(task, thread, aiSummary, config, userMentions, fieldMapping, userMappings)
       results.push(result)
 
       console.log(
@@ -583,6 +671,24 @@ export function formatNotionProperty(
       return {
         phone_number: String(value),
       }
+
+    case 'people': {
+      // Handle array of user IDs for people fields
+      const userIds = Array.isArray(value) ? value : [value]
+      // Filter out null/undefined values
+      const validIds = userIds.filter(id => id != null)
+
+      if (validIds.length === 0) {
+        return null
+      }
+
+      return {
+        people: validIds.map(id => ({
+          object: 'user',
+          id: String(id),
+        })),
+      }
+    }
 
     default:
       // Fallback to rich_text for unknown types
