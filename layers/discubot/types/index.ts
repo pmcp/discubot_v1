@@ -49,14 +49,21 @@ export interface AISummary {
 
 /**
  * A single detected task from AI analysis
+ *
+ * Note: Fields use optional (?) syntax which allows null/undefined.
+ * AI should return null when uncertain to maintain data quality.
  */
 export interface DetectedTask {
   title: string
   description: string
-  priority?: 'low' | 'medium' | 'high' | 'urgent'
-  assignee?: string
-  dueDate?: Date
-  tags?: string[]
+  /** Priority level - AI returns null if uncertain */
+  priority?: 'low' | 'medium' | 'high' | 'urgent' | null
+  /** Task type - AI returns null if uncertain */
+  type?: 'bug' | 'feature' | 'question' | 'improvement' | null
+  /** Assignee as Slack/Figma user ID or email - AI returns null if uncertain */
+  assignee?: string | null
+  dueDate?: Date | null
+  tags?: string[] | null
 }
 
 /**

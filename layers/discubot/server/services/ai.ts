@@ -310,10 +310,24 @@ ${taskPrompt || ''}
 
 Instructions:
 - Identify specific, actionable tasks mentioned or implied
-- Extract title, description, and priority for each task
+- Extract title, description, and metadata for each task
 - Determine if there are multiple distinct tasks (isMultiTask: true/false)
 - Maximum ${maxTasks} tasks
 - If no clear tasks, return empty array
+
+CRITICAL - Confidence Rules:
+- ONLY fill fields if you are confident in the value
+- If uncertain about priority, type, assignee, or other fields, return null
+- Better to return null than guess incorrectly
+- This maintains data quality and prevents incorrect field mappings
+
+Field Standardization:
+- priority: Use ONLY "low", "medium", "high", "urgent", or null (if uncertain)
+- type: Use ONLY "bug", "feature", "question", "improvement", or null (if uncertain)
+- assignee: Return Slack user ID (format: U...) or email address, NOT display names
+  - If only display name available and cannot determine ID/email, return null
+- tags: Extract relevant tags if mentioned, otherwise null
+- dueDate: Extract if explicitly mentioned, otherwise null
 
 Respond in JSON format:
 {
@@ -322,9 +336,11 @@ Respond in JSON format:
     {
       "title": "...",
       "description": "...",
-      "priority": "low|medium|high|urgent",
-      "assignee": "...",
-      "tags": ["..."]
+      "priority": "low"|"medium"|"high"|"urgent"|null,
+      "type": "bug"|"feature"|"question"|"improvement"|null,
+      "assignee": "U123ABC"|"user@example.com"|null,
+      "dueDate": "2024-01-15"|null,
+      "tags": ["tag1", "tag2"]|null
     }
   ],
   "confidence": 0.0-1.0
