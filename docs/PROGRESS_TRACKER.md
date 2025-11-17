@@ -13,9 +13,9 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 81 / 84 |
-| Remaining Tasks | 3 |
-| Hours Logged | 149.75 / 175-178 |
+| Tasks Completed | 82 / 84 |
+| Remaining Tasks | 2 |
+| Hours Logged | 153.25 / 175-178 |
 | Current Phase | Phase 14 - Smart Field Mapping 🎯 |
 | Days Elapsed | 6 / 21 |
 | Blockers | 0 (OAuth fixed!) |
@@ -210,8 +210,8 @@
 > **📋 Detailed Execution Guide**: See [phase-14-field-mapping-brief.md](./briefings/phase-14-field-mapping-brief.md) for complete implementation details, verified infrastructure, and technical patterns.
 
 **Status**: In Progress
-**Progress**: 1/4 tasks (25%)
-**Time**: 1.5h / 8-11h estimated
+**Progress**: 2/4 tasks (50%)
+**Time**: 5h / 8-11h estimated
 **Target**: TBD
 
 **Goal**: Connect existing infrastructure (AI DetectedTask + User Mappings + Field Mappings) to populate Notion properties intelligently while maintaining data quality through confidence-based filling.
@@ -242,7 +242,7 @@
   - Test with vague discussions to ensure AI returns null appropriately
   - Files: `layers/discubot/server/services/ai.ts`, `layers/discubot/types/index.ts`
 
-- [ ] Task 14.2: Schema Introspection + Auto-Mapping (3-4h)
+- [x] Task 14.2: Schema Introspection + Auto-Mapping (3-4h) ✅
   - **A. Schema Fetching API (1.5h)**:
     - Create `GET /api/notion/schema/:databaseId` endpoint
     - Use Notion API `databases.retrieve()` to fetch schema
@@ -374,14 +374,15 @@
 ## Recent Daily Log
 
 ### 2025-11-17 - Day 7
-**Focus**: Phase 15 - OAuth Fix & Phase 14 - Smart Field Mapping (Task 14.1)
-**Hours**: 1.83h (110 min)
+**Focus**: Phase 15 - OAuth Fix & Phase 14 - Smart Field Mapping (Tasks 14.1-14.2)
+**Hours**: 5.33h (320 min)
 **Completed**:
 - [x] Task 15.1: Add audit fields to OAuth callback ✅
 - [x] Task 15.2: Test and deploy ✅
 - [x] Task 15.3: Document decision ✅
 - [x] Issue 003: Fix NuxtHub KV API method ✅
 - [x] Task 14.1: Standardize AI Output & Add Confidence Rules ✅
+- [x] Task 14.2: Schema Introspection + Auto-Mapping ✅
 
 **Notes**:
 - **Phase 15 Complete**: OAuth blocker removed with KISS quick fix approach
@@ -391,14 +392,26 @@
 - Added `createdBy: SYSTEM_USER_ID, updatedBy: SYSTEM_USER_ID` to OAuth callback
 - **Discovered Issue 003**: OAuth callback used wrong KV API method (`.delete()` instead of `.del()`)
 - Fixed KV API call on line 94 - changed to `hubKV().del()`
-- **Phase 14 Started**: Task 14.1 complete
+- **OAuth Testing**: After deploy, OAuth succeeded but redirected to 404 `/teams` page
+- Fixed OAuth success page redirect routes: `/teams/[team]/discubot-configs` → `/dashboard/[team]/discubot/configs`
+- Updated "Back to Teams" button to "Back to Dashboard" with correct route
+- **Phase 14 Task 14.1 Complete**: AI confidence rules implemented
 - Updated `DetectedTask` interface to add 'type' field and explicit null support
 - Added confidence rules to AI prompt: "Only fill fields if confident, otherwise return null"
 - Standardized vocabulary: priority (low/medium/high/urgent|null), type (bug/feature/question/improvement|null)
 - Updated prompt to request Slack user ID or email (not display names) for assignee field
+- **Phase 14 Task 14.2 Complete**: Schema introspection and auto-mapping implemented
+- Created `/layers/discubot/server/api/notion/schema/[databaseId].get.ts` endpoint
+- Fetches Notion database schema via Notion API `databases.retrieve()`
+- Parses properties: name, type, select/multi-select/status options
+- Created `/layers/discubot/server/utils/field-mapping.ts` with utilities:
+  - `generateDefaultMapping()`: Fuzzy matches AI fields → Notion properties
+  - `transformValue()`: Simple string matching for value transformation (e.g., "high" → "P1")
+- Implemented similarity scoring algorithm for smart field matching
+- Auto-generates value mappings for priority and type fields based on Notion options
 - Ran `npx nuxt typecheck` - no new errors introduced in discubot layer
-- **Phase 14 is now 25% complete (1/4 tasks)**
-- **Overall project progress: 96% (81/84 tasks)**
+- **Phase 14 is now 50% complete (2/4 tasks)**
+- **Overall project progress: 98% (82/84 tasks)**
 
 ---
 
