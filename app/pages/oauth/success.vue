@@ -3,13 +3,46 @@
  * OAuth Success Page
  *
  * Shows success message after completing OAuth flow.
- * This is a temporary page for Phase 4 - will be replaced with
- * proper config form in Phase 5 (Admin UI).
+ * Auto-redirects to config page after 3 seconds.
  */
 
 const route = useRoute()
+const router = useRouter()
+const { currentTeam } = useTeam()
+
 const provider = computed(() => route.query.provider as string || 'Unknown')
 const team = computed(() => route.query.team as string || 'Unknown')
+
+// Auto-redirect countdown
+const countdown = ref(3)
+const redirecting = ref(false)
+
+// Config page URL
+const configUrl = computed(() => {
+  if (!currentTeam.value?.slug) return '/teams'
+  return `/teams/${currentTeam.value.slug}/discubot-configs`
+})
+
+// Start countdown on mount
+onMounted(() => {
+  const timer = setInterval(() => {
+    countdown.value--
+    if (countdown.value <= 0) {
+      clearInterval(timer)
+      redirecting.value = true
+      router.push(configUrl.value)
+    }
+  }, 1000)
+
+  // Cleanup on unmount
+  onBeforeUnmount(() => clearInterval(timer))
+})
+
+// Manual navigation
+function goToConfigs() {
+  redirecting.value = true
+  router.push(configUrl.value)
+}
 </script>
 
 <template>
@@ -35,69 +68,81 @@ const team = computed(() => route.query.team as string || 'Unknown')
         </template>
 
         <div class="space-y-4">
-          <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-            <h3 class="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
-              What's Next?
-            </h3>
-            <ol class="text-sm text-blue-800 dark:text-blue-200 space-y-2 list-decimal list-inside">
-              <li>Complete your configuration in the admin dashboard</li>
-              <li>Add your Notion API token and database ID</li>
-              <li>Test the connection</li>
-              <li>Start syncing discussions to Notion!</li>
-            </ol>
-          </div>
-
-          <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-            <h3 class="text-sm font-medium text-gray-900 dark:text-white mb-2">
-              Connection Details
-            </h3>
-            <dl class="space-y-2">
-              <div class="flex justify-between text-sm">
-                <dt class="text-gray-500 dark:text-gray-400">Provider:</dt>
-                <dd class="font-medium text-gray-900 dark:text-white capitalize">{{ provider }}</dd>
+          <!-- Auto-redirect notice -->
+          <div class="bg-primary/5 border border-primary/20 rounded-lg p-4">
+            <div class="flex items-center gap-3">
+              <div class="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <span class="text-lg font-bold text-primary">{{ countdown }}</span>
               </div>
-              <div class="flex justify-between text-sm">
-                <dt class="text-gray-500 dark:text-gray-400">Workspace:</dt>
-                <dd class="font-medium text-gray-900 dark:text-white">{{ team }}</dd>
-              </div>
-              <div class="flex justify-between text-sm">
-                <dt class="text-gray-500 dark:text-gray-400">Status:</dt>
-                <dd class="font-medium text-green-600 dark:text-green-400">Connected</dd>
-              </div>
-            </dl>
-          </div>
-
-          <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-            <div class="flex gap-3">
-              <svg class="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
               <div>
-                <h3 class="text-sm font-medium text-yellow-900 dark:text-yellow-100">
-                  Note: Admin UI Coming in Phase 5
+                <h3 class="text-sm font-medium text-foreground">
+                  Redirecting to Configuration...
                 </h3>
-                <p class="text-sm text-yellow-800 dark:text-yellow-200 mt-1">
-                  The configuration dashboard is not yet available. Your OAuth token has been received but needs to be stored manually for now.
+                <p class="text-xs text-muted-foreground mt-0.5">
+                  You'll be redirected in {{ countdown }} {{ countdown === 1 ? 'second' : 'seconds' }}
                 </p>
               </div>
             </div>
           </div>
+
+          <!-- Connection details -->
+          <div class="bg-muted/50 rounded-lg p-4">
+            <h3 class="text-sm font-medium text-foreground mb-3">
+              Connection Details
+            </h3>
+            <dl class="space-y-2">
+              <div class="flex justify-between text-sm">
+                <dt class="text-muted-foreground">Provider:</dt>
+                <dd class="font-medium text-foreground capitalize">{{ provider }}</dd>
+              </div>
+              <div class="flex justify-between text-sm">
+                <dt class="text-muted-foreground">Workspace:</dt>
+                <dd class="font-medium text-foreground">{{ team }}</dd>
+              </div>
+              <div class="flex justify-between text-sm">
+                <dt class="text-muted-foreground">Status:</dt>
+                <dd class="font-medium text-success">
+                  <span class="inline-flex items-center gap-1.5">
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                    Connected
+                  </span>
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          <!-- Next steps -->
+          <div class="bg-info/5 border border-info/20 rounded-lg p-4">
+            <h3 class="text-sm font-medium text-foreground mb-2">
+              Next Steps
+            </h3>
+            <ol class="text-sm text-muted-foreground space-y-1.5 list-decimal list-inside">
+              <li>Add your Notion integration token</li>
+              <li>Configure your Notion database ID</li>
+              <li>Customize AI prompts (optional)</li>
+              <li>Activate the configuration</li>
+            </ol>
+          </div>
         </div>
 
         <template #footer>
-          <div class="flex justify-end gap-3">
+          <div class="flex justify-between items-center gap-3">
             <UButton
               color="gray"
               variant="ghost"
-              to="/"
+              to="/teams"
+              size="sm"
             >
-              Return Home
+              Back to Teams
             </UButton>
             <UButton
               color="primary"
-              to="/dashboard"
+              @click="goToConfigs"
+              :loading="redirecting"
             >
-              Go to Dashboard
+              {{ redirecting ? 'Redirecting...' : 'Continue Setup' }}
             </UButton>
           </div>
         </template>

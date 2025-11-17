@@ -20,8 +20,6 @@
  * @see https://api.slack.com/methods/oauth.v2.access
  */
 
-import { __testing__ as installTesting } from './install.get'
-
 /**
  * Slack oauth.v2.access response structure
  */
@@ -78,8 +76,8 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Verify state token (CSRF protection)
-    const stateData = installTesting.oauthStates.get(state)
+    // Verify state token (CSRF protection) using NuxtHub KV
+    const stateData = await hubKV().get<{ teamId: string; createdAt: number }>(`oauth:state:${state}`)
 
     if (!stateData) {
       console.error('[OAuth] Invalid or expired state token')
@@ -92,8 +90,8 @@ export default defineEventHandler(async (event) => {
     // Extract team ID from state
     const { teamId } = stateData
 
-    // Delete state token (single use)
-    installTesting.oauthStates.delete(state)
+    // Delete state token (single use) from KV
+    await hubKV().delete(`oauth:state:${state}`)
 
     // Get environment variables
     const config = useRuntimeConfig(event)
@@ -159,32 +157,90 @@ export default defineEventHandler(async (event) => {
       scopes: tokenData.scope,
     })
 
-    // TODO: Store access token in database
-    // For now, we'll need to integrate with Crouton's sourceConfigs collection
-    // This will be implemented when database integration is ready
-    //
-    // Pseudo-code for future implementation:
-    // await createSourceConfig({
-    //   teamId: teamId,
-    //   sourceType: 'slack',
-    //   name: tokenData.team?.name || 'Slack Workspace',
-    //   apiToken: tokenData.access_token, // Should be encrypted!
-    //   settings: {
-    //     workspaceId: tokenData.team?.id,
-    //     workspaceName: tokenData.team?.name,
-    //     botUserId: tokenData.bot_user_id,
-    //     scopes: tokenData.scope,
-    //   },
-    //   notionToken: '', // User will need to configure separately
-    //   notionDatabaseId: '', // User will need to configure separately
-    // })
+    // Store access token in database
+    // Create config with incomplete setup - user must complete in admin UI
+    try {
+      const { createDiscubotConfig } = await import(
+        '#layers/discubot/collections/configs/server/database/queries'
+      )
+      const { SYSTEM_USER_ID } = await import('../../../utils/constants')
 
-    console.log('[OAuth] TODO: Store token in database (not yet implemented)')
-    console.log('[OAuth] Token details:', {
-      accessToken: tokenData.access_token.substring(0, 15) + '...',
-      teamId: tokenData.team?.id,
-      teamName: tokenData.team?.name,
-    })
+      // Check if config already exists for this Slack workspace
+      const db = useDB()
+      const { discubotConfigs } = await import('#layers/discubot-configs/server/database/schema')
+      const { eq, and } = await import('drizzle-orm')
+
+      const existingConfigs = await db
+        .select()
+        .from(discubotConfigs)
+        .where(and(
+          eq(discubotConfigs.teamId, teamId),
+          eq(discubotConfigs.sourceType, 'slack'),
+        ))
+        .all()
+
+      // Check if this Slack workspace is already connected
+      const existingConfig = existingConfigs.find(config => {
+        return config.sourceMetadata && (config.sourceMetadata as any).slackTeamId === tokenData.team?.id
+      })
+
+      if (existingConfig) {
+        console.log('[OAuth] Config already exists for this Slack workspace, updating token:', existingConfig.id)
+        const { updateDiscubotConfig } = await import(
+          '#layers/discubot/collections/configs/server/database/queries'
+        )
+
+        // Update existing config with new token
+        await updateDiscubotConfig(
+          existingConfig.id,
+          teamId,
+          existingConfig.owner,
+          {
+            apiToken: tokenData.access_token,
+            sourceMetadata: {
+              slackTeamId: tokenData.team?.id,
+              slackTeamName: tokenData.team?.name,
+              botUserId: tokenData.bot_user_id,
+              scopes: tokenData.scope,
+            },
+          },
+        )
+      }
+      else {
+        console.log('[OAuth] Creating new config for Slack workspace:', tokenData.team?.name)
+
+        // Create new config with placeholder Notion values
+        // User must complete setup in admin UI before config becomes active
+        await createDiscubotConfig({
+          teamId,
+          owner: SYSTEM_USER_ID,
+          sourceType: 'slack',
+          name: tokenData.team?.name || 'Slack Workspace',
+          apiToken: tokenData.access_token,
+          sourceMetadata: {
+            slackTeamId: tokenData.team?.id,
+            slackTeamName: tokenData.team?.name,
+            botUserId: tokenData.bot_user_id,
+            scopes: tokenData.scope,
+          },
+          notionToken: '', // User will configure in admin UI
+          notionDatabaseId: '', // User will configure in admin UI
+          aiEnabled: false,
+          autoSync: false,
+          postConfirmation: true,
+          enableEmailForwarding: false,
+          active: false, // Requires completion of Notion setup
+          onboardingComplete: false, // User must complete setup
+        })
+
+        console.log('[OAuth] Config created successfully')
+      }
+    }
+    catch (error) {
+      console.error('[OAuth] Failed to save config:', error)
+      // Don't fail the OAuth flow if config creation fails
+      // User can try reconnecting or manually create config
+    }
 
     // For now, redirect to a success page with instructions
     // In Phase 5 (Admin UI), this will redirect to the config form

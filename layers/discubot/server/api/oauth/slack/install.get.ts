@@ -21,28 +21,6 @@
 import { randomBytes } from 'node:crypto'
 
 /**
- * In-memory state storage for OAuth CSRF protection
- * In production, this should be replaced with database or KV storage
- *
- * Structure: Map<stateToken, { teamId: string, createdAt: number }>
- */
-const oauthStates = new Map<string, { teamId: string; createdAt: number }>()
-
-/**
- * Clean up expired state tokens (older than 5 minutes)
- */
-function cleanupExpiredStates() {
-  const now = Date.now()
-  const fiveMinutes = 5 * 60 * 1000
-
-  for (const [state, data] of oauthStates.entries()) {
-    if (now - data.createdAt > fiveMinutes) {
-      oauthStates.delete(state)
-    }
-  }
-}
-
-/**
  * Required Slack OAuth scopes for the bot
  *
  * Scopes needed:
@@ -74,9 +52,6 @@ const SLACK_SCOPES = [
 
 export default defineEventHandler(async (event) => {
   try {
-    // Clean up expired states periodically
-    cleanupExpiredStates()
-
     // Get environment variables
     const config = useRuntimeConfig(event)
     const clientId = config.slackClientId || process.env.SLACK_CLIENT_ID
@@ -98,10 +73,13 @@ export default defineEventHandler(async (event) => {
     // Generate secure random state token (32 bytes = 256 bits)
     const state = randomBytes(32).toString('hex')
 
-    // Store state token with team ID and timestamp
-    oauthStates.set(state, {
+    // Store state token with team ID in NuxtHub KV
+    // TTL of 300 seconds (5 minutes) for automatic cleanup
+    await hubKV().set(`oauth:state:${state}`, {
       teamId,
       createdAt: Date.now(),
+    }, {
+      ttl: 300, // 5 minutes
     })
 
     // Build redirect URI (must match what's configured in Slack app settings)
@@ -138,9 +116,8 @@ export default defineEventHandler(async (event) => {
 })
 
 /**
- * Export state management functions for testing
+ * Export for testing (KV-based storage doesn't need exports)
+ *
+ * Note: State is now stored in NuxtHub KV with automatic TTL cleanup.
+ * For testing, mock hubKV() calls instead of using exported Map.
  */
-export const __testing__ = {
-  oauthStates,
-  cleanupExpiredStates,
-}
