@@ -19,8 +19,8 @@ const redirecting = ref(false)
 
 // Config page URL
 const configUrl = computed(() => {
-  if (!currentTeam.value?.slug) return '/teams'
-  return `/teams/${currentTeam.value.slug}/discubot-configs`
+  if (!currentTeam.value?.slug) return '/dashboard'
+  return `/dashboard/${currentTeam.value.slug}/discubot/configs`
 })
 
 // Start countdown on mount
@@ -132,10 +132,10 @@ function goToConfigs() {
             <UButton
               color="gray"
               variant="ghost"
-              to="/teams"
+              to="/dashboard"
               size="sm"
             >
-              Back to Teams
+              Back to Dashboard
             </UButton>
             <UButton
               color="primary"
