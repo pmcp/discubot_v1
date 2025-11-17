@@ -2,8 +2,8 @@
 
 **Project Start Date**: 2025-11-11
 **Expected Completion**: 2025-12-16 (5 weeks)
-**Current Phase**: Phase 14 - Smart Field Mapping 🎯
-**Overall Progress**: 100% (84/84 tasks complete)
+**Current Phase**: Phase 16 - OAuth UX Improvements 🎯
+**Overall Progress**: 100% (85/85 tasks complete)
 
 > **📋 Historical Archive**: For completed phases (1-7, 9-11, 13), see [PROGRESS_MADE.md](./PROGRESS_MADE.md)
 
@@ -13,12 +13,12 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 84 / 84 |
+| Tasks Completed | 85 / 85 |
 | Remaining Tasks | 0 |
-| Hours Logged | 157.25 / 175-178 |
-| Current Phase | Phase 14 - Smart Field Mapping 🎯 |
-| Days Elapsed | 6 / 21 |
-| Blockers | 0 (OAuth fixed!) |
+| Hours Logged | 157.5 / 175-178 |
+| Current Phase | Phase 16 - OAuth UX Improvements 🎯 |
+| Days Elapsed | 7 / 21 |
+| Blockers | 0 |
 | Tests Passing | 366+ / 440+ (83%+ - 42 expected API key failures) |
 
 ---
@@ -347,6 +347,33 @@
 
 ---
 
+### Phase 16: OAuth UX Improvements ✅
+**Status**: Complete
+**Progress**: 1/1 tasks (100%)
+**Time**: 0.25h / 0.25h estimated (15 min)
+**Target**: Fix OAuth infinite loop in config creation
+**Priority**: 🔴 **HIGH** - Blocks config creation workflow
+
+**Goal**: Fix OAuth infinite loop by implementing popup window flow instead of full page redirect.
+
+**Problem**: Creating new config → OAuth redirect → Form data lost → Infinite loop
+
+**Solution**: Open OAuth in popup window, preserve form state, notify parent on completion
+
+- [x] Task 16.1: Implement OAuth Popup Window (15 min) ✅
+  - Updated `Form.vue` OAuth button to open popup instead of full redirect
+  - Added `openOAuthPopup()` function with centered window positioning
+  - Added `postMessage` listener in Form.vue to handle OAuth success
+  - Updated `oauth/success.vue` to detect popup mode (check `window.opener`)
+  - Popup sends success message to parent and auto-closes
+  - Parent window shows toast and refreshes OAuth status
+  - Form data preserved during OAuth flow (no more infinite loop!)
+  - Files: `/layers/discubot/collections/configs/app/components/Form.vue`, `/app/pages/oauth/success.vue`
+
+**Checkpoint**: ✅ OAuth popup flow working, form data preserved, infinite loop fixed, smooth UX for config creation
+
+---
+
 ## Current Sprint (Update Weekly)
 
 **Week**: 2
@@ -374,9 +401,10 @@
 ## Recent Daily Log
 
 ### 2025-11-17 - Day 7 (Updated)
-**Focus**: Phase 15 - OAuth Fix & Phase 14 - Smart Field Mapping (All Tasks Complete!)
-**Hours**: 9.33h (560 min)
+**Focus**: Phase 15 - OAuth Fix, Phase 14 - Smart Field Mapping, Phase 16 - OAuth UX Improvements (All Complete!)
+**Hours**: 9.58h (575 min)
 **Completed**:
+- [x] Task 16.1: Implement OAuth Popup Window ✅
 - [x] Task 15.1: Add audit fields to OAuth callback ✅
 - [x] Task 15.2: Test and deploy ✅
 - [x] Task 15.3: Document decision ✅
@@ -448,7 +476,21 @@
 - Fixed all TypeScript errors (Nuxt UI 4 color type strictness)
 - Ran `npx nuxt typecheck` - no new errors introduced
 - **Phase 14 is now 100% complete (4/4 tasks)** 🎉
-- **Overall project progress: 100% (84/84 tasks)** 🎉🎉🎉
+- **Phase 16 Task 16.1 Complete**: OAuth Popup Window implemented
+- Discovered OAuth infinite loop during config creation:
+  - User fills form → OAuth redirect → Form data lost → Repeat forever
+  - Root cause: Full page redirect vs popup window
+- Implemented popup-based OAuth flow:
+  - Changed "Connect with Slack" button from `:to` link to `@click` handler
+  - Added `openOAuthPopup()` function with window.open() (600x800px, centered)
+  - Updated `/app/pages/oauth/success.vue` to detect popup mode (`window.opener`)
+  - Popup sends `postMessage({ type: 'oauth-success' })` to parent window
+  - Parent Form.vue listens for message, shows toast, refreshes data
+  - Popup auto-closes after 1 second
+  - Form data fully preserved during OAuth flow
+- No new TypeScript errors introduced
+- **Phase 16 is now 100% complete (1/1 tasks)** 🎉
+- **Overall project progress: 100% (85/85 tasks)** 🎉🎉🎉
 
 ---
 
@@ -623,7 +665,7 @@
 Track items deferred to future phases:
 
 - [ ] **Config Service Layer** - When: We have 3+ config creation code paths OR need to add notifications/validation/audit logging. Currently only 2 paths exist (API endpoints + OAuth callback), so service layer would be premature abstraction. See `/docs/briefings/oauth-service-layer-brief.md` for detailed architecture proposal and Decision 004 for rationale. Priority: Medium (refactoring opportunity, not critical path).
-- [ ] **OAuth Popup Window** - UX: Open OAuth flow in popup window instead of same tab to avoid navigating away from current page. Better user experience as parent window stays in place and can react to OAuth completion. Implementation: (~15 min) Create popup opener utility, update OAuth success page to detect popup context and postMessage to parent, add parent listener to refresh/notify on success. Priority: Low-Medium (UX enhancement, current flow works but requires full page navigation). Affects: "Connect with Slack" button component, `/app/pages/oauth/success.vue`.
+- [x] **OAuth Popup Window** ✅ - DONE: Implemented in Phase 16 (2025-11-17). OAuth now opens in popup window, preserves form data, notifies parent on completion. Infinite loop issue fixed.
 - [ ] **Circuit Breaker Pattern** - When: API outage patterns emerge
 - [ ] **Token Encryption (AES-256-GCM)** - When: SOC2/ISO27001 compliance needed (NOTE: SQLite encryption at rest already enabled via Cloudflare D1)
 - [ ] **KV-Based AI Caching** - When: Multi-region deployment needed

@@ -14,6 +14,9 @@ const provider = computed(() => route.query.provider as string || 'Unknown')
 const team = computed(() => route.query.team as string || 'Unknown')
 const configId = computed(() => route.query.configId as string | undefined)
 
+// Check if opened in popup
+const isPopup = computed(() => window.opener !== null)
+
 // Auto-redirect countdown
 const countdown = ref(3)
 const redirecting = ref(false)
@@ -27,6 +30,16 @@ const configUrl = computed(() => {
 
 // Start countdown on mount
 onMounted(() => {
+  // If in popup, notify parent and close
+  if (isPopup.value) {
+    window.opener.postMessage({ type: 'oauth-success', provider: provider.value, team: team.value }, window.location.origin)
+    setTimeout(() => {
+      window.close()
+    }, 1000)
+    return
+  }
+
+  // Normal flow: countdown and redirect
   const timer = setInterval(() => {
     countdown.value--
     if (countdown.value <= 0) {
@@ -69,7 +82,18 @@ function goToConfigs() {
           </div>
         </template>
 
-        <div class="space-y-4">
+        <div v-if="isPopup" class="space-y-4">
+          <div class="bg-primary/5 border border-primary/20 rounded-lg p-4 text-center">
+            <p class="text-sm text-foreground font-medium">
+              This window will close automatically...
+            </p>
+            <p class="text-xs text-muted-foreground mt-2">
+              You can close this window now
+            </p>
+          </div>
+        </div>
+
+        <div v-else class="space-y-4">
           <!-- Auto-redirect notice -->
           <div class="bg-primary/5 border border-primary/20 rounded-lg p-4">
             <div class="flex items-center gap-3">

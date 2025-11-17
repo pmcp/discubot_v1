@@ -165,10 +165,9 @@
                 <!-- OAuth Connect Button -->
                 <UButton
                   v-else
-                  :to="oauthInstallUrl"
+                  @click="openOAuthPopup"
                   color="primary"
                   size="md"
-                  external
                 >
                   <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5zm0 1c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5zm-5 0c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5zm0 1c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5z"/>
@@ -1288,6 +1287,51 @@ const oauthWorkspaceName = computed(() => {
 const oauthInstallUrl = computed(() => {
   if (!currentTeam.value?.id) return '#'
   return `/api/oauth/slack/install?teamId=${currentTeam.value.id}`
+})
+
+// OAuth Popup Window
+function openOAuthPopup() {
+  const width = 600
+  const height = 800
+  const left = (window.screen.width - width) / 2
+  const top = (window.screen.height - height) / 2
+
+  const popup = window.open(
+    oauthInstallUrl.value,
+    'slack-oauth',
+    `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`
+  )
+
+  if (popup) {
+    popup.focus()
+  }
+}
+
+// Listen for OAuth success message from popup
+function handleOAuthMessage(event: MessageEvent) {
+  if (event.data?.type === 'oauth-success') {
+    // Refresh the form to get updated OAuth status
+    if (props.items && props.items.length > 0) {
+      // Trigger a refresh of the config data
+      const toast = useToast()
+      toast.add({
+        title: 'Slack Connected!',
+        description: 'OAuth connection successful',
+        color: 'success'
+      })
+
+      // Reload the config to get updated sourceMetadata
+      window.location.reload()
+    }
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('message', handleOAuthMessage)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('message', handleOAuthMessage)
 })
 
 // Form layout configuration - dynamic based on source type
