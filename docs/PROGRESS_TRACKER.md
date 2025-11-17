@@ -2,7 +2,7 @@
 
 **Project Start Date**: 2025-11-11
 **Expected Completion**: 2025-12-16 (5 weeks)
-**Current Phase**: Phase 14 - Intelligent Notion Field Mapping 🎯
+**Current Phase**: Phase 14 - Smart Field Mapping with User Integration 🎯
 **Overall Progress**: 92% (77/84 tasks complete)
 
 ---
@@ -12,8 +12,8 @@
 | Metric | Value |
 |--------|-------|
 | Tasks Completed | 77 / 84 |
-| Hours Logged | 148 / 191-199 |
-| Current Phase | Phase 14 - Intelligent Notion Field Mapping 🎯 |
+| Hours Logged | 148 / 175-178 |
+| Current Phase | Phase 14 - Smart Field Mapping with User Integration 🎯 |
 | Days Elapsed | 6 / 21 |
 | Blockers | 0 |
 | Tests Passing | 366+ / 440+ (83%+ - 42 expected API key failures) |
@@ -618,94 +618,103 @@
 
 ---
 
-### Phase 14: Intelligent Notion Field Mapping 🎯
+### Phase 14: Smart Field Mapping with User Integration 🎯
 **Status**: Not Started
 **Progress**: 0/4 tasks (0%)
-**Time**: 0h / 24-32h estimated
+**Time**: 0h / 8-11h estimated
 **Target**: TBD
 
-**Goal**: Replace manual JSON field mapping with AI-powered visual mapper that automatically fetches Notion database schemas and intelligently transforms field values to match database requirements.
+**Goal**: Connect existing infrastructure (AI DetectedTask + User Mappings + Field Mappings) to populate Notion properties intelligently while maintaining data quality through confidence-based filling.
 
-**Key Features**:
-- Auto-fetch Notion database properties via API
-- Visual dropdown-based field mapping (replaces JSON textarea)
-- AI-powered value transformation (priority, type, tags)
-- Leverage existing user mapping infrastructure for person fields
-- Live preview of transformations
-- Graceful error handling with fallbacks
+**Key Approach**:
+- Use existing AI-generated structured data (DetectedTask interface)
+- Use existing formatNotionProperty() helper (+ add 'people' case)
+- Use existing notionFieldMapping config (already in database)
+- Use existing discubot_usermappings table + resolveToNotionUser()
+- Simple fuzzy matching for value transformation (no AI service needed)
+- Nuxt UI 4 components for clean, accessible UI
 
-**Background**:
-- User mapping infrastructure (Task 5.6A) already handles source user → Notion user resolution
-- Existing `resolveToNotionUser()` provides person field mapping with confidence scores
-- No need for AI-based person matching - use existing email/name matching service
+**What Changed from Original Plan**:
+- ❌ Removed: AI transformation service (DetectedTask already structured!)
+- ❌ Removed: Complex caching (store schema in sourceMetadata)
+- ❌ Removed: Confidence scoring algorithms (simple fuzzy match sufficient)
+- ❌ Removed: Separate test/validation endpoints (use existing)
+- ✅ Added: AI confidence rules (return null when uncertain)
+- ✅ Added: User mapping integration for person fields
+- ✅ Focus: Connect existing pieces vs build new systems
 
-- [ ] Task 14.1: Notion Schema Fetching (6-8h)
-  - Create TypeScript schema types (`layers/discubot/types/notion-schema.ts`)
-  - Implement `fetchDatabaseSchema()` function in notion service
-  - Create `GET /api/notion/schema` endpoint with database_id parameter
-  - Add 15-minute in-memory caching (Map-based cache like AI service)
-  - Support all property types: title, rich_text, select, multi_select, people, date, checkbox, url, number, etc.
-  - Return property names, types, and select/multi_select options
-  - Test with various database structures (simple, complex, multi-property)
-  - Handle API errors gracefully (invalid database ID, permissions, etc.)
-  - Files: `layers/discubot/types/notion-schema.ts`, `layers/discubot/server/services/notion.ts`, `layers/discubot/server/api/notion/schema.get.ts`
+- [ ] Task 14.1: Standardize AI Output & Add Confidence Rules (1-2h)
+  - Update AI prompt in `layers/discubot/server/services/ai.ts`
+  - Add rule: "Only fill fields if confident, otherwise return null"
+  - Standardize vocabulary: priority (low/medium/high/urgent|null), type (bug/feature/question/improvement|null)
+  - For assignee: Output Slack/Figma user ID or email (not display name)
+  - Update DetectedTask interface to explicitly support null values
+  - Test with vague discussions to ensure AI returns null appropriately
+  - Files: `layers/discubot/server/services/ai.ts`, `layers/discubot/types/ai.ts`
 
-- [ ] Task 14.2: AI Value Transformation Service (4-6h)
-  - Create AI mapper service (`layers/discubot/server/services/ai-mapper.ts`)
-  - Priority transformation: "high"→"P1", "urgent"→"P1", "medium"→"P2", "low"→"P3"
-  - Type inference: Analyze discussion tone/keywords → Bug/Feature/Improvement/etc.
-  - Tag/category extraction: Extract topics/modules from discussion content
-  - Confidence scoring for all AI transformations (0.0-1.0)
-  - **Integration with existing user mapping**: Use `resolveToNotionUser()` for person fields (NO AI matching!)
-  - Transform function signature: `transformFieldValue(sourceValue, targetPropertyType, selectOptions?, context?)`
-  - Create `POST /api/ai/map-field` test endpoint for debugging transformations
-  - Graceful fallback: If AI transformation fails, return original value + log warning
-  - Files: `layers/discubot/server/services/ai-mapper.ts`, `layers/discubot/server/api/ai/map-field.post.ts`
+- [ ] Task 14.2: Schema Introspection + Auto-Mapping (3-4h)
+  - **A. Schema Fetching API (1.5h)**:
+    - Create `GET /api/notion/schema/:databaseId` endpoint
+    - Use Notion API `databases.retrieve()` to fetch schema
+    - Parse properties: name, type, select/multi-select options
+    - Store in config.sourceMetadata (no complex in-memory caching)
+    - Return: `{ properties: { Priority: { type: 'select', options: ['P1','P2','P3'] } } }`
+    - Files: `layers/discubot/server/api/notion/schema/[databaseId].get.ts`
+  - **B. Auto-Mapping Logic (1h)**:
+    - Create utility: `generateDefaultMapping()` in `layers/discubot/server/utils/field-mapping.ts`
+    - Fuzzy match AI fields → Notion properties by name (e.g., "priority" → "Priority")
+    - Include property type from schema in mapping config
+    - Return mapping object: `{ priority: { notionProperty: "Priority", propertyType: "select", valueMap: {...} } }`
+    - Files: `layers/discubot/server/utils/field-mapping.ts`
+  - **C. Value Transformation (0.5-1h)**:
+    - Create utility: `transformValue()` - simple fuzzy matcher
+    - Case-insensitive partial match: "high" → "P1" (based on select options)
+    - No AI, no complex logic - just string matching
+    - Fallback: return original value if no match
+    - Files: `layers/discubot/server/utils/field-mapping.ts`
 
-- [ ] Task 14.3: Visual Field Mapping UI (10-12h)
-  - Create `FieldMapper.vue` component with table layout (Source Field | → | Notion Property | AI Transform)
-  - "Fetch Database Schema" button with loading state and error handling
-  - Dropdown selectors for each field mapping (populated from fetched schema)
-  - Show property types and available options (for select/multi_select)
-  - Auto-suggestions based on property name matching (e.g., "priority" → "Priority" property)
-  - Toggle "AI Transform" checkbox per field (for priority, type, tags)
-  - Create `MappingPreview.vue` modal component:
-    - "Test Mapping" button in Form.vue
-    - Show sample discussion data → transformed values
-    - Display confidence scores for AI transforms
-    - Preview exact Notion property format
-  - Type compatibility validation with visual feedback (✓ compatible, ⚠ warning, ✗ incompatible)
-  - Create `useNotionSchema.ts` composable for schema fetching + caching
-  - Create `useFieldMapper.ts` composable for mapping logic + validation
-  - Update `Form.vue` to use FieldMapper component instead of JSON textarea
-  - Replace textarea in Notion tab with: `<FieldMapper v-model="state.notionFieldMapping" :database-id="state.notionDatabaseId" />`
-  - Files: `layers/discubot/collections/configs/app/components/FieldMapper.vue`, `layers/discubot/collections/configs/app/components/MappingPreview.vue`, `layers/discubot/app/composables/useNotionSchema.ts`, `layers/discubot/app/composables/useFieldMapper.ts`, update `layers/discubot/collections/configs/app/components/Form.vue`
+- [ ] Task 14.3: Integrate User Mapping for People Fields (2-3h)
+  - **A. Fix formatNotionProperty() - Add 'people' case (0.5h)**:
+    - Add missing 'people' case to `formatNotionProperty()` in notion.ts
+    - Return format: `{ people: [{ object: 'user', id: notionUserId }] }`
+    - Handle arrays and null values
+    - Files: `layers/discubot/server/services/notion.ts`
+  - **B. Update buildTaskProperties() (1.5-2h)**:
+    - Modify to accept `fieldMapping` and `userMappings` parameters
+    - For each AI field: Check if non-null, apply mapping
+    - Special handling for 'people' type: Use userMappings to resolve IDs
+    - Apply value transformation for 'select' types using valueMap
+    - Use existing `formatNotionProperty()` to format each property
+    - Skip fields with null values (don't force when AI uncertain)
+    - Files: `layers/discubot/server/services/notion.ts`
+  - **C. Update discussion processor (0.5h)**:
+    - Load user mappings for team/source in processor
+    - Pass to buildTaskProperties() along with field mapping config
+    - Log warning when assignee has no user mapping (skip field gracefully)
+    - Files: `layers/discubot/server/services/processor.ts`
 
-- [ ] Task 14.4: Processor Integration (4-6h)
-  - Update `buildTaskProperties()` in notion.ts to accept `fieldMapping` and `schema` parameters
-  - Load database schema before task creation in processor (Stage 5: "Create tasks in Notion")
-  - For each mapped field:
-    - **Person fields**: Call `resolveToNotionUser()` from existing user mapping service
-    - **Other fields**: Call AI transformation service (`transformFieldValue()`)
-    - Build Notion property object using `formatNotionProperty()`
-  - Validate mapped properties against schema (check property exists, type matches)
-  - Graceful error handling: If mapping/transformation fails, log warning and continue (don't fail task creation!)
-  - Add processing metrics: Log which fields were mapped, which were transformed, confidence scores
-  - Create `POST /api/notion/test-mapping` endpoint:
-    - Takes: field mapping config + sample task data
-    - Returns: transformed Notion properties + confidence scores
-    - Used by MappingPreview.vue component
-  - Create `POST /api/notion/validate-mapping` endpoint:
-    - Takes: field mapping config + database ID
-    - Validates mapping against actual schema
-    - Returns: validation results (✓ valid, ⚠ warnings, ✗ errors)
-  - Update processor.ts Stage 5 to wire everything together:
-    1. Load schema (cached 15min)
-    2. Apply field mapping with transformations
-    3. Fall back to default behavior if mapping fails
-  - Files: `layers/discubot/server/services/notion.ts`, `layers/discubot/server/services/processor.ts`, `layers/discubot/server/api/notion/test-mapping.post.ts`, `layers/discubot/server/api/notion/validate-mapping.post.ts`
+- [ ] Task 14.4: Field Mapper UI with Nuxt UI Components (1.5-2h)
+  - **A. Schema Fetch Button (0.5h)**:
+    - Add "Fetch Notion Schema" button to Form.vue
+    - Call `/api/notion/schema/:databaseId` endpoint
+    - Generate default mappings using fuzzy matching
+    - Pre-fill form with auto-generated suggestions
+  - **B. Field Mapping Form (1-1.5h)**:
+    - Create field mapping section using UForm + UFormField
+    - For each AI field (priority, type, assignee):
+      - USelectMenu for Notion property selection
+      - UBadge showing property type (select/people/text)
+      - UInput for value mapping (e.g., "high" → "P1")
+    - Use Nuxt UI 4 components: UForm, UFormField, USelectMenu, UBadge, UInput, UAlert
+    - No custom table - use semantic form layout
+  - **C. User Mapping Integration Hint (0.5h)**:
+    - When user maps 'assignee' to 'people' field:
+      - Show UAlert: "Assignee mapping requires user mappings"
+      - Link to user mapping management page
+    - Add UCollapsible for advanced JSON editor (fallback)
+  - Files: `layers/discubot/collections/configs/app/components/Form.vue`
 
-**Checkpoint**: Teams can visually configure field mappings through dropdown UI, AI intelligently transforms values to match Notion database schemas (priority, type, tags), person fields leverage existing user mapping infrastructure with confidence scores, live preview shows transformations before saving, graceful degradation ensures task creation never fails due to mapping errors
+**Checkpoint**: Field mappings configured through clean Nuxt UI form, AI returns null when uncertain (high data quality), assignees properly resolved to Notion users via existing user mapping service, simple fuzzy matching transforms values (no AI overhead), all data persisted in existing database columns, graceful degradation ensures nothing breaks
 
 ---
 
