@@ -19,6 +19,31 @@
 
 <script setup lang="ts">
 const { currentTeam } = useTeam()
+const route = useRoute()
+const router = useRouter()
+const { open } = useCrouton()
+const toast = useToast()
+
+// Auto-open edit form after OAuth
+onMounted(() => {
+  const configId = route.query.openEdit as string | undefined
+  const isOAuthSuccess = route.query.oauth === 'success'
+
+  if (configId && isOAuthSuccess) {
+    // Show success toast
+    toast.add({
+      title: 'Slack Connected!',
+      description: 'Complete your Notion setup to activate this config',
+      color: 'success'
+    })
+
+    // Open edit slideover
+    open('update', 'discubotConfigs', [configId])
+
+    // Clean up URL
+    router.replace({ query: {} })
+  }
+})
 
 definePageMeta({
   middleware: 'auth'

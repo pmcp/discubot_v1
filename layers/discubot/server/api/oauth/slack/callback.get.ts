@@ -159,6 +159,7 @@ export default defineEventHandler(async (event) => {
 
     // Store access token in database
     // Create config with incomplete setup - user must complete in admin UI
+    let configId: string | undefined
     try {
       const { createDiscubotConfig } = await import(
         '#layers/discubot/collections/configs/server/database/queries'
@@ -206,6 +207,7 @@ export default defineEventHandler(async (event) => {
             updatedBy: SYSTEM_USER_ID, // OAuth is a system operation
           },
         )
+        configId = existingConfig.id
       }
       else {
         console.log('[OAuth] Creating new config for Slack workspace:', tokenData.team?.name)
@@ -213,7 +215,7 @@ export default defineEventHandler(async (event) => {
         // Create new config with placeholder Notion values
         // User must complete setup in admin UI before config becomes active
         // TODO: Consider service layer if we add 3+ config creation code paths
-        await createDiscubotConfig({
+        const newConfig = await createDiscubotConfig({
           teamId,
           owner: SYSTEM_USER_ID,
           sourceType: 'slack',
@@ -237,7 +239,8 @@ export default defineEventHandler(async (event) => {
           updatedBy: SYSTEM_USER_ID,
         })
 
-        console.log('[OAuth] Config created successfully')
+        configId = newConfig.id
+        console.log('[OAuth] Config created successfully:', configId)
       }
     }
     catch (error) {
@@ -246,9 +249,8 @@ export default defineEventHandler(async (event) => {
       // User can try reconnecting or manually create config
     }
 
-    // For now, redirect to a success page with instructions
-    // In Phase 5 (Admin UI), this will redirect to the config form
-    const successUrl = `/oauth/success?provider=slack&team=${encodeURIComponent(tokenData.team?.name || 'Unknown')}`
+    // Redirect to success page with config ID for auto-opening edit form
+    const successUrl = `/oauth/success?provider=slack&team=${encodeURIComponent(tokenData.team?.name || 'Unknown')}${configId ? `&configId=${configId}` : ''}`
 
     return sendRedirect(event, successUrl, 302)
   }

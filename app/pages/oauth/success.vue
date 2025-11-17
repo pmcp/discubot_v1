@@ -12,15 +12,17 @@ const { currentTeam } = useTeam()
 
 const provider = computed(() => route.query.provider as string || 'Unknown')
 const team = computed(() => route.query.team as string || 'Unknown')
+const configId = computed(() => route.query.configId as string | undefined)
 
 // Auto-redirect countdown
 const countdown = ref(3)
 const redirecting = ref(false)
 
-// Config page URL
+// Config page URL with auto-open parameter
 const configUrl = computed(() => {
   if (!currentTeam.value?.slug) return '/dashboard'
-  return `/dashboard/${currentTeam.value.slug}/discubot/configs`
+  const baseUrl = `/dashboard/${currentTeam.value.slug}/discubot/configs`
+  return configId.value ? `${baseUrl}?openEdit=${configId.value}&oauth=success` : baseUrl
 })
 
 // Start countdown on mount
