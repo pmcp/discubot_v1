@@ -4,7 +4,7 @@
     <div class="flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-center">
       <USelectMenu
         v-model="selectedSourceType"
-        :options="sourceTypeOptions"
+        :items="sourceTypeOptions"
         placeholder="All Sources"
         class="w-full sm:w-40"
         aria-label="Filter by source type"
@@ -12,7 +12,7 @@
 
       <USelectMenu
         v-model="selectedMappingType"
-        :options="mappingTypeOptions"
+        :items="mappingTypeOptions"
         placeholder="All Types"
         class="w-full sm:w-40"
         aria-label="Filter by mapping type"

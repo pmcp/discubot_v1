@@ -22,6 +22,7 @@
           <USelectMenu
             v-model="state.sourceType"
             :items="sourceTypeOptions"
+            value-key="value"
             placeholder="Select source type"
             class="w-full"
           />
@@ -73,7 +74,7 @@
           <USelectMenu
             v-if="notionUsers.length"
             v-model="selectedNotionUser"
-            :options="notionUserOptions"
+            :items="notionUserOptions"
             placeholder="Select Notion user"
             searchable
             class="w-full"
@@ -135,7 +136,8 @@
         <UFormField label="Mapping Type" name="mappingType" description="How was this mapping created?" class="not-last:pb-4">
           <USelectMenu
             v-model="state.mappingType"
-            :options="mappingTypeOptions"
+            :items="mappingTypeOptions"
+            value-key="value"
             placeholder="Select mapping type"
             class="w-full"
           />

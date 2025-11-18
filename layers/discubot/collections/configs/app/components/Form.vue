@@ -296,7 +296,7 @@
             <UFormField label="Notion Property" name="notionFieldMapping.priority.notionProperty" size="sm">
               <USelectMenu
                 v-model="fieldMappings.priority.notionProperty"
-                :options="notionPropertyOptions"
+                :items="notionPropertyOptions"
                 placeholder="Select a property..."
                 size="md"
                 class="w-full"
@@ -339,7 +339,7 @@
             <UFormField label="Notion Property" name="notionFieldMapping.type.notionProperty" size="sm">
               <USelectMenu
                 v-model="fieldMappings.type.notionProperty"
-                :options="notionPropertyOptions"
+                :items="notionPropertyOptions"
                 placeholder="Select a property..."
                 size="md"
                 class="w-full"
@@ -382,7 +382,7 @@
             <UFormField label="Notion Property" name="notionFieldMapping.assignee.notionProperty" size="sm">
               <USelectMenu
                 v-model="fieldMappings.assignee.notionProperty"
-                :options="notionPropertyOptions"
+                :items="notionPropertyOptions"
                 placeholder="Select a property..."
                 size="md"
                 class="w-full"
