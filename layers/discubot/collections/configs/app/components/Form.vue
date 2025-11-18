@@ -153,7 +153,7 @@
                   </p>
                   <UButton
                     type="button"
-                    @click="openOAuthPopup"
+                    @click.prevent="openOAuthPopup"
                     color="neutral"
                     variant="soft"
                     size="sm"
@@ -166,7 +166,7 @@
                 <UButton
                   v-else
                   type="button"
-                  @click="openOAuthPopup"
+                  @click.prevent="openOAuthPopup"
                   color="primary"
                   size="md"
                 >
@@ -1291,20 +1291,51 @@ const oauthInstallUrl = computed(() => {
 })
 
 // OAuth Popup Window
-function openOAuthPopup() {
+function openOAuthPopup(event?: Event) {
+  // Prevent any default behavior
+  if (event) {
+    event.preventDefault()
+    event.stopPropagation()
+  }
+
+  console.log('[OAuth Popup] Opening popup with URL:', oauthInstallUrl.value)
+  console.log('[OAuth Popup] Current team:', currentTeam.value)
+
   const width = 600
   const height = 800
   const left = (window.screen.width - width) / 2
   const top = (window.screen.height - height) / 2
 
+  const features = `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
+  console.log('[OAuth Popup] Window features:', features)
+
+  // Open popup
   const popup = window.open(
     oauthInstallUrl.value,
     'slack-oauth',
-    `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`
+    features
   )
+
+  console.log('[OAuth Popup] Popup opened:', !!popup)
 
   if (popup) {
     popup.focus()
+    const toast = useToast()
+    toast.add({
+      title: 'Opening Slack Authorization',
+      description: 'Complete the authorization in the popup window',
+      color: 'primary',
+      timeout: 5000
+    })
+  } else {
+    console.error('[OAuth Popup] Failed to open popup - check popup blocker')
+    const toast = useToast()
+    toast.add({
+      title: 'Popup Blocked',
+      description: 'Please allow popups for this site and try again',
+      color: 'error',
+      timeout: 8000
+    })
   }
 }
 
