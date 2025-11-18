@@ -11,8 +11,18 @@ const router = useRouter()
 const { currentTeam } = useTeam()
 
 const provider = computed(() => route.query.provider as string || 'Unknown')
-const team = computed(() => route.query.team as string || 'Unknown')
-const configId = computed(() => route.query.configId as string | undefined)
+const team = computed(() => route.query.team_name as string || route.query.team as string || 'Unknown')
+
+// Extract OAuth credentials from URL query params
+const credentials = computed(() => ({
+  apiToken: route.query.access_token as string,
+  sourceMetadata: {
+    slackTeamId: route.query.team_id as string,
+    slackTeamName: route.query.team_name as string,
+    botUserId: route.query.bot_user_id as string,
+    scopes: route.query.scopes as string
+  }
+}))
 
 // Check if opened in popup (client-side only)
 const isPopup = ref(false)
@@ -21,11 +31,10 @@ const isPopup = ref(false)
 const countdown = ref(3)
 const redirecting = ref(false)
 
-// Config page URL with auto-open parameter
+// Config page URL (no auto-open since config isn't created yet)
 const configUrl = computed(() => {
   if (!currentTeam.value?.slug) return '/dashboard'
-  const baseUrl = `/dashboard/${currentTeam.value.slug}/discubot/configs`
-  return configId.value ? `${baseUrl}?openEdit=${configId.value}&oauth=success` : baseUrl
+  return `/dashboard/${currentTeam.value.slug}/discubot/configs`
 })
 
 // Start countdown on mount
@@ -44,7 +53,7 @@ onMounted(() => {
           type: 'oauth-success',
           provider: provider.value,
           team: team.value,
-          configId: configId.value
+          credentials: credentials.value
         },
         window.location.origin
       )

@@ -1355,45 +1355,32 @@ async function handleOAuthMessage(event: MessageEvent) {
 
   if (event.data?.type === 'oauth-success') {
     const toast = useToast()
-    toast.add({
-      title: 'Slack Connected!',
-      description: `Successfully connected to ${event.data.team || 'workspace'}`,
-      color: 'success',
-      timeout: 5000
-    })
 
-    console.log('[OAuth Message] OAuth successful, fetching updated config data')
+    // Merge OAuth credentials directly into form state (no database fetch!)
+    if (event.data.credentials) {
+      console.log('[OAuth Message] Merging credentials into form state')
 
-    // If we have a configId, fetch the updated config and merge into our form state
-    if (event.data.configId) {
-      try {
-        const updatedConfig = await $fetch(`/api/teams/${currentTeam.value?.id}/discubot-configs/${event.data.configId}`)
+      // Merge OAuth credentials into form
+      state.value.apiToken = event.data.credentials.apiToken
+      state.value.sourceMetadata = event.data.credentials.sourceMetadata
 
-        // Merge OAuth-related fields from the updated config into our form state
-        // This preserves all the user's form inputs while updating OAuth credentials
-        if (updatedConfig) {
-          state.value.apiToken = updatedConfig.apiToken || state.value.apiToken
-          state.value.sourceMetadata = updatedConfig.sourceMetadata || state.value.sourceMetadata
-
-          console.log('[OAuth Message] Form state updated with OAuth credentials')
-
-          toast.add({
-            title: 'Form Updated',
-            description: 'OAuth credentials added to your form. Continue filling out other fields.',
-            color: 'primary',
-            timeout: 4000
-          })
-        }
-      } catch (error) {
-        console.error('[OAuth Message] Failed to fetch updated config:', error)
-        toast.add({
-          title: 'Warning',
-          description: 'Connected successfully, but could not refresh form. Save to apply changes.',
-          color: 'warning',
-          timeout: 6000
-        })
+      // If user hasn't filled in a name yet, use the Slack workspace name
+      if (!state.value.name && event.data.credentials.sourceMetadata?.slackTeamName) {
+        state.value.name = event.data.credentials.sourceMetadata.slackTeamName
       }
+
+      console.log('[OAuth Message] OAuth credentials merged into form state')
+
+      toast.add({
+        title: 'Slack Connected!',
+        description: 'OAuth credentials added to your form. Complete the form and click Save.',
+        color: 'success',
+        timeout: 5000
+      })
     }
+
+    // Reset waiting flag
+    waitingForOAuth.value = false
   }
 }
 

@@ -24,26 +24,8 @@ const router = useRouter()
 const { open } = useCrouton()
 const toast = useToast()
 
-// Auto-open edit form after OAuth
-onMounted(() => {
-  const configId = route.query.openEdit as string | undefined
-  const isOAuthSuccess = route.query.oauth === 'success'
-
-  if (configId && isOAuthSuccess) {
-    // Show success toast
-    toast.add({
-      title: 'Slack Connected!',
-      description: 'Complete your Notion setup to activate this config',
-      color: 'success'
-    })
-
-    // Open edit slideover
-    open('update', 'discubotConfigs', [configId])
-
-    // Clean up URL
-    router.replace({ query: {} })
-  }
-})
+// No auto-open logic needed anymore - OAuth now merges credentials into form
+// User completes the form and saves once
 
 definePageMeta({
   middleware: 'auth'

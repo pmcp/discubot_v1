@@ -157,102 +157,17 @@ export default defineEventHandler(async (event) => {
       scopes: tokenData.scope,
     })
 
-    // Store access token in database
-    // Create config with incomplete setup - user must complete in admin UI
-    let configId: string | undefined
-    try {
-      const { createDiscubotConfig } = await import(
-        '#layers/discubot/collections/configs/server/database/queries'
-      )
-      const { SYSTEM_USER_ID } = await import('../../../utils/constants')
+    // Pass OAuth credentials via redirect URL (no database creation)
+    // User will complete the form and save everything together
+    const successUrl = new URL('/oauth/success', baseUrl)
+    successUrl.searchParams.set('provider', 'slack')
+    successUrl.searchParams.set('access_token', tokenData.access_token)
+    successUrl.searchParams.set('team_id', tokenData.team?.id || '')
+    successUrl.searchParams.set('team_name', tokenData.team?.name || '')
+    successUrl.searchParams.set('bot_user_id', tokenData.bot_user_id || '')
+    successUrl.searchParams.set('scopes', tokenData.scope || '')
 
-      // Check if config already exists for this Slack workspace
-      const db = useDB()
-      const { discubotConfigs } = await import('#layers/discubot-configs/server/database/schema')
-      const { eq, and } = await import('drizzle-orm')
-
-      const existingConfigs = await db
-        .select()
-        .from(discubotConfigs)
-        .where(and(
-          eq(discubotConfigs.teamId, teamId),
-          eq(discubotConfigs.sourceType, 'slack'),
-        ))
-        .all()
-
-      // Check if this Slack workspace is already connected
-      const existingConfig = existingConfigs.find(config => {
-        return config.sourceMetadata && (config.sourceMetadata as any).slackTeamId === tokenData.team?.id
-      })
-
-      if (existingConfig) {
-        console.log('[OAuth] Config already exists for this Slack workspace, updating token:', existingConfig.id)
-        const { updateDiscubotConfig } = await import(
-          '#layers/discubot/collections/configs/server/database/queries'
-        )
-
-        // Update existing config with new token
-        await updateDiscubotConfig(
-          existingConfig.id,
-          teamId,
-          existingConfig.owner,
-          {
-            apiToken: tokenData.access_token,
-            sourceMetadata: {
-              slackTeamId: tokenData.team?.id,
-              slackTeamName: tokenData.team?.name,
-              botUserId: tokenData.bot_user_id,
-              scopes: tokenData.scope,
-            },
-            updatedBy: SYSTEM_USER_ID, // OAuth is a system operation
-          },
-        )
-        configId = existingConfig.id
-      }
-      else {
-        console.log('[OAuth] Creating new config for Slack workspace:', tokenData.team?.name)
-
-        // Create new config with placeholder Notion values
-        // User must complete setup in admin UI before config becomes active
-        // TODO: Consider service layer if we add 3+ config creation code paths
-        const newConfig = await createDiscubotConfig({
-          teamId,
-          owner: SYSTEM_USER_ID,
-          sourceType: 'slack',
-          name: tokenData.team?.name || 'Slack Workspace',
-          apiToken: tokenData.access_token,
-          sourceMetadata: {
-            slackTeamId: tokenData.team?.id,
-            slackTeamName: tokenData.team?.name,
-            botUserId: tokenData.bot_user_id,
-            scopes: tokenData.scope,
-          },
-          notionToken: '', // User will configure in admin UI
-          notionDatabaseId: '', // User will configure in admin UI
-          aiEnabled: false,
-          autoSync: false,
-          postConfirmation: true,
-          enableEmailForwarding: false,
-          active: false, // Requires completion of Notion setup
-          onboardingComplete: false, // User must complete setup
-          createdBy: SYSTEM_USER_ID, // OAuth is a system operation
-          updatedBy: SYSTEM_USER_ID,
-        })
-
-        configId = newConfig.id
-        console.log('[OAuth] Config created successfully:', configId)
-      }
-    }
-    catch (error) {
-      console.error('[OAuth] Failed to save config:', error)
-      // Don't fail the OAuth flow if config creation fails
-      // User can try reconnecting or manually create config
-    }
-
-    // Redirect to success page with config ID for auto-opening edit form
-    const successUrl = `/oauth/success?provider=slack&team=${encodeURIComponent(tokenData.team?.name || 'Unknown')}${configId ? `&configId=${configId}` : ''}`
-
-    return sendRedirect(event, successUrl, 302)
+    return sendRedirect(event, successUrl.toString(), 302)
   }
   catch (error) {
     console.error('[OAuth] Callback handler failed:', error)
