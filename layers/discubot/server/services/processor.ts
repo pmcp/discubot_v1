@@ -757,15 +757,29 @@ export async function processDiscussion(
       const { getAllDiscubotUserMappings } = await import('#layers/discubot/collections/usermappings/server/database/queries')
       const allUserMappings = await getAllDiscubotUserMappings(parsed.teamId)
 
+      console.log(`[Processor] 🔍 User Mapping Debug - Total mappings in DB: ${allUserMappings.length}`)
+      console.log(`[Processor] 🔍 User Mapping Debug - Team ID: ${parsed.teamId}, Source Type: ${parsed.sourceType}`)
+
       // Filter by sourceType and active status, then build Map for efficient lookup
       const userMappings = new Map<string, string>()
       for (const mapping of allUserMappings) {
+        console.log(`[Processor] 🔍 Checking mapping: sourceType="${mapping.sourceType}", active=${mapping.active}, sourceUserId="${mapping.sourceUserId}"`)
+
         if (mapping.sourceType === parsed.sourceType && mapping.active) {
           userMappings.set(String(mapping.sourceUserId), String(mapping.notionUserId))
+          console.log(`[Processor] ✅ Added mapping: ${mapping.sourceUserId} → ${mapping.notionUserId}`)
+        } else {
+          const reasons = []
+          if (mapping.sourceType !== parsed.sourceType) reasons.push(`sourceType mismatch (got "${mapping.sourceType}", need "${parsed.sourceType}")`)
+          if (!mapping.active) reasons.push('inactive')
+          console.log(`[Processor] ❌ Skipped mapping: ${reasons.join(', ')}`)
         }
       }
 
-      console.log(`[Processor] Loaded ${userMappings.size} user mappings for ${parsed.sourceType}`)
+      console.log(`[Processor] 📊 Final user mappings loaded: ${userMappings.size} active mappings for ${parsed.sourceType}`)
+      if (userMappings.size > 0) {
+        console.log(`[Processor] 📋 Mapping keys: ${Array.from(userMappings.keys()).join(', ')}`)
+      }
 
       // Get field mapping configuration
       const fieldMapping = config.notionFieldMapping || {}

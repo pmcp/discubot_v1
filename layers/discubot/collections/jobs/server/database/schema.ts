@@ -31,7 +31,7 @@ export const discubotJobs = sqliteTable('discubot_jobs', {
   error: text('error'),
   errorStack: text('errorStack'),
   startedAt: integer('startedAt', { mode: 'timestamp' }).$default(() => new Date()),
-  completedAt: integer('completedAt', { mode: 'timestamp' }).$default(() => new Date()),
+  completedAt: integer('completedAt', { mode: 'timestamp' }),
   processingTime: integer('processingTime'),
   taskIds: jsonColumn('taskIds').$default(() => (null)),
   metadata: jsonColumn('metadata').$default(() => ({})),

@@ -386,6 +386,27 @@ Respond in JSON format:
     `[AI Service] Detected ${result.tasks.length} task(s) in ${Date.now() - startTime}ms`,
   )
 
+  // Log detailed task information for debugging user mappings
+  console.log(`[AI Service] 🔍 Task Detection Debug - Full result:`)
+  for (let i = 0; i < result.tasks.length; i++) {
+    const task = result.tasks[i]
+    console.log(`[AI Service] 🔍 Task ${i + 1}:`, {
+      title: task.title,
+      assignee: task.assignee,
+      priority: task.priority,
+      type: task.type,
+      tags: task.tags,
+      dueDate: task.dueDate,
+    })
+
+    if (task.assignee) {
+      console.log(`[AI Service] ✅ AI extracted assignee: "${task.assignee}" (this will be looked up in user mappings)`)
+    } else {
+      console.log(`[AI Service] ⚠️  AI did not extract an assignee - returned null`)
+      console.log(`[AI Service] 💡 Tip: Ensure discussion clearly mentions user with Slack ID (U...) or email`)
+    }
+  }
+
   return {
     isMultiTask: result.isMultiTask || result.tasks.length > 1,
     tasks: result.tasks,

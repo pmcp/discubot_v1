@@ -147,23 +147,39 @@ async function buildTaskProperties(
 
     // Special handling for 'people' type (assignee field)
     if (propertyType === 'people') {
+      console.log(`[Notion] 🔍 Assignee Mapping Debug - AI extracted assignee: "${value}"`)
+      console.log(`[Notion] 🔍 Assignee Mapping Debug - User mappings available: ${userMappings ? userMappings.size : 0}`)
+
       if (!userMappings) {
-        console.warn(`[Notion] No user mappings provided for assignee field: ${value}`)
+        console.warn(`[Notion] ❌ No user mappings Map provided for assignee field: ${value}`)
         continue
+      }
+
+      if (userMappings.size === 0) {
+        console.warn(`[Notion] ⚠️  User mappings Map is empty - no mappings to lookup`)
+      } else {
+        console.log(`[Notion] 🔍 Available mapping keys: ${Array.from(userMappings.keys()).join(', ')}`)
       }
 
       // Resolve source user ID to Notion user ID
-      const notionUserId = userMappings.get(String(value))
+      const lookupKey = String(value)
+      console.log(`[Notion] 🔍 Looking up key: "${lookupKey}"`)
+      const notionUserId = userMappings.get(lookupKey)
 
       if (!notionUserId) {
-        console.warn(`[Notion] No user mapping found for assignee: ${value}`)
+        console.warn(`[Notion] ❌ No user mapping found for assignee: "${value}"`)
+        console.warn(`[Notion] 💡 Tip: Ensure sourceUserId in your mapping exactly matches: "${value}"`)
         continue
       }
+
+      console.log(`[Notion] ✅ Found mapping: ${value} -> ${notionUserId}`)
 
       const formattedProperty = formatNotionProperty(notionUserId, propertyType)
       if (formattedProperty) {
         properties[notionProperty] = formattedProperty
-        console.log(`[Notion] Mapped assignee: ${value} -> ${notionUserId}`)
+        console.log(`[Notion] ✅ Successfully mapped assignee: ${value} -> ${notionUserId} to property "${notionProperty}"`)
+      } else {
+        console.warn(`[Notion] ⚠️  formatNotionProperty returned null for assignee: ${notionUserId}`)
       }
       continue
     }
