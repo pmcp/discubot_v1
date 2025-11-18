@@ -171,7 +171,19 @@ async function buildTaskProperties(
       continue
     }
 
-    const { notionProperty, propertyType, valueMap } = mapping
+    const { notionProperty: rawNotionProperty, propertyType, valueMap } = mapping
+
+    // Extract property name (handle both string and object formats from USelectMenu)
+    const notionProperty = typeof rawNotionProperty === 'string'
+      ? rawNotionProperty
+      : rawNotionProperty?.value || rawNotionProperty?.name || null
+
+    if (!notionProperty) {
+      console.warn(`[Notion] ⚠️ Invalid notionProperty format for field "${aiField}":`, rawNotionProperty)
+      continue
+    }
+
+    console.log(`[Notion] 🔍 Mapping field "${aiField}" to Notion property "${notionProperty}" (type: ${propertyType})`)
 
     // Special handling for 'people' type (assignee field)
     if (propertyType === 'people') {
