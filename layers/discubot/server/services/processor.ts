@@ -754,11 +754,14 @@ export async function processDiscussion(
       }
 
       // Load user mappings for assignee field resolution
+      // IMPORTANT: Use config.teamId (internal app team ID), not parsed.teamId (Slack workspace ID)
       const { getAllDiscubotUserMappings } = await import('#layers/discubot/collections/usermappings/server/database/queries')
-      const allUserMappings = await getAllDiscubotUserMappings(parsed.teamId)
+      const allUserMappings = await getAllDiscubotUserMappings(config.teamId)
 
       console.log(`[Processor] 🔍 User Mapping Debug - Total mappings in DB: ${allUserMappings.length}`)
-      console.log(`[Processor] 🔍 User Mapping Debug - Team ID: ${parsed.teamId}, Source Type: ${parsed.sourceType}`)
+      console.log(`[Processor] 🔍 User Mapping Debug - Using config.teamId (internal): ${config.teamId}`)
+      console.log(`[Processor] 🔍 User Mapping Debug - Source Type: ${parsed.sourceType}`)
+      console.log(`[Processor] 🔍 User Mapping Debug - FYI: parsed.teamId (Slack workspace ID): ${parsed.teamId}`)
 
       // Filter by sourceType and active status, then build Map for efficient lookup
       const userMappings = new Map<string, string>()

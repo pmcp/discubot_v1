@@ -319,10 +319,10 @@ const stats = computed(() => {
     activeConfigs: configs.value?.filter((c: any) => c.active).length || 0,
     activeJobs: jobs.value?.filter((j: any) => j.status === 'processing').length || 0,
     completed24h: jobs.value?.filter((j: any) =>
-      j.status === 'completed' && new Date(j.completedAt) > oneDayAgo
+      j.status === 'completed' && j.completedAt && new Date(j.completedAt * 1000) > oneDayAgo
     ).length || 0,
     recentTasks: tasks.value?.filter((t: any) =>
-      new Date(t.createdAt) > oneWeekAgo
+      t.createdAt && new Date(t.createdAt * 1000) > oneWeekAgo
     ).length || 0
   }
 })
