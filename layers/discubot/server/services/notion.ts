@@ -76,17 +76,45 @@ async function notionRequest(
 ): Promise<any> {
   const url = `https://api.notion.com/v1/${endpoint}`
 
-  const response = await $fetch(url, {
-    method: options.method,
-    headers: {
-      'Authorization': `Bearer ${options.apiKey}`,
-      'Notion-Version': NOTION_API_VERSION,
-      'Content-Type': 'application/json',
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  })
+  try {
+    // Log sanitized request body for debugging
+    if (options.body) {
+      console.log('[Notion API] 🔍 Request to:', url)
+      console.log('[Notion API] 🔍 Method:', options.method)
+      // Create a safe copy without sensitive data for logging
+      const safeBody = JSON.parse(JSON.stringify(options.body))
+      console.log('[Notion API] 🔍 Request body:', JSON.stringify(safeBody, null, 2))
+    }
 
-  return response
+    const response = await $fetch(url, {
+      method: options.method,
+      headers: {
+        'Authorization': `Bearer ${options.apiKey}`,
+        'Notion-Version': NOTION_API_VERSION,
+        'Content-Type': 'application/json',
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    })
+
+    console.log('[Notion API] ✅ Request successful')
+    return response
+  } catch (error: any) {
+    // Extract detailed error information from Notion API
+    const errorDetails = error.data || error.response?._data || {}
+    console.error('[Notion API] ❌ Request failed:', {
+      url,
+      method: options.method,
+      status: error.status || error.statusCode,
+      statusText: error.statusText,
+      message: error.message,
+      notionErrorMessage: errorDetails.message,
+      notionErrorCode: errorDetails.code,
+      notionErrorDetails: errorDetails,
+    })
+
+    // Re-throw the original error
+    throw error
+  }
 }
 
 /**
@@ -299,15 +327,18 @@ function buildTaskContent(
       if (notionUserId) {
         // Add proper @mention
         console.log(`[Notion] ✅ Creating @mention for participant ${participantId} → ${notionUserId}`)
-        participantRichText.push({
+        const mentionObject = {
           type: 'mention',
           mention: {
             type: 'user',
             user: {
+              object: 'user', // Required by Notion API
               id: notionUserId,
             },
           },
-        })
+        }
+        console.log('[Notion] 🔍 Mention object structure:', JSON.stringify(mentionObject, null, 2))
+        participantRichText.push(mentionObject)
       }
       else {
         // Fallback to plain text if no mapping
@@ -326,6 +357,8 @@ function buildTaskContent(
         })
       }
     }
+
+    console.log('[Notion] 🔍 Complete participantRichText array:', JSON.stringify(participantRichText, null, 2))
 
     blocks.push({
       object: 'block',
@@ -457,6 +490,8 @@ function buildTaskContent(
       },
     })
   }
+
+  console.log('[Notion] 🔍 Complete blocks array (children):', JSON.stringify(blocks, null, 2))
 
   return blocks
 }
