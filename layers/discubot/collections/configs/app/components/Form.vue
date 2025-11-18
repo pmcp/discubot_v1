@@ -1341,20 +1341,23 @@ function openOAuthPopup(event?: Event) {
 
 // Listen for OAuth success message from popup
 function handleOAuthMessage(event: MessageEvent) {
-  if (event.data?.type === 'oauth-success') {
-    // Refresh the form to get updated OAuth status
-    if (props.items && props.items.length > 0) {
-      // Trigger a refresh of the config data
-      const toast = useToast()
-      toast.add({
-        title: 'Slack Connected!',
-        description: 'OAuth connection successful',
-        color: 'success'
-      })
+  console.log('[OAuth Message] Received message:', event.data)
 
-      // Reload the config to get updated sourceMetadata
+  if (event.data?.type === 'oauth-success') {
+    const toast = useToast()
+    toast.add({
+      title: 'Slack Connected!',
+      description: `Successfully connected to ${event.data.team || 'workspace'}`,
+      color: 'success',
+      timeout: 5000
+    })
+
+    console.log('[OAuth Message] OAuth successful, reloading page to refresh data')
+
+    // Reload the page to refresh the config data with new OAuth tokens
+    setTimeout(() => {
       window.location.reload()
-    }
+    }, 1000)
   }
 }
 

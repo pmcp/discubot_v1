@@ -14,8 +14,8 @@ const provider = computed(() => route.query.provider as string || 'Unknown')
 const team = computed(() => route.query.team as string || 'Unknown')
 const configId = computed(() => route.query.configId as string | undefined)
 
-// Check if opened in popup
-const isPopup = computed(() => window.opener !== null)
+// Check if opened in popup (client-side only)
+const isPopup = ref(false)
 
 // Auto-redirect countdown
 const countdown = ref(3)
@@ -30,10 +30,30 @@ const configUrl = computed(() => {
 
 // Start countdown on mount
 onMounted(() => {
+  // Check if opened in popup (only safe to check on client)
+  isPopup.value = typeof window !== 'undefined' && window.opener !== null
+
+  console.log('[OAuth Success] Mounted. Is popup:', isPopup.value)
+
   // If in popup, notify parent and close
-  if (isPopup.value) {
-    window.opener.postMessage({ type: 'oauth-success', provider: provider.value, team: team.value }, window.location.origin)
+  if (isPopup.value && window.opener) {
+    console.log('[OAuth Success] Notifying parent window and closing popup')
+    try {
+      window.opener.postMessage(
+        {
+          type: 'oauth-success',
+          provider: provider.value,
+          team: team.value,
+          configId: configId.value
+        },
+        window.location.origin
+      )
+    } catch (error) {
+      console.error('[OAuth Success] Failed to post message to parent:', error)
+    }
+
     setTimeout(() => {
+      console.log('[OAuth Success] Closing popup window')
       window.close()
     }, 1000)
     return
