@@ -245,6 +245,7 @@ async function generateSummary(
       maxAttempts: 3,
       baseDelay: 1000,
       maxDelay: 10000,
+      timeout: 30000, // 30 second timeout to prevent hanging
     },
   )
 
@@ -364,6 +365,7 @@ Respond in JSON format:
       maxAttempts: 3,
       baseDelay: 1000,
       maxDelay: 10000,
+      timeout: 30000, // 30 second timeout to prevent hanging
     },
   )
 

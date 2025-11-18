@@ -24,6 +24,19 @@ export interface RetryOptions {
   baseDelay?: number
 
   /**
+   * Maximum delay in milliseconds (caps exponential backoff)
+   * @default undefined (no cap)
+   */
+  maxDelay?: number
+
+  /**
+   * Timeout in milliseconds for each attempt
+   * If an attempt takes longer than this, it will be aborted
+   * @default undefined (no timeout)
+   */
+  timeout?: number
+
+  /**
    * Optional callback invoked before each retry
    * Useful for logging retry attempts
    */
@@ -39,22 +52,24 @@ function delay(ms: number): Promise<void> {
 }
 
 /**
- * Retry an async function with exponential backoff
+ * Retry an async function with exponential backoff and optional timeout
  *
  * Attempts to execute the provided function up to maxAttempts times.
  * On failure, waits with exponential backoff: 2s, 4s, 8s, etc.
+ * Optionally enforces a timeout per attempt to prevent hanging.
  *
  * @example
  * ```typescript
  * // Simple usage
  * const result = await retryWithBackoff(() => fetchData())
  *
- * // With custom options
+ * // With timeout to prevent hanging
  * const result = await retryWithBackoff(
  *   () => callExternalAPI(),
  *   {
- *     maxAttempts: 5,
- *     baseDelay: 500,
+ *     maxAttempts: 3,
+ *     baseDelay: 1000,
+ *     timeout: 15000, // 15 second timeout per attempt
  *     onRetry: (attempt, error) => console.log(`Retry ${attempt}:`, error)
  *   }
  * )
@@ -72,6 +87,8 @@ export async function retryWithBackoff<T>(
   const {
     maxAttempts = 3,
     baseDelay = 1000,
+    maxDelay,
+    timeout,
     onRetry
   } = options
 
@@ -79,7 +96,18 @@ export async function retryWithBackoff<T>(
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      return await fn()
+      // If timeout is specified, race the function against a timeout
+      if (timeout) {
+        const result = await Promise.race([
+          fn(),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error(`Operation timed out after ${timeout}ms`)), timeout)
+          )
+        ])
+        return result
+      } else {
+        return await fn()
+      }
     } catch (error) {
       lastError = error
 
@@ -97,7 +125,12 @@ export async function retryWithBackoff<T>(
       // Attempt 1: 2^1 * 1000 = 2000ms (2s)
       // Attempt 2: 2^2 * 1000 = 4000ms (4s)
       // Attempt 3: 2^3 * 1000 = 8000ms (8s)
-      const backoffMs = Math.pow(2, attempt) * baseDelay
+      let backoffMs = Math.pow(2, attempt) * baseDelay
+
+      // Cap at maxDelay if specified
+      if (maxDelay && backoffMs > maxDelay) {
+        backoffMs = maxDelay
+      }
 
       // Wait before next retry
       await delay(backoffMs)

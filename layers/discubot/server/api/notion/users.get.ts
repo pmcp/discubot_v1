@@ -5,9 +5,11 @@
  *
  * Returns list of users from a Notion workspace for use in user mapping dropdowns.
  * Requires a Notion integration token with access to the workspace.
+ *
+ * Edge-compatible version using fetch instead of @notionhq/client SDK.
  */
 
-import { Client } from '@notionhq/client'
+const NOTION_API_VERSION = '2022-06-28'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -39,11 +41,14 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Initialize Notion client
-    const notion = new Client({ auth: notionToken })
-
-    // Fetch all users from workspace
-    const response = await notion.users.list({})
+    // Fetch all users from workspace using edge-compatible fetch
+    const response = await $fetch<any>('https://api.notion.com/v1/users', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${notionToken}`,
+        'Notion-Version': NOTION_API_VERSION,
+      },
+    })
 
     // Transform to simpler format for frontend
     const users = response.results.map((user: any) => ({

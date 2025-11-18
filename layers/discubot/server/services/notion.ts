@@ -15,7 +15,6 @@
  * - Functional exports (not class-based)
  */
 
-import { Client } from '@notionhq/client'
 import type {
   AISummary,
   DetectedTask,
@@ -26,15 +25,20 @@ import type {
 import { retryWithBackoff } from '../utils/retry'
 
 /**
- * Initialize Notion client
- * Uses API key from config parameter, runtime config, or environment variable
+ * Notion API Version
+ * https://developers.notion.com/reference/versioning
+ */
+const NOTION_API_VERSION = '2022-06-28'
+
+/**
+ * Get Notion API key from config, runtime, or environment
  *
  * Checks in this order:
  * 1. apiKey parameter (passed explicitly)
  * 2. Environment variable (for standalone testing)
  * 3. Nuxt runtime config (for Nuxt context)
  */
-function getNotionClient(apiKey?: string): Client {
+function getNotionApiKey(apiKey?: string): string {
   let key = apiKey || process.env.NOTION_API_KEY
 
   // Try Nuxt runtime config if not in env (and if available)
@@ -52,7 +56,37 @@ function getNotionClient(apiKey?: string): Client {
     throw new Error('NOTION_API_KEY is not configured')
   }
 
-  return new Client({ auth: key })
+  return key
+}
+
+/**
+ * Make a request to the Notion API using edge-compatible fetch
+ *
+ * Replaces the @notionhq/client SDK for Cloudflare Workers compatibility.
+ *
+ * @see https://developers.notion.com/reference/intro
+ */
+async function notionRequest(
+  endpoint: string,
+  options: {
+    method: 'GET' | 'POST' | 'PATCH' | 'DELETE'
+    apiKey: string
+    body?: any
+  }
+): Promise<any> {
+  const url = `https://api.notion.com/v1/${endpoint}`
+
+  const response = await $fetch(url, {
+    method: options.method,
+    headers: {
+      'Authorization': `Bearer ${options.apiKey}`,
+      'Notion-Version': NOTION_API_VERSION,
+      'Content-Type': 'application/json',
+    },
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  })
+
+  return response
 }
 
 /**
@@ -428,7 +462,7 @@ export async function createNotionTask(
     sourceType: config.sourceType,
   })
 
-  const notion = getNotionClient(config.apiKey)
+  const apiKey = getNotionApiKey(config.apiKey)
   const properties = await buildTaskProperties(task, fieldMapping, userMappings)
   const children = buildTaskContent(task, thread, aiSummary, config, userMentions)
 
@@ -436,14 +470,20 @@ export async function createNotionTask(
 
   const page = await retryWithBackoff(
     () =>
-      notion.pages.create({
-        parent: { database_id: config.databaseId },
-        properties,
-        children,
-      }) as Promise<any>,
+      notionRequest('pages', {
+        method: 'POST',
+        apiKey,
+        body: {
+          parent: { database_id: config.databaseId },
+          properties,
+          children,
+        },
+      }),
     {
       maxAttempts: 3,
       baseDelay: 1000,
+      maxDelay: 5000,
+      timeout: 15000, // 15 second timeout to prevent hanging
     },
   )
 
@@ -555,13 +595,17 @@ export async function testNotionConnection(config: {
   databaseId: string
 }): Promise<NotionConnectionTestResult> {
   try {
-    const notion = getNotionClient(config.apiKey)
+    const apiKey = getNotionApiKey(config.apiKey)
 
     const database: any = await retryWithBackoff(
-      () => notion.databases.retrieve({ database_id: config.databaseId }) as Promise<any>,
+      () => notionRequest(`databases/${config.databaseId}`, {
+        method: 'GET',
+        apiKey,
+      }),
       {
         maxAttempts: 2,
         baseDelay: 500,
+        timeout: 10000, // 10 second timeout
       },
     )
 
