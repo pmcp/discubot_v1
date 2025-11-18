@@ -99,50 +99,83 @@ export default defineEventHandler(async (event) => {
     // ============================================================================
     console.log('[Slack Webhook] Starting discussion processing...')
 
-    let result: ProcessingResult
+    // Use Cloudflare Workers waitUntil to process in background
+    // This allows the webhook to return immediately while processing continues
+    const cfCtx = event.context.cloudflare?.context
 
-    try {
-      result = await processDiscussion(parsed)
+    if (cfCtx) {
+      // Production: Process in background using waitUntil
+      console.log('[Slack Webhook] Using background processing (waitUntil)')
 
-      console.log('[Slack Webhook] Discussion processed successfully:', {
+      cfCtx.waitUntil(
+        processDiscussion(parsed)
+          .then((result) => {
+            console.log('[Slack Webhook] Background processing completed:', {
+              discussionId: result.discussionId,
+              taskCount: result.notionTasks.length,
+              processingTime: `${result.processingTime}ms`,
+              isMultiTask: result.isMultiTask,
+            })
+          })
+          .catch((error) => {
+            console.error('[Slack Webhook] Background processing failed:', error)
+            // Error is already logged in processor, job status updated to failed
+          })
+      )
+
+      // Return immediately
+      return {
+        success: true,
+        message: 'Discussion queued for background processing',
+        timestamp: new Date().toISOString(),
+      }
+    } else {
+      // Development: Process synchronously (no cloudflare context in local dev)
+      console.log('[Slack Webhook] Using synchronous processing (local dev)')
+
+      let result: ProcessingResult
+
+      try {
+        result = await processDiscussion(parsed)
+
+        console.log('[Slack Webhook] Discussion processed successfully:', {
+          discussionId: result.discussionId,
+          taskCount: result.notionTasks.length,
+          processingTime: `${result.processingTime}ms`,
+          isMultiTask: result.isMultiTask,
+        })
+      } catch (processingError: any) {
+        console.error('[Slack Webhook] Processing failed:', processingError)
+
+        // Check if error is retryable
+        const isRetryable = processingError.retryable === true
+        const statusCode = isRetryable ? 503 : 422
+
+        throw createError({
+          statusCode,
+          statusMessage: 'Processing failed',
+          data: {
+            error: processingError.message,
+            stage: processingError.stage,
+            retryable: isRetryable,
+          },
+        })
+      }
+
+      // Return with full result in dev mode
+      return {
+        success: true,
         discussionId: result.discussionId,
         taskCount: result.notionTasks.length,
-        processingTime: `${result.processingTime}ms`,
+        tasks: result.notionTasks.map(t => ({
+          id: t.id,
+          url: t.url,
+        })),
         isMultiTask: result.isMultiTask,
-      })
-    } catch (processingError: any) {
-      console.error('[Slack Webhook] Processing failed:', processingError)
-
-      // Check if error is retryable
-      const isRetryable = processingError.retryable === true
-      const statusCode = isRetryable ? 503 : 422
-
-      throw createError({
-        statusCode,
-        statusMessage: 'Processing failed',
-        data: {
-          error: processingError.message,
-          stage: processingError.stage,
-          retryable: isRetryable,
-        },
-      })
-    }
-
-    // ============================================================================
-    // RETURN SUCCESS RESPONSE
-    // ============================================================================
-    return {
-      success: true,
-      discussionId: result.discussionId,
-      taskCount: result.notionTasks.length,
-      tasks: result.notionTasks.map(t => ({
-        id: t.id,
-        url: t.url,
-      })),
-      isMultiTask: result.isMultiTask,
-      processingTime: result.processingTime,
-      summary: result.aiAnalysis.summary.summary,
-      timestamp: new Date().toISOString(),
+        processingTime: result.processingTime,
+        summary: result.aiAnalysis.summary.summary,
+        timestamp: new Date().toISOString(),
+      }
     }
 
   } catch (error) {
