@@ -152,11 +152,11 @@
                     <strong class="text-foreground">Workspace:</strong> {{ oauthWorkspaceName }}
                   </p>
                   <UButton
-                    :to="oauthInstallUrl"
+                    type="button"
+                    @click="openOAuthPopup"
                     color="neutral"
                     variant="soft"
                     size="sm"
-                    external
                   >
                     Reconnect Workspace
                   </UButton>
@@ -165,6 +165,7 @@
                 <!-- OAuth Connect Button -->
                 <UButton
                   v-else
+                  type="button"
                   @click="openOAuthPopup"
                   color="primary"
                   size="md"
