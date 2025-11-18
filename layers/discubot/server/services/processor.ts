@@ -797,13 +797,14 @@ export async function processDiscussion(
         }
         else {
           console.log('[Processor] Creating single Notion task')
+          console.log('[Processor] 💬 Passing user mappings for @mentions in task content')
 
           const result = await createNotionTask(
             task,
             thread,
             aiAnalysis.summary,
             notionConfig,
-            undefined, // userMentions (for @mentions in content)
+            userMappings, // userMentions (for @mentions in content) - use same mappings as assignee
             fieldMapping,
             userMappings,
           )
@@ -814,13 +815,14 @@ export async function processDiscussion(
       else {
         // Multiple tasks
         console.log(`[Processor] Creating ${tasks.length} Notion tasks`)
+        console.log('[Processor] 💬 Passing user mappings for @mentions in task content')
 
         notionTasks = await createNotionTasks(
           tasks,
           thread,
           aiAnalysis.summary,
           notionConfig,
-          undefined, // userMentions (for @mentions in content)
+          userMappings, // userMentions (for @mentions in content) - use same mappings as assignee
           fieldMapping,
           userMappings,
         )

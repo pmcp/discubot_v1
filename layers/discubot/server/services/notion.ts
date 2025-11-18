@@ -278,6 +278,9 @@ function buildTaskContent(
 
   // Participants with @mentions (if userMentions provided)
   if (thread.participants.length > 0) {
+    console.log(`[Notion] 💬 Building participants section with ${thread.participants.length} participants`)
+    console.log(`[Notion] 💬 User mentions available: ${userMentions ? userMentions.size : 0}`)
+
     const participantRichText: any[] = [
       {
         type: 'text',
@@ -295,6 +298,7 @@ function buildTaskContent(
 
       if (notionUserId) {
         // Add proper @mention
+        console.log(`[Notion] ✅ Creating @mention for participant ${participantId} → ${notionUserId}`)
         participantRichText.push({
           type: 'mention',
           mention: {
@@ -307,6 +311,7 @@ function buildTaskContent(
       }
       else {
         // Fallback to plain text if no mapping
+        console.log(`[Notion] ⚠️  No mention mapping for participant ${participantId}, using plain text`)
         participantRichText.push({
           type: 'text',
           text: { content: `@${participantId}` },
