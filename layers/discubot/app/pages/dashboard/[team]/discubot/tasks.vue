@@ -2,7 +2,7 @@
   <AppContainer title="Tasks">
     <div class="mb-4">
       <NuxtLink
-        :to="`/dashboard/${currentTeam?.slug}/discubot`"
+        :to="`/dashboard/${currentTeam?.slug}`"
         class="hover:underline inline-flex items-center gap-1 text-sm text-muted-foreground"
       >
         <UIcon name="i-lucide-arrow-left" class="w-4 h-4" />
