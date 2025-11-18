@@ -497,6 +497,7 @@ export async function processDiscussion(
   const startTime = Date.now()
   let discussionId: string | undefined
   let jobId: string | undefined
+  let actualTeamId: string = parsed.teamId // Will be updated to config.teamId after config loads
 
   console.log('[Processor] Starting discussion processing:', {
     sourceType: parsed.sourceType,
@@ -504,54 +505,13 @@ export async function processDiscussion(
     title: parsed.title,
   })
 
-  // ============================================================================
-  // CREATE JOB RECORD (Before processing starts)
-  // ============================================================================
-  try {
-    const { createDiscubotJob } = await import(
-      '#layers/discubot/collections/jobs/server/database/queries'
-    )
-
-    const job = await createDiscubotJob({
-      teamId: parsed.teamId,
-      owner: SYSTEM_USER_ID,
-      discussionId: '', // Will update after discussion is created
-      sourceConfigId: '', // Will update after config is loaded
-      status: 'pending',
-      stage: 'ingestion',
-      attempts: 0,
-      maxAttempts: 3,
-      error: null,
-      errorStack: null,
-      startedAt: new Date(),
-      completedAt: null,
-      processingTime: null,
-      taskIds: [],
-      metadata: {
-        sourceType: parsed.sourceType,
-        sourceThreadId: parsed.sourceThreadId,
-        startTimestamp: Date.now(),
-      },
-      createdBy: SYSTEM_USER_ID,
-      updatedBy: SYSTEM_USER_ID,
-    })
-
-    jobId = job?.id
-    console.log('[Processor] Job created:', jobId)
-  } catch (error) {
-    console.error('[Processor] Failed to create job record:', error)
-    // Don't fail processing if job creation fails
-  }
+  // Note: Job creation moved to after config loading to get correct teamId
 
   try {
     // ============================================================================
     // STAGE 1: Validation
     // ============================================================================
     console.log('[Processor] Stage 1: Validation')
-    await updateJobStatus(jobId, parsed.teamId, {
-      status: 'processing',
-      stage: 'ingestion',
-    })
 
     validateParsedDiscussion(parsed)
 
@@ -588,19 +548,69 @@ export async function processDiscussion(
       config = await loadSourceConfig(parsed.teamId, parsed.sourceType, parsed.metadata)
     }
 
+    // Update actualTeamId to use the correct team ID from config
+    actualTeamId = config.teamId
+    console.log('[Processor] Resolved team IDs:', {
+      sourceIdentifier: parsed.teamId, // Slack workspace ID or Figma email slug
+      actualTeamId: config.teamId, // Actual Discubot team ID from database
+    })
+
+    // ============================================================================
+    // CREATE JOB RECORD (After config loaded to get correct teamId)
+    // ============================================================================
+    try {
+      const { createDiscubotJob } = await import(
+        '#layers/discubot/collections/jobs/server/database/queries'
+      )
+
+      const job = await createDiscubotJob({
+        teamId: actualTeamId, // Use actual team ID from config, not source identifier
+        owner: SYSTEM_USER_ID,
+        discussionId: '', // Will update after discussion is created
+        sourceConfigId: config.id,
+        status: 'processing',
+        stage: 'thread_building',
+        attempts: 0,
+        maxAttempts: 3,
+        error: null,
+        errorStack: null,
+        startedAt: new Date(),
+        completedAt: null,
+        processingTime: null,
+        taskIds: [],
+        metadata: {
+          sourceType: parsed.sourceType,
+          sourceThreadId: parsed.sourceThreadId,
+          emailSlug: parsed.teamId, // Store original email slug for reference
+          startTimestamp: Date.now(),
+        },
+        createdBy: SYSTEM_USER_ID,
+        updatedBy: SYSTEM_USER_ID,
+      })
+
+      jobId = job?.id
+      console.log('[Processor] Job created with correct teamId:', {
+        jobId,
+        teamId: config.teamId,
+        emailSlug: parsed.teamId,
+      })
+    } catch (error) {
+      console.error('[Processor] Failed to create job record:', error)
+      // Don't fail processing if job creation fails
+    }
+
     // Save discussion record
     discussionId = await saveDiscussion(parsed, config.id, 'processing')
 
-    // Update job with discussion and config IDs
+    // Update job with discussion ID (sourceConfigId already set during creation)
     if (jobId && discussionId) {
       try {
         const { updateDiscubotJob } = await import(
           '#layers/discubot/collections/jobs/server/database/queries'
         )
 
-        await updateDiscubotJob(jobId, parsed.teamId, SYSTEM_USER_ID, {
+        await updateDiscubotJob(jobId, actualTeamId, SYSTEM_USER_ID, {
           discussionId,
-          sourceConfigId: config.id,
         })
 
         // Link discussion to job
@@ -632,7 +642,7 @@ export async function processDiscussion(
     // ============================================================================
     console.log('[Processor] Stage 3: Thread Building')
     await updateDiscussionStatus(discussionId, 'processing')
-    await updateJobStatus(jobId, parsed.teamId, {
+    await updateJobStatus(jobId, actualTeamId, {
       stage: 'thread_building',
     })
 
@@ -685,7 +695,7 @@ export async function processDiscussion(
     // STAGE 4: AI Analysis
     // ============================================================================
     console.log('[Processor] Stage 4: AI Analysis')
-    await updateJobStatus(jobId, parsed.teamId, {
+    await updateJobStatus(jobId, actualTeamId, {
       stage: 'ai_analysis',
     })
 
@@ -739,7 +749,7 @@ export async function processDiscussion(
     // ============================================================================
     console.log('[Processor] Stage 5: Task Creation')
     await updateDiscussionStatus(discussionId, 'analyzed')
-    await updateJobStatus(jobId, parsed.teamId, {
+    await updateJobStatus(jobId, actualTeamId, {
       stage: 'task_creation',
     })
 
@@ -754,14 +764,14 @@ export async function processDiscussion(
       }
 
       // Load user mappings for assignee field resolution
-      // IMPORTANT: Use config.teamId (internal app team ID), not parsed.teamId (Slack workspace ID)
+      // IMPORTANT: Use actualTeamId (internal app team ID), not parsed.teamId (source identifier)
       const { getAllDiscubotUserMappings } = await import('#layers/discubot/collections/usermappings/server/database/queries')
-      const allUserMappings = await getAllDiscubotUserMappings(config.teamId)
+      const allUserMappings = await getAllDiscubotUserMappings(actualTeamId)
 
       console.log(`[Processor] 🔍 User Mapping Debug - Total mappings in DB: ${allUserMappings.length}`)
-      console.log(`[Processor] 🔍 User Mapping Debug - Using config.teamId (internal): ${config.teamId}`)
+      console.log(`[Processor] 🔍 User Mapping Debug - Using actualTeamId (internal): ${actualTeamId}`)
       console.log(`[Processor] 🔍 User Mapping Debug - Source Type: ${parsed.sourceType}`)
-      console.log(`[Processor] 🔍 User Mapping Debug - FYI: parsed.teamId (Slack workspace ID): ${parsed.teamId}`)
+      console.log(`[Processor] 🔍 User Mapping Debug - FYI: parsed.teamId (source identifier): ${parsed.teamId}`)
 
       // Filter by sourceType and active status, then build Map for efficient lookup
       const userMappings = new Map<string, string>()
@@ -855,7 +865,7 @@ export async function processDiscussion(
     // STAGE 6: Finalization
     // ============================================================================
     console.log('[Processor] Stage 6: Finalization')
-    await updateJobStatus(jobId, parsed.teamId, {
+    await updateJobStatus(jobId, actualTeamId, {
       stage: 'notification',
     })
 
@@ -910,7 +920,7 @@ export async function processDiscussion(
           '#layers/discubot/collections/jobs/server/database/queries'
         )
 
-        await updateDiscubotJob(jobId, parsed.teamId, SYSTEM_USER_ID, {
+        await updateDiscubotJob(jobId, actualTeamId, SYSTEM_USER_ID, {
           status: 'completed',
           completedAt: new Date(),
           processingTime,
@@ -966,7 +976,7 @@ export async function processDiscussion(
           '#layers/discubot/collections/jobs/server/database/queries'
         )
 
-        await updateDiscubotJob(jobId, parsed.teamId, SYSTEM_USER_ID, {
+        await updateDiscubotJob(jobId, actualTeamId, SYSTEM_USER_ID, {
           status: 'failed',
           completedAt: new Date(),
           processingTime,
