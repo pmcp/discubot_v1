@@ -5,9 +5,9 @@
  *
  * Returns the schema (properties) of a Notion database for field mapping configuration.
  * Parses property types and options (for select/multi-select fields).
+ *
+ * Note: Uses direct fetch calls instead of Notion SDK for edge compatibility (Cloudflare Workers)
  */
-
-import { Client } from '@notionhq/client'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -41,19 +41,17 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Initialize Notion client with older API version to get properties
-    const notion = new Client({
-      auth: notionToken,
-      notionVersion: '2022-06-28' // Use older version that includes properties in database response
-    })
-
-    // Fetch database schema
+    // Fetch database schema using direct API call (edge-compatible)
     console.log(`[Notion Schema] Fetching schema for database ${databaseId}`)
 
-    // Get database metadata (contains data_sources)
-    const database = await notion.databases.retrieve({
-      database_id: databaseId
-    })
+    // Get database metadata using direct fetch (no SDK)
+    const database = await $fetch(`https://api.notion.com/v1/databases/${databaseId}`, {
+      headers: {
+        'Authorization': `Bearer ${notionToken}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      }
+    }) as any
 
     console.log(`[Notion Schema] Database metadata:`, JSON.stringify(database, null, 2))
 
@@ -83,11 +81,18 @@ export default defineEventHandler(async (event) => {
       } catch (fetchError: any) {
         console.error('[Notion Schema] Data source fetch failed, falling back to query')
 
-        // Fallback: query database for schema
-        const queryResponse = await notion.databases.query({
-          database_id: databaseId,
-          page_size: 1
-        })
+        // Fallback: query database for schema using direct API call
+        const queryResponse = await $fetch(`https://api.notion.com/v1/databases/${databaseId}/query`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${notionToken}`,
+            'Notion-Version': '2022-06-28',
+            'Content-Type': 'application/json'
+          },
+          body: {
+            page_size: 1
+          }
+        }) as any
 
         if (!queryResponse.results || queryResponse.results.length === 0) {
           throw createError({
