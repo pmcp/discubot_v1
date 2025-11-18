@@ -1290,6 +1290,9 @@ const oauthInstallUrl = computed(() => {
   return `/api/oauth/slack/install?teamId=${currentTeam.value.id}`
 })
 
+// Track if we're waiting for OAuth to complete (for create mode)
+const waitingForOAuth = ref(false)
+
 // OAuth Popup Window
 function openOAuthPopup(event?: Event) {
   // Prevent any default behavior
@@ -1300,6 +1303,12 @@ function openOAuthPopup(event?: Event) {
 
   console.log('[OAuth Popup] Opening popup with URL:', oauthInstallUrl.value)
   console.log('[OAuth Popup] Current team:', currentTeam.value)
+  console.log('[OAuth Popup] Action mode:', props.action)
+
+  // If in create mode, set flag to know we're waiting for OAuth result
+  if (props.action === 'create') {
+    waitingForOAuth.value = true
+  }
 
   const width = 600
   const height = 800
@@ -1329,6 +1338,7 @@ function openOAuthPopup(event?: Event) {
     })
   } else {
     console.error('[OAuth Popup] Failed to open popup - check popup blocker')
+    waitingForOAuth.value = false
     const toast = useToast()
     toast.add({
       title: 'Popup Blocked',
@@ -1340,7 +1350,7 @@ function openOAuthPopup(event?: Event) {
 }
 
 // Listen for OAuth success message from popup
-function handleOAuthMessage(event: MessageEvent) {
+async function handleOAuthMessage(event: MessageEvent) {
   console.log('[OAuth Message] Received message:', event.data)
 
   if (event.data?.type === 'oauth-success') {
@@ -1352,12 +1362,38 @@ function handleOAuthMessage(event: MessageEvent) {
       timeout: 5000
     })
 
-    console.log('[OAuth Message] OAuth successful, reloading page to refresh data')
+    console.log('[OAuth Message] OAuth successful, fetching updated config data')
 
-    // Reload the page to refresh the config data with new OAuth tokens
-    setTimeout(() => {
-      window.location.reload()
-    }, 1000)
+    // If we have a configId, fetch the updated config and merge into our form state
+    if (event.data.configId) {
+      try {
+        const updatedConfig = await $fetch(`/api/teams/${currentTeam.value?.id}/discubot-configs/${event.data.configId}`)
+
+        // Merge OAuth-related fields from the updated config into our form state
+        // This preserves all the user's form inputs while updating OAuth credentials
+        if (updatedConfig) {
+          state.value.apiToken = updatedConfig.apiToken || state.value.apiToken
+          state.value.sourceMetadata = updatedConfig.sourceMetadata || state.value.sourceMetadata
+
+          console.log('[OAuth Message] Form state updated with OAuth credentials')
+
+          toast.add({
+            title: 'Form Updated',
+            description: 'OAuth credentials added to your form. Continue filling out other fields.',
+            color: 'primary',
+            timeout: 4000
+          })
+        }
+      } catch (error) {
+        console.error('[OAuth Message] Failed to fetch updated config:', error)
+        toast.add({
+          title: 'Warning',
+          description: 'Connected successfully, but could not refresh form. Save to apply changes.',
+          color: 'warning',
+          timeout: 6000
+        })
+      }
+    }
   }
 }
 
