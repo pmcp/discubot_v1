@@ -84,42 +84,6 @@
         </UFormField>
       </div>
 
-      <div v-show="(!tabs || activeSection === 'webhook') && isSlackSource" class="flex flex-col gap-4 p-1">
-        <div class="mb-2 p-3 sm:p-4 bg-muted/50 rounded-lg">
-          <p class="text-xs sm:text-sm text-muted-foreground">
-            Configure Slack webhook integration. You'll receive this webhook URL after setting up your Slack app.
-          </p>
-        </div>
-        <UFormField
-          label="Webhook URL"
-          name="webhookUrl"
-          description="Slack webhook endpoint (provided by Slack app configuration)"
-          class="not-last:pb-4"
-        >
-          <UInput
-            v-model="state.webhookUrl"
-            type="url"
-            placeholder="https://hooks.slack.com/services/..."
-            class="w-full"
-            size="xl"
-          />
-        </UFormField>
-        <UFormField
-          label="Webhook Secret"
-          name="webhookSecret"
-          description="Signing secret for webhook verification (from Slack app settings)"
-          class="not-last:pb-4"
-        >
-          <UInput
-            v-model="state.webhookSecret"
-            type="password"
-            placeholder="Enter signing secret..."
-            class="w-full"
-            size="xl"
-          />
-        </UFormField>
-      </div>
-
       <div v-show="!tabs || activeSection === 'credentials'" class="flex flex-col gap-4 p-1">
         <!-- Slack OAuth Section -->
         <div v-if="isSlackSource" class="space-y-4">
@@ -798,8 +762,6 @@ const fieldToGroup: Record<string, string> = {
   'name': 'basic',
   'emailAddress': 'email',
   'emailSlug': 'email',
-  'webhookUrl': 'webhook',
-  'webhookSecret': 'webhook',
   'apiToken': 'credentials',
   'notionToken': 'credentials',
   'anthropicApiKey': 'credentials',
@@ -1398,10 +1360,6 @@ const navigationItems = computed(() => {
 
   if (isFigmaSource.value) {
     base.push({ label: 'Email', value: 'email' })
-  }
-
-  if (isSlackSource.value) {
-    base.push({ label: 'Webhook', value: 'webhook' })
   }
 
   base.push(
