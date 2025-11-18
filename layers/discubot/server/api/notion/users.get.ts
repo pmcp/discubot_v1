@@ -33,11 +33,11 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Validate token format (Notion tokens start with 'secret_')
-    if (!notionToken.startsWith('secret_')) {
+    // Validate token format (Notion tokens can be internal 'secret_*' or public 'ntn_*')
+    if (!notionToken.startsWith('secret_') && !notionToken.startsWith('ntn_')) {
       throw createError({
         statusCode: 422,
-        statusMessage: 'Invalid Notion token format. Token must start with "secret_"'
+        statusMessage: 'Invalid Notion token format. Token must start with "secret_" (internal) or "ntn_" (public)'
       })
     }
 

@@ -21,7 +21,7 @@
         <UFormField label="Source Type" name="sourceType" description="Select the source system" class="not-last:pb-4">
           <USelectMenu
             v-model="state.sourceType"
-            :options="sourceTypeOptions"
+            :items="sourceTypeOptions"
             placeholder="Select source type"
             class="w-full"
           />
@@ -51,7 +51,7 @@
               type="password"
               class="flex-1"
               size="xl"
-              placeholder="secret_..."
+              placeholder="secret_... or ntn_..."
             />
             <UButton
               @click="fetchNotionUsers"
