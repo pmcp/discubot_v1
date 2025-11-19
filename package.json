@@ -9,6 +9,7 @@
     "generate": "nuxt generate",
     "preview": "npx nuxthub preview",
     "deploy": "npx nuxthub deploy",
+    "deploy:watch": "pnpm build && npx nuxthub deploy && npx nuxthub logs --tail",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
