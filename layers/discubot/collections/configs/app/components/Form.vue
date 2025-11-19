@@ -294,9 +294,11 @@
             </div>
 
             <UFormField label="Notion Property" name="notionFieldMapping.priority.notionProperty" size="sm">
+              <!-- @vue-expect-error: value-attribute extracts string value from select menu item object -->
               <USelectMenu
                 v-model="fieldMappings.priority.notionProperty"
                 :items="notionPropertyOptions"
+                value-attribute="value"
                 placeholder="Select a property..."
                 size="md"
                 class="w-full"
@@ -337,9 +339,11 @@
             </div>
 
             <UFormField label="Notion Property" name="notionFieldMapping.type.notionProperty" size="sm">
+              <!-- @vue-expect-error: value-attribute extracts string value from select menu item object -->
               <USelectMenu
                 v-model="fieldMappings.type.notionProperty"
                 :items="notionPropertyOptions"
+                value-attribute="value"
                 placeholder="Select a property..."
                 size="md"
                 class="w-full"
@@ -380,9 +384,11 @@
             </div>
 
             <UFormField label="Notion Property" name="notionFieldMapping.assignee.notionProperty" size="sm">
+              <!-- @vue-expect-error: value-attribute extracts string value from select menu item object -->
               <USelectMenu
                 v-model="fieldMappings.assignee.notionProperty"
                 :items="notionPropertyOptions"
+                value-attribute="value"
                 placeholder="Select a property..."
                 size="md"
                 class="w-full"
@@ -907,11 +913,18 @@ onMounted(() => {
   if (state.value.notionFieldMapping && typeof state.value.notionFieldMapping === 'object') {
     const mapping = state.value.notionFieldMapping as any
 
+    // Helper to extract string from property (handles both string and object formats)
+    const extractPropertyValue = (prop: any): string => {
+      if (typeof prop === 'string') return prop
+      if (prop && typeof prop === 'object') return prop.value || prop.name || ''
+      return ''
+    }
+
     // Load priority
     if (mapping.priority) {
       fieldMappings.value.priority = {
-        notionProperty: mapping.priority.notionProperty || '',
-        propertyType: mapping.priority.propertyType || '',
+        notionProperty: extractPropertyValue(mapping.priority.notionProperty),
+        propertyType: extractPropertyValue(mapping.priority.propertyType),
         valueMap: mapping.priority.valueMap || {}
       }
     }
@@ -919,8 +932,8 @@ onMounted(() => {
     // Load type
     if (mapping.type) {
       fieldMappings.value.type = {
-        notionProperty: mapping.type.notionProperty || '',
-        propertyType: mapping.type.propertyType || '',
+        notionProperty: extractPropertyValue(mapping.type.notionProperty),
+        propertyType: extractPropertyValue(mapping.type.propertyType),
         valueMap: mapping.type.valueMap || {}
       }
     }
@@ -928,8 +941,8 @@ onMounted(() => {
     // Load assignee
     if (mapping.assignee) {
       fieldMappings.value.assignee = {
-        notionProperty: mapping.assignee.notionProperty || '',
-        propertyType: mapping.assignee.propertyType || '',
+        notionProperty: extractPropertyValue(mapping.assignee.notionProperty),
+        propertyType: extractPropertyValue(mapping.assignee.propertyType),
         valueMap: mapping.assignee.valueMap || {}
       }
     }
