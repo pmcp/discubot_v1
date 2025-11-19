@@ -1,12 +1,13 @@
 <template>
   <div class="space-y-4">
+
     <!-- Filters -->
-    <div class="flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-center">
+    <div class="flex flex-row sm:flex-row flex-wrap gap-3 items-stretch sm:items-center">
       <USelectMenu
         v-model="selectedSourceType"
         :items="sourceTypeOptions"
         placeholder="All Sources"
-        class="w-full sm:w-40"
+        class="grow"
         aria-label="Filter by source type"
       />
 
@@ -14,7 +15,7 @@
         v-model="selectedMappingType"
         :items="mappingTypeOptions"
         placeholder="All Types"
-        class="w-full sm:w-40"
+        class="grow sm:w-40"
         aria-label="Filter by mapping type"
       />
 
@@ -116,6 +117,11 @@
           </template>
         </CroutonTableHeader>
       </template>
+      <template #Metadata-cell="{ row }">
+        Test
+
+      </template>
+
     </CroutonCollection>
 
     <!-- Bulk Import Modal -->
