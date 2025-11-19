@@ -90,7 +90,6 @@
             aria-label="Create new source configuration"
           >
             <span class="hidden sm:inline">New Source Config</span>
-            <span class="sm:hidden">New Config</span>
           </UButton>
           <UButton
             color="neutral"
@@ -100,8 +99,7 @@
             class="w-full justify-center sm:justify-start"
             aria-label="View all source configurations"
           >
-            <span class="hidden lg:inline">View All Configs</span>
-            <span class="lg:hidden">Configs</span>
+            <span>View All Configs</span>
           </UButton>
           <UButton
             color="neutral"
@@ -111,8 +109,7 @@
             class="w-full justify-center sm:justify-start"
             aria-label="View all processing jobs"
           >
-            <span class="hidden lg:inline">View All Jobs</span>
-            <span class="lg:hidden">Jobs</span>
+            <span>View All Jobs</span>
           </UButton>
           <UButton
             color="neutral"
@@ -122,8 +119,7 @@
             class="w-full justify-center sm:justify-start"
             aria-label="View all discussions"
           >
-            <span class="hidden lg:inline">View Discussions</span>
-            <span class="lg:hidden">Discussions</span>
+            <span>View Discussions</span>
           </UButton>
           <UButton
             color="neutral"
@@ -133,8 +129,7 @@
             class="w-full justify-center sm:justify-start"
             aria-label="Manage user mappings"
           >
-            <span class="hidden lg:inline">User Mappings</span>
-            <span class="lg:hidden">Users</span>
+            <span>User Mappings</span>
           </UButton>
           <UButton
             color="neutral"
@@ -144,8 +139,7 @@
             class="w-full justify-center sm:justify-start"
             aria-label="View inbox messages"
           >
-            <span class="hidden lg:inline">Email Inbox</span>
-            <span class="lg:hidden">Inbox</span>
+            <span>Email Inbox</span>
           </UButton>
         </div>
 
