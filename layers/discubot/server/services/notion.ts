@@ -477,7 +477,7 @@ function buildTaskContent(
       rich_text: [
         {
           type: 'text',
-          text: { content: `${thread.rootMessage.authorHandle}:` },
+          text: { content: `${thread.rootMessage.authorName ? `@${thread.rootMessage.authorName}` : thread.rootMessage.authorHandle}:` },
           annotations: { bold: true },
         },
       ],
@@ -517,7 +517,7 @@ function buildTaskContent(
         rich_text: [
           {
             type: 'text',
-            text: { content: `${reply.authorHandle}:` },
+            text: { content: `${reply.authorName ? `@${reply.authorName}` : reply.authorHandle}:` },
             annotations: { bold: true },
           },
         ],

@@ -9,7 +9,10 @@
  */
 export interface ThreadMessage {
   id: string
+  /** Source user ID (e.g., Figma user ID, Slack user ID) */
   authorHandle: string
+  /** Resolved display name (populated from user mappings if available) */
+  authorName?: string
   content: string
   timestamp: Date
   attachments?: Attachment[]

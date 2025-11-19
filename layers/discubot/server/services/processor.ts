@@ -507,6 +507,7 @@ async function buildThread(
   config: SourceConfig,
   threadInput?: DiscussionThread,
   teamId?: string,
+  userMappings?: Map<string, { name: string; notionId: string }>,
 ): Promise<DiscussionThread> {
   // If thread provided directly, use it (for testing)
   if (threadInput) {
@@ -519,41 +520,35 @@ async function buildThread(
   const adapter = getAdapter(parsed.sourceType)
   const thread = await adapter.fetchThread(parsed.sourceThreadId, config)
 
-  // Load user mappings to convert user IDs to names + Notion IDs for AI
-  let userIdToMentionMap = new Map<string, { name: string; notionId: string }>()
-  let handleToMentionMap = new Map<string, { name: string; notionId: string }>() // For Figma @handle mentions
+  // Use user mappings passed from Stage 2.5 (already loaded once)
+  const userIdToMentionMap = userMappings || new Map<string, { name: string; notionId: string }>()
+  const handleToMentionMap = new Map<string, { name: string; notionId: string }>() // For Figma @handle mentions
 
-  if (teamId) {
+  // Build handle map for Figma (only if we have user mappings)
+  if (userMappings && parsed.sourceType === 'figma' && teamId) {
     try {
       const { getAllDiscubotUserMappings } = await import('#layers/discubot/collections/usermappings/server/database/queries')
       const allUserMappings = await getAllDiscubotUserMappings(teamId)
 
-      // Build map of sourceUserId -> { name, notionId }
       for (const mapping of allUserMappings) {
-        if (mapping.sourceType === parsed.sourceType && mapping.active) {
+        if (mapping.sourceType === 'figma' && mapping.active && mapping.sourceUserName) {
           const displayName = mapping.notionUserName || mapping.sourceUserName || mapping.sourceUserId
           const mentionData = {
             name: String(displayName),
             notionId: String(mapping.notionUserId)
           }
-
-          userIdToMentionMap.set(String(mapping.sourceUserId), mentionData)
-
-          // For Figma: also map by source user name (handle) for @mention matching
-          if (parsed.sourceType === 'figma' && mapping.sourceUserName) {
-            handleToMentionMap.set(String(mapping.sourceUserName), mentionData)
-          }
+          handleToMentionMap.set(String(mapping.sourceUserName), mentionData)
         }
       }
-
-      logger.debug('Loaded user mappings for mention conversion', {
-        userIdMappings: userIdToMentionMap.size,
-        handleMappings: handleToMentionMap.size,
-      })
     } catch (error) {
-      logger.warn('Failed to load user mappings for mention conversion', error)
+      logger.warn('Failed to load Figma handle mappings', error)
     }
   }
+
+  logger.debug('User mappings available for mention conversion', {
+    userIdMappings: userIdToMentionMap.size,
+    handleMappings: handleToMentionMap.size,
+  })
 
   // Convert user ID mentions to readable names with Notion IDs and filter out bot
   const botUserId = config.sourceMetadata?.botUserId
@@ -625,6 +620,35 @@ async function buildThread(
       ...reply,
       content: convertMentions(reply.content)
     }))
+  }
+
+  // Resolve author IDs to names for display in Notion
+  if (userIdToMentionMap.size > 0) {
+    // Resolve root message author
+    const rootAuthorData = userIdToMentionMap.get(thread.rootMessage.authorHandle)
+    if (rootAuthorData) {
+      thread.rootMessage.authorName = rootAuthorData.name
+      logger.debug('Resolved root author', {
+        from: thread.rootMessage.authorHandle,
+        to: rootAuthorData.name,
+      })
+    }
+
+    // Resolve reply authors
+    thread.replies = thread.replies.map((reply: any) => {
+      const replyAuthorData = userIdToMentionMap.get(reply.authorHandle)
+      return {
+        ...reply,
+        authorName: replyAuthorData?.name,
+      }
+    })
+
+    logger.debug('Resolved author IDs to names', {
+      totalAuthors: new Set([
+        thread.rootMessage.authorHandle,
+        ...thread.replies.map((r: any) => r.authorHandle)
+      ]).size,
+    })
   }
 
   return thread
@@ -723,6 +747,39 @@ export async function processDiscussion(
     })
 
     // ============================================================================
+    // STAGE 2.5: Load User Mappings (Once, used throughout pipeline)
+    // ============================================================================
+    logger.info('Stage 2.5: Loading User Mappings')
+    let userMappings: Map<string, { name: string; notionId: string }> | undefined
+
+    try {
+      const { getAllDiscubotUserMappings } = await import(
+        '#layers/discubot/collections/usermappings/server/database/queries'
+      )
+      const allUserMappings = await getAllDiscubotUserMappings(actualTeamId)
+
+      const userIdToMentionMap = new Map<string, { name: string; notionId: string }>()
+
+      for (const mapping of allUserMappings) {
+        if (mapping.sourceType === parsed.sourceType && mapping.active) {
+          const displayName = mapping.notionUserName || mapping.sourceUserName || mapping.sourceUserId
+          const mentionData = {
+            name: String(displayName),
+            notionId: String(mapping.notionUserId),
+          }
+          userIdToMentionMap.set(String(mapping.sourceUserId), mentionData)
+        }
+      }
+
+      userMappings = userIdToMentionMap
+      logger.info(`Loaded ${userMappings.size} user mappings for ${parsed.sourceType}`)
+    }
+    catch (error) {
+      logger.warn('Failed to load user mappings', { error })
+      // Continue without mappings - operations will fallback to IDs
+    }
+
+    // ============================================================================
     // CREATE JOB RECORD (After config loaded to get correct teamId)
     // ============================================================================
     try {
@@ -811,7 +868,7 @@ export async function processDiscussion(
       stage: 'thread_building',
     })
 
-    const thread = await buildThread(parsed, config, options.thread, actualTeamId)
+    const thread = await buildThread(parsed, config, options.thread, actualTeamId, userMappings)
     logger.info('Thread built', {
       id: thread.id,
       messages: thread.replies.length + 1,
@@ -927,22 +984,17 @@ export async function processDiscussion(
         sourceUrl: parsed.sourceUrl,
       }
 
-      // Load user mappings for assignee field resolution
-      // IMPORTANT: Use actualTeamId (internal app team ID), not parsed.teamId (source identifier)
-      const { getAllDiscubotUserMappings } = await import('#layers/discubot/collections/usermappings/server/database/queries')
-      const allUserMappings = await getAllDiscubotUserMappings(actualTeamId)
-
-      // Filter by sourceType and active status, then build Map for efficient lookup
-      const userMappings = new Map<string, string>()
-      for (const mapping of allUserMappings) {
-        if (mapping.sourceType === parsed.sourceType && mapping.active) {
-          userMappings.set(String(mapping.sourceUserId), String(mapping.notionUserId))
+      // Use user mappings from Stage 2.5 (already loaded once)
+      // Convert to simple userId -> notionId map for Notion API
+      const notionUserMappings = new Map<string, string>()
+      if (userMappings) {
+        for (const [userId, data] of userMappings.entries()) {
+          notionUserMappings.set(userId, data.notionId)
         }
       }
 
-      logger.debug('User mappings loaded', {
-        total: allUserMappings.length,
-        active: userMappings.size,
+      logger.debug('User mappings available for Notion tasks', {
+        active: notionUserMappings.size,
         sourceType: parsed.sourceType
       })
 
@@ -969,9 +1021,9 @@ export async function processDiscussion(
             thread,
             aiAnalysis.summary,
             notionConfig,
-            userMappings, // userMentions (for @mentions in content) - use same mappings as assignee
+            userMappings, // userMentions (for @mentions in content) - full data with names
             fieldMapping,
-            userMappings,
+            notionUserMappings, // assigneeMappings - just userId -> notionId for API
           )
 
           notionTasks.push(result)
@@ -987,9 +1039,9 @@ export async function processDiscussion(
           thread,
           aiAnalysis.summary,
           notionConfig,
-          userMappings, // userMentions (for @mentions in content) - use same mappings as assignee
+          userMappings, // userMentions (for @mentions in content) - full data with names
           fieldMapping,
-          userMappings,
+          notionUserMappings, // assigneeMappings - just userId -> notionId for API
         )
       }
 

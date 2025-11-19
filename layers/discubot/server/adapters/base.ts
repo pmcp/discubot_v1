@@ -16,6 +16,7 @@ import type {
   SourceConfig,
   ValidationResult,
 } from '~/layers/discubot/types'
+import { logger } from '../utils/logger'
 
 /**
  * Discussion Source Adapter Interface
@@ -229,11 +230,11 @@ export interface DiscussionSourceAdapter {
    * ```typescript
    * const result = await adapter.validateConfig(config)
    * if (!result.valid) {
-   *   console.error('Config errors:', result.errors)
+   *   logger.error('Config errors:', result.errors)
    *   // ['apiToken is required', 'Invalid workspace ID format']
    * }
    * if (result.warnings.length > 0) {
-   *   console.warn('Config warnings:', result.warnings)
+   *   logger.warn('Config warnings:', result.warnings)
    *   // ['API token appears to be expired']
    * }
    * ```

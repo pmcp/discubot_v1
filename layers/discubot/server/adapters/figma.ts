@@ -27,6 +27,7 @@ import {
   extractFileKeyFromUrl,
   findCommentByText,
 } from '../utils/emailParser'
+import { logger } from '../utils/logger'
 
 /**
  * Figma API base URL
@@ -214,7 +215,7 @@ export class FigmaAdapter implements DiscussionSourceAdapter {
 
       if (fuzzySearchText) {
         // Use fuzzy matching to find comment by text content
-        console.log('[FigmaAdapter] Using fuzzy matching to find comment:', {
+        logger.debug('[FigmaAdapter] Using fuzzy matching to find comment:', {
           searchText: fuzzySearchText.substring(0, 100),
           totalComments: data.comments.length,
         })
@@ -228,7 +229,7 @@ export class FigmaAdapter implements DiscussionSourceAdapter {
         rootComment = matchedComment || undefined
 
         if (!rootComment) {
-          console.warn('[FigmaAdapter] Fuzzy match failed, falling back to most recent comment')
+          logger.warn('[FigmaAdapter] Fuzzy match failed, falling back to most recent comment')
           rootComment = this.findMostRecentRootComment(data.comments)
         }
       } else if (targetCommentId) {
@@ -303,7 +304,7 @@ export class FigmaAdapter implements DiscussionSourceAdapter {
       const [fileKey, commentId] = threadId.split(':')
 
       if (!commentId) {
-        console.warn('No commentId provided, cannot post reply')
+        logger.warn('No commentId provided, cannot post reply')
         return false
       }
 
@@ -322,13 +323,13 @@ export class FigmaAdapter implements DiscussionSourceAdapter {
 
       if (!response.ok) {
         const error = await this.handleApiError(response)
-        console.error('Failed to post Figma reply:', error.message)
+        logger.error('Failed to post Figma reply:', error.message)
         return false
       }
 
       return true
     } catch (error) {
-      console.error('Failed to post Figma reply:', error)
+      logger.error('Failed to post Figma reply:', error)
       return false
     }
   }
@@ -356,7 +357,7 @@ export class FigmaAdapter implements DiscussionSourceAdapter {
       const [fileKey, commentId] = threadId.split(':')
 
       if (!commentId) {
-        console.warn('No commentId provided, cannot update status')
+        logger.warn('No commentId provided, cannot update status')
         return false
       }
 
@@ -384,13 +385,13 @@ export class FigmaAdapter implements DiscussionSourceAdapter {
 
       if (!response.ok) {
         const error = await this.handleApiError(response)
-        console.error('Failed to update Figma status:', error.message)
+        logger.error('Failed to update Figma status:', error.message)
         return false
       }
 
       return true
     } catch (error) {
-      console.error('Failed to update Figma status:', error)
+      logger.error('Failed to update Figma status:', error)
       return false
     }
   }
@@ -414,7 +415,7 @@ export class FigmaAdapter implements DiscussionSourceAdapter {
       const [fileKey, commentId] = threadId.split(':')
 
       if (!commentId) {
-        console.warn('No commentId provided, cannot remove reaction')
+        logger.warn('No commentId provided, cannot remove reaction')
         return false
       }
 
@@ -441,17 +442,17 @@ export class FigmaAdapter implements DiscussionSourceAdapter {
       if (!response.ok) {
         // Don't treat 404 as an error (reaction might not exist)
         if (response.status === 404) {
-          console.log('Reaction not found (already removed or never added)')
+          logger.debug('Reaction not found (already removed or never added)')
           return true
         }
         const error = await this.handleApiError(response)
-        console.error('Failed to remove Figma reaction:', error.message)
+        logger.error('Failed to remove Figma reaction:', error.message)
         return false
       }
 
       return true
     } catch (error) {
-      console.error('Failed to remove Figma reaction:', error)
+      logger.error('Failed to remove Figma reaction:', error)
       return false
     }
   }
@@ -514,7 +515,7 @@ export class FigmaAdapter implements DiscussionSourceAdapter {
 
       return response.ok
     } catch (error) {
-      console.error('Failed to test Figma connection:', error)
+      logger.error('Failed to test Figma connection:', error)
       return false
     }
   }
