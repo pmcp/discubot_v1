@@ -449,38 +449,73 @@ function buildTaskContent(
     },
   })
 
-  const metadataItems = [
-    `Source: ${config.sourceType}`,
-    `Thread ID: ${thread.id}`,
-    `Thread Size: ${thread.replies.length + 1} messages`,
-    `Created By: @${thread.rootMessage.authorHandle}`,
-    `Priority: ${task.priority || 'medium'}`,
-    `Sentiment: ${aiSummary.sentiment || 'neutral'}`,
-    `Confidence: ${Math.round((aiSummary.confidence || 0) * 100)}%`,
-    `Timestamp: ${new Date().toLocaleString()}`,
-  ]
+  // Helper to create metadata item with optional Notion mention
+  const createMetadataItem = (label: string, value: string, notionUserId?: string) => {
+    const richText: any[] = [
+      {
+        type: 'text',
+        text: { content: `${label}: ` },
+      },
+    ]
 
-  if (task.assignee) {
-    metadataItems.push(`Assignee: @${task.assignee}`)
-  }
+    if (notionUserId) {
+      // Add Notion user mention
+      richText.push({
+        type: 'mention',
+        mention: {
+          type: 'user',
+          user: {
+            object: 'user',
+            id: notionUserId,
+          },
+        },
+      })
+    } else {
+      // Just add plain text
+      richText.push({
+        type: 'text',
+        text: { content: value },
+      })
+    }
 
-  if (task.tags && task.tags.length > 0) {
-    metadataItems.push(`Tags: ${task.tags.join(', ')}`)
-  }
-
-  for (const item of metadataItems) {
-    blocks.push({
+    return {
       object: 'block',
       type: 'bulleted_list_item',
-      bulleted_list_item: {
-        rich_text: [
-          {
-            type: 'text',
-            text: { content: item },
-          },
-        ],
-      },
-    })
+      bulleted_list_item: { rich_text: richText },
+    }
+  }
+
+  // Get Notion user ID for the message author
+  const authorHandle = thread.rootMessage.authorHandle
+  const authorNotionId = userMentions?.get(authorHandle)
+
+  console.log(`[Notion] 🔍 Metadata - Author handle: "${authorHandle}"`)
+  console.log(`[Notion] 🔍 Metadata - Author Notion ID: "${authorNotionId || 'not found'}"`)
+  if (userMentions) {
+    console.log(`[Notion] 🔍 Metadata - Available user mentions: ${Array.from(userMentions.keys()).join(', ')}`)
+  }
+
+  // Basic metadata items
+  blocks.push(createMetadataItem('Source', config.sourceType))
+  blocks.push(createMetadataItem('Thread ID', thread.id))
+  blocks.push(createMetadataItem('Thread Size', `${thread.replies.length + 1} messages`))
+  blocks.push(createMetadataItem('Created By', thread.rootMessage.authorHandle, authorNotionId))
+  blocks.push(createMetadataItem('Priority', task.priority || 'medium'))
+  blocks.push(createMetadataItem('Sentiment', aiSummary.sentiment || 'neutral'))
+  blocks.push(createMetadataItem('Confidence', `${Math.round((aiSummary.confidence || 0) * 100)}%`))
+  blocks.push(createMetadataItem('Timestamp', new Date().toLocaleString()))
+
+  // Assignee with Notion mention if available
+  if (task.assignee) {
+    // Check if assignee is a Notion UUID
+    const isNotionUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(task.assignee)
+    const assigneeNotionId = isNotionUuid ? task.assignee : userMentions?.get(task.assignee)
+    blocks.push(createMetadataItem('Assignee', task.assignee, assigneeNotionId))
+  }
+
+  // Tags
+  if (task.tags && task.tags.length > 0) {
+    blocks.push(createMetadataItem('Tags', task.tags.join(', ')))
   }
 
   // Deep link back to source
