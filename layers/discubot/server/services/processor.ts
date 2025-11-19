@@ -520,15 +520,36 @@ async function buildThread(
     } else if (parsed.sourceType === 'figma') {
       // Figma format: @handle (e.g., @Maarten)
 
+      console.log(`[Processor] 🔍 DEBUG: Starting Figma mention conversion`)
+      console.log(`[Processor] 🔍 DEBUG: Original content: "${content}"`)
+      console.log(`[Processor] 🔍 DEBUG: handleToMentionMap has ${handleToMentionMap.size} entries`)
+
       // Convert @handle mentions to @Name (NotionID)
       handleToMentionMap.forEach((mention, handle) => {
-        // Match @handle but not email-like patterns (@example.com)
-        // Use word boundary to match whole usernames only
+        console.log(`[Processor] 🔍 DEBUG: Trying to convert handle: "${handle}" to ${mention.name} (${mention.notionId})`)
+
+        // Escape special regex characters in handle
+        const escapedHandle = handle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const pattern = `@${escapedHandle}(?!\\S)` // Case-insensitive, not followed by non-whitespace
+
+        console.log(`[Processor] 🔍 DEBUG: Regex pattern: "${pattern}"`)
+
+        const regex = new RegExp(pattern, 'gi')
+        const beforeConvert = converted
         converted = converted.replace(
-          new RegExp(`@${handle}(?!\\S)`, 'gi'), // Case-insensitive, not followed by non-whitespace
+          regex,
           `@${mention.name} (${mention.notionId})`
         )
+
+        if (beforeConvert !== converted) {
+          console.log(`[Processor] 🔍 DEBUG: ✅ Converted! Before: "${beforeConvert}"`)
+          console.log(`[Processor] 🔍 DEBUG: ✅ Converted! After: "${converted}"`)
+        } else {
+          console.log(`[Processor] 🔍 DEBUG: ❌ No match found for pattern "${pattern}" in content "${beforeConvert}"`)
+        }
       })
+
+      console.log(`[Processor] 🔍 DEBUG: Final converted content: "${converted}"`)
     }
 
     return converted
