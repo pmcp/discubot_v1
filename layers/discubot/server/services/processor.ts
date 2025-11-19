@@ -164,15 +164,20 @@ async function loadSourceConfig(
     id: config.id,
     teamId: config.teamId,
     sourceType: config.sourceType as 'slack' | 'figma',
-    webhookUrl: config.webhookUrl || '',
+    name: config.name || '',
     apiToken: config.apiToken || '',
     notionToken: config.notionToken,
     notionDatabaseId: config.notionDatabaseId,
-    notionFieldMapping: config.notionFieldMapping || {},
     anthropicApiKey: config.anthropicApiKey || undefined,
     aiEnabled: config.aiEnabled || false,
+    autoSync: config.autoSync || false,
+    settings: {}, // Empty settings object for backward compatibility
+    sourceMetadata: (config.sourceMetadata as Record<string, any>) || undefined,
     aiSummaryPrompt: config.aiSummaryPrompt || undefined,
     aiTaskPrompt: config.aiTaskPrompt || undefined,
+    notionFieldMapping: config.notionFieldMapping || {},
+    webhookUrl: config.webhookUrl || '',
+    active: config.active,
   }
 }
 
@@ -180,20 +185,25 @@ async function loadSourceConfig(
  * Save discussion to database
  *
  * Creates a new discussion record with initial status using Crouton queries.
+ * Note: authorHandle and participants may be placeholder values at this point
+ * (e.g., from Figma webhook email addresses). They will be updated after
+ * thread building with correct values via updateDiscussionMetadata().
  */
 async function saveDiscussion(
   parsed: ParsedDiscussion,
   configId: string,
+  actualTeamId: string,
   status: DiscussionStatus = 'pending',
 ): Promise<string> {
   console.log('[Processor] Saving discussion to database:', {
     sourceType: parsed.sourceType,
     sourceThreadId: parsed.sourceThreadId,
     status,
+    actualTeamId,
   })
 
   // Store teamId for use in update functions
-  currentTeamId = parsed.teamId
+  currentTeamId = actualTeamId
 
   // Import Crouton query
   const { createDiscubotDiscussion } = await import(
@@ -201,8 +211,10 @@ async function saveDiscussion(
   )
 
   // Create discussion record
+  // NOTE: For Figma, authorHandle and participants contain email addresses at this point
+  // They will be updated after thread building with actual user names
   const discussion = await createDiscubotDiscussion({
-    teamId: parsed.teamId,
+    teamId: actualTeamId, // Use actual team ID from config, not source identifier
     owner: SYSTEM_USER_ID,
     sourceType: parsed.sourceType,
     sourceThreadId: parsed.sourceThreadId,
@@ -210,8 +222,8 @@ async function saveDiscussion(
     sourceConfigId: configId,
     title: parsed.title,
     content: parsed.content,
-    authorHandle: parsed.authorHandle,
-    participants: parsed.participants,
+    authorHandle: parsed.authorHandle, // Placeholder - will be updated after thread building
+    participants: parsed.participants, // Placeholder - will be updated after thread building
     status,
     rawPayload: parsed.metadata,
     metadata: {},
@@ -275,6 +287,52 @@ async function updateDiscussionStatus(
   )
 
   console.log('[Processor] Discussion status updated')
+}
+
+/**
+ * Update discussion metadata after thread building
+ *
+ * Updates authorHandle and participants with correct values from the built thread.
+ * This fixes the issue where Figma discussions initially have email addresses instead
+ * of actual user names.
+ */
+async function updateDiscussionMetadata(
+  discussionId: string,
+  thread: DiscussionThread,
+): Promise<void> {
+  console.log('[Processor] Updating discussion metadata:', {
+    discussionId,
+    authorHandle: thread.rootMessage.authorHandle,
+    participants: thread.participants,
+  })
+
+  // Verify teamId is available
+  if (!currentTeamId) {
+    throw new ProcessingError(
+      'TeamId not available for discussion update',
+      'update_metadata',
+      { discussionId },
+      false,
+    )
+  }
+
+  // Import Crouton query
+  const { updateDiscubotDiscussion } = await import(
+    '#layers/discubot/collections/discussions/server/database/queries'
+  )
+
+  // Update discussion with correct authorHandle and participants from thread
+  await updateDiscubotDiscussion(
+    discussionId,
+    currentTeamId,
+    SYSTEM_USER_ID,
+    {
+      authorHandle: thread.rootMessage.authorHandle,
+      participants: thread.participants,
+    },
+  )
+
+  console.log('[Processor] Discussion metadata updated with correct values from thread')
 }
 
 /**
@@ -508,6 +566,8 @@ async function buildThread(
       // First, remove bot mentions entirely
       if (botUserId) {
         converted = converted.replace(new RegExp(`<@${botUserId}>`, 'g'), '').trim()
+        // Clean up multiple spaces
+        converted = converted.replace(/\s+/g, ' ').trim()
       }
 
       // Then convert remaining user IDs to @Name (NotionID)
@@ -523,6 +583,25 @@ async function buildThread(
       console.log(`[Processor] 🔍 DEBUG: Starting Figma mention conversion`)
       console.log(`[Processor] 🔍 DEBUG: Original content: "${content}"`)
       console.log(`[Processor] 🔍 DEBUG: handleToMentionMap has ${handleToMentionMap.size} entries`)
+
+      // First, remove bot mentions entirely (before converting user mentions)
+      const botHandle = config.sourceMetadata?.botHandle
+      if (botHandle) {
+        console.log(`[Processor] 🤖 Filtering Figma bot mentions: @${botHandle}`)
+        // Escape special regex characters in handle
+        const escapedBotHandle = botHandle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        // Match @bothandle with word boundary (case-insensitive)
+        const botPattern = new RegExp(`@${escapedBotHandle}(?!\\S)`, 'gi')
+        const beforeFilter = converted
+        converted = converted.replace(botPattern, '').trim()
+        // Clean up multiple spaces
+        converted = converted.replace(/\s+/g, ' ').trim()
+
+        if (beforeFilter !== converted) {
+          console.log(`[Processor] 🤖 ✅ Bot mentions filtered! Before: "${beforeFilter}"`)
+          console.log(`[Processor] 🤖 ✅ Bot mentions filtered! After: "${converted}"`)
+        }
+      }
 
       // Convert @handle mentions to @Name (NotionID)
       handleToMentionMap.forEach((mention, handle) => {
@@ -720,8 +799,8 @@ export async function processDiscussion(
       // Don't fail processing if job creation fails
     }
 
-    // Save discussion record
-    discussionId = await saveDiscussion(parsed, config.id, 'processing')
+    // Save discussion record with actual team ID
+    discussionId = await saveDiscussion(parsed, config.id, actualTeamId, 'processing')
 
     // Update job with discussion ID (sourceConfigId already set during creation)
     if (jobId && discussionId) {
@@ -773,6 +852,10 @@ export async function processDiscussion(
       messages: thread.replies.length + 1,
       participants: thread.participants.length,
     })
+
+    // Update discussion metadata with correct values from thread
+    // This fixes the issue where initial save had placeholder email addresses
+    await updateDiscussionMetadata(discussionId, thread)
 
     // Update sourceUrl and sourceThreadId with comment ID for Figma
     if (parsed.sourceType === 'figma' && thread.id && parsed.metadata?.fileKey) {
@@ -1195,7 +1278,7 @@ function buildConfirmationMessage(tasks: NotionTaskResult[]): string {
     return '✅ Discussion processed (no tasks created)'
   }
 
-  if (tasks.length === 1) {
+  if (tasks.length === 1 && tasks[0]) {
     return `✅ Task created in Notion\n🔗 ${tasks[0].url}`
   }
 
