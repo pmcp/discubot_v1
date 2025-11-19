@@ -16,20 +16,20 @@ import { processDiscussion } from '#layers/discubot/server/services/processor'
 import type { ProcessingResult } from '#layers/discubot/server/services/processor'
 
 export default defineEventHandler(async (event) => {
-  console.log('[Slack Webhook] ===== REQUEST RECEIVED =====')
-  console.log('[Slack Webhook] Method:', event.method)
-  console.log('[Slack Webhook] Path:', event.path)
+  logger.debug('[Slack Webhook] ===== REQUEST RECEIVED =====')
+  logger.debug('[Slack Webhook] Method:', event.method)
+  logger.debug('[Slack Webhook] Path:', event.path)
 
   try {
     // Read body
     const body = await readBody(event)
-    console.log('[Slack Webhook] Payload type:', body?.type)
+    logger.debug('[Slack Webhook] Payload type:', body?.type)
 
     // ============================================================================
     // HANDLE URL VERIFICATION CHALLENGE
     // ============================================================================
     if (body && body.type === 'url_verification') {
-      console.log('[Slack Webhook] URL verification challenge received')
+      logger.debug('[Slack Webhook] URL verification challenge received')
       return { challenge: body.challenge }
     }
 
@@ -37,7 +37,7 @@ export default defineEventHandler(async (event) => {
     // VALIDATE EVENT PAYLOAD
     // ============================================================================
     if (!body || body.type !== 'event_callback') {
-      console.log('[Slack Webhook] Ignoring non-event payload:', body?.type)
+      logger.debug('[Slack Webhook] Ignoring non-event payload:', body?.type)
       return {
         success: true,
         message: 'Non-event payload ignored',
@@ -51,8 +51,8 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('[Slack Webhook] Event type:', body.event.type)
-    console.log('[Slack Webhook] Event details:', {
+    logger.debug('[Slack Webhook] Event type:', body.event.type)
+    logger.debug('[Slack Webhook] Event details:', {
       channel: body.event.channel,
       user: body.event.user,
       text: body.event.text?.substring(0, 100),
@@ -68,7 +68,7 @@ export default defineEventHandler(async (event) => {
 
     try {
       parsed = await adapter.parseIncoming(body)
-      console.log('[Slack Webhook] Successfully parsed event:', {
+      logger.debug('[Slack Webhook] Successfully parsed event:', {
         sourceThreadId: parsed.sourceThreadId,
         teamId: parsed.teamId,
         title: parsed.title,
@@ -77,7 +77,7 @@ export default defineEventHandler(async (event) => {
     } catch (parseError: any) {
       // If it's an unsupported event type (not app_mention), just acknowledge it
       if (parseError.message?.includes('Unsupported event type')) {
-        console.log('[Slack Webhook] Ignoring unsupported event type:', body.event.type)
+        logger.debug('[Slack Webhook] Ignoring unsupported event type:', body.event.type)
         return {
           success: true,
           message: 'Event type not supported',
@@ -86,7 +86,7 @@ export default defineEventHandler(async (event) => {
       }
 
       // Otherwise, it's a real error
-      console.error('[Slack Webhook] Failed to parse event:', parseError)
+      logger.error('[Slack Webhook] Failed to parse event:', parseError)
       throw createError({
         statusCode: 400,
         statusMessage: 'Failed to parse event',
@@ -97,7 +97,7 @@ export default defineEventHandler(async (event) => {
     // ============================================================================
     // PROCESS DISCUSSION
     // ============================================================================
-    console.log('[Slack Webhook] Starting discussion processing...')
+    logger.debug('[Slack Webhook] Starting discussion processing...')
 
     // Use Cloudflare Workers waitUntil to process in background
     // This allows the webhook to return immediately while processing continues
@@ -105,12 +105,12 @@ export default defineEventHandler(async (event) => {
 
     if (cfCtx) {
       // Production: Process in background using waitUntil
-      console.log('[Slack Webhook] Using background processing (waitUntil)')
+      logger.debug('[Slack Webhook] Using background processing (waitUntil)')
 
       cfCtx.waitUntil(
         processDiscussion(parsed)
           .then((result) => {
-            console.log('[Slack Webhook] Background processing completed:', {
+            logger.debug('[Slack Webhook] Background processing completed:', {
               discussionId: result.discussionId,
               taskCount: result.notionTasks.length,
               processingTime: `${result.processingTime}ms`,
@@ -118,7 +118,7 @@ export default defineEventHandler(async (event) => {
             })
           })
           .catch((error) => {
-            console.error('[Slack Webhook] Background processing failed:', error)
+            logger.error('[Slack Webhook] Background processing failed:', error)
             // Error is already logged in processor, job status updated to failed
           })
       )
@@ -131,21 +131,21 @@ export default defineEventHandler(async (event) => {
       }
     } else {
       // Development: Process synchronously (no cloudflare context in local dev)
-      console.log('[Slack Webhook] Using synchronous processing (local dev)')
+      logger.debug('[Slack Webhook] Using synchronous processing (local dev)')
 
       let result: ProcessingResult
 
       try {
         result = await processDiscussion(parsed)
 
-        console.log('[Slack Webhook] Discussion processed successfully:', {
+        logger.debug('[Slack Webhook] Discussion processed successfully:', {
           discussionId: result.discussionId,
           taskCount: result.notionTasks.length,
           processingTime: `${result.processingTime}ms`,
           isMultiTask: result.isMultiTask,
         })
       } catch (processingError: any) {
-        console.error('[Slack Webhook] Processing failed:', processingError)
+        logger.error('[Slack Webhook] Processing failed:', processingError)
 
         // Check if error is retryable
         const isRetryable = processingError.retryable === true
@@ -185,8 +185,8 @@ export default defineEventHandler(async (event) => {
     }
 
     // Otherwise, wrap it in a generic 500 error
-    console.error('[Slack Webhook] Unexpected error:', error)
-    console.error('[Slack Webhook] Stack:', (error as Error).stack)
+    logger.error('[Slack Webhook] Unexpected error:', error)
+    logger.error('[Slack Webhook] Stack:', (error as Error).stack)
 
     throw createError({
       statusCode: 500,

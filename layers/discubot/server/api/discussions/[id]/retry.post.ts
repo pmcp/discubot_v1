@@ -32,7 +32,7 @@ export default defineEventHandler(async (event) => {
     // 1. Authenticate and get team context
     const { team, user } = await resolveTeamAndCheckMembership(event)
 
-    console.log('[Retry Endpoint] User authenticated', {
+    logger.debug('[Retry Endpoint] User authenticated', {
       userId: user.id,
       teamId: team.id
     })
@@ -51,7 +51,7 @@ export default defineEventHandler(async (event) => {
     // 3. Parse request body (optional skip flags)
     const body = await readBody<RetryRequestBody>(event).catch(() => ({} as RetryRequestBody))
 
-    console.log('[Retry Endpoint] Retrying discussion', {
+    logger.debug('[Retry Endpoint] Retrying discussion', {
       discussionId,
       teamId: team.id,
       skipAI: body?.skipAI,
@@ -86,7 +86,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    console.log('[Retry Endpoint] Discussion loaded', {
+    logger.debug('[Retry Endpoint] Discussion loaded', {
       discussionId: discussion.id,
       status: discussion.status,
       sourceType: discussion.sourceType,
@@ -133,7 +133,7 @@ export default defineEventHandler(async (event) => {
       }
     })
 
-    console.log('[Retry Endpoint] New job created', {
+    logger.debug('[Retry Endpoint] New job created', {
       jobId: job?.id,
       discussionId: discussion.id,
       isRetry: true
@@ -152,13 +152,13 @@ export default defineEventHandler(async (event) => {
     // If threadData exists in DB, pass it to avoid re-fetching from source
     if (discussion.threadData && Object.keys(discussion.threadData).length > 0) {
       options.thread = discussion.threadData as DiscussionThread
-      console.log('[Retry Endpoint] Reusing stored thread data')
+      logger.debug('[Retry Endpoint] Reusing stored thread data')
     }
 
     // Call processor
     const result = await processDiscussion(parsed, options)
 
-    console.log('[Retry Endpoint] Retry complete', {
+    logger.debug('[Retry Endpoint] Retry complete', {
       discussionId: result.discussionId,
       jobId: job?.id,
       notionTaskCount: result.notionTasks.length,
@@ -190,7 +190,7 @@ export default defineEventHandler(async (event) => {
     }
 
   } catch (error) {
-    console.error('[Retry Endpoint] Retry failed:', error)
+    logger.error('[Retry Endpoint] Retry failed:', error)
 
     // If this is already a H3Error from createError(), re-throw it
     if ((error as any).statusCode) {

@@ -70,7 +70,7 @@ function delay(ms: number): Promise<void> {
  *     maxAttempts: 3,
  *     baseDelay: 1000,
  *     timeout: 15000, // 15 second timeout per attempt
- *     onRetry: (attempt, error) => console.log(`Retry ${attempt}:`, error)
+ *     onRetry: (attempt, error) => logger.debug(`Retry ${attempt}:`, error)
  *   }
  * )
  * ```

@@ -190,7 +190,7 @@ export default defineEventHandler(async (event) => {
     // 1. Read and validate request
     const body = await readBody(event)
 
-    console.log('[Test Connection] Received request', {
+    logger.debug('[Test Connection] Received request', {
       type: body?.type,
       configId: body?.configId,
       sourceType: body?.config?.sourceType,
@@ -213,13 +213,13 @@ export default defineEventHandler(async (event) => {
     let config: SourceConfig
 
     if (body.type === 'id') {
-      console.log('[Test Connection] Loading config from database', {
+      logger.debug('[Test Connection] Loading config from database', {
         configId: body.configId,
       })
       config = await loadConfigById(body.configId)
     }
     else {
-      console.log('[Test Connection] Building config from request', {
+      logger.debug('[Test Connection] Building config from request', {
         sourceType: body.config.sourceType,
       })
       config = buildSourceConfig(body.config)
@@ -229,7 +229,7 @@ export default defineEventHandler(async (event) => {
     const adapter = getAdapter(config.sourceType)
     const validation = await adapter.validateConfig(config)
 
-    console.log('[Test Connection] Config validation complete', {
+    logger.debug('[Test Connection] Config validation complete', {
       valid: validation.valid,
       errorCount: validation.errors.length,
       warningCount: validation.warnings.length,
@@ -241,26 +241,26 @@ export default defineEventHandler(async (event) => {
     let sourceError: string | null = null
 
     try {
-      console.log('[Test Connection] Testing source API connection', {
+      logger.debug('[Test Connection] Testing source API connection', {
         sourceType: config.sourceType,
       })
 
       sourceConnected = await adapter.testConnection(config)
 
       if (sourceConnected) {
-        console.log('[Test Connection] Source API connection successful')
+        logger.debug('[Test Connection] Source API connection successful')
         sourceDetails = {
           sourceType: config.sourceType,
           message: `Successfully connected to ${config.sourceType} API`,
         }
       }
       else {
-        console.warn('[Test Connection] Source API connection failed (returned false)')
+        logger.warn('[Test Connection] Source API connection failed (returned false)')
         sourceError = 'Connection test returned false - check API token'
       }
     }
     catch (error) {
-      console.error('[Test Connection] Source API connection error:', error)
+      logger.error('[Test Connection] Source API connection error:', error)
       sourceConnected = false
       sourceError = (error as Error).message || 'Unknown error'
     }
@@ -271,7 +271,7 @@ export default defineEventHandler(async (event) => {
     let notionError: string | null = null
 
     try {
-      console.log('[Test Connection] Testing Notion API connection', {
+      logger.debug('[Test Connection] Testing Notion API connection', {
         databaseId: config.notionDatabaseId.substring(0, 8) + '...',
       })
 
@@ -285,25 +285,25 @@ export default defineEventHandler(async (event) => {
       notionError = notionResult.error || null
 
       if (notionConnected) {
-        console.log('[Test Connection] Notion API connection successful', {
+        logger.debug('[Test Connection] Notion API connection successful', {
           databaseTitle: notionDetails?.title,
         })
       }
       else {
-        console.warn('[Test Connection] Notion API connection failed', {
+        logger.warn('[Test Connection] Notion API connection failed', {
           error: notionError,
         })
       }
     }
     catch (error) {
-      console.error('[Test Connection] Notion API connection error:', error)
+      logger.error('[Test Connection] Notion API connection error:', error)
       notionConnected = false
       notionError = (error as Error).message || 'Unknown error'
     }
 
     const testTime = Date.now() - startTime
 
-    console.log('[Test Connection] Test complete', {
+    logger.debug('[Test Connection] Test complete', {
       sourceConnected,
       notionConnected,
       validationValid: validation.valid,
@@ -336,7 +336,7 @@ export default defineEventHandler(async (event) => {
     }
   }
   catch (error) {
-    console.error('[Test Connection] Test failed:', error)
+    logger.error('[Test Connection] Test failed:', error)
 
     // If this is already a H3Error from createError(), re-throw it
     if ((error as any).statusCode) {

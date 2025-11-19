@@ -97,20 +97,20 @@ export default defineEventHandler(async (event) => {
       const { timestamp, token, signature } = payload.signature
 
       if (!verifyMailgunSignature(timestamp, token, signature, signingKey)) {
-        console.warn('[Mailgun Webhook] Invalid signature detected')
+        logger.warn('[Mailgun Webhook] Invalid signature detected')
         throw createError({
           statusCode: 401,
           statusMessage: 'Invalid webhook signature',
         })
       }
 
-      console.log('[Mailgun Webhook] Signature verified successfully')
+      logger.debug('[Mailgun Webhook] Signature verified successfully')
     }
     else if (!signingKey) {
-      console.warn('[Mailgun Webhook] Signature verification skipped - MAILGUN_SIGNING_KEY not configured')
+      logger.warn('[Mailgun Webhook] Signature verification skipped - MAILGUN_SIGNING_KEY not configured')
     }
 
-    console.log('[Mailgun Webhook] Received webhook', {
+    logger.debug('[Mailgun Webhook] Received webhook', {
       recipient: payload.recipient,
       from: payload.from,
       subject: payload.subject,
@@ -127,13 +127,13 @@ export default defineEventHandler(async (event) => {
     let parsed: ParsedDiscussion
     try {
       parsed = await adapter.parseIncoming(payload)
-      console.log('[Mailgun Webhook] Successfully parsed email', {
+      logger.debug('[Mailgun Webhook] Successfully parsed email', {
         teamId: parsed.teamId,
         sourceThreadId: parsed.sourceThreadId,
         authorHandle: parsed.authorHandle,
       })
     } catch (error) {
-      console.error('[Mailgun Webhook] Failed to parse email:', error)
+      logger.error('[Mailgun Webhook] Failed to parse email:', error)
       throw createError({
         statusCode: 422,
         statusMessage: 'Failed to parse email',
@@ -149,7 +149,7 @@ export default defineEventHandler(async (event) => {
 
       const processingTime = Date.now() - startTime
 
-      console.log('[Mailgun Webhook] Successfully processed discussion', {
+      logger.debug('[Mailgun Webhook] Successfully processed discussion', {
         discussionId: result.discussionId,
         notionTaskCount: result.notionTasks.length,
         isMultiTask: result.isMultiTask,
@@ -170,7 +170,7 @@ export default defineEventHandler(async (event) => {
         },
       }
     } catch (error) {
-      console.error('[Mailgun Webhook] Failed to process discussion:', error)
+      logger.error('[Mailgun Webhook] Failed to process discussion:', error)
 
       // Determine if error is retryable (for webhook retry logic)
       const isRetryable = (error as any).retryable === true
@@ -190,7 +190,7 @@ export default defineEventHandler(async (event) => {
     }
   } catch (error) {
     // Handle all other unexpected errors
-    console.error('[Mailgun Webhook] Unexpected error:', error)
+    logger.error('[Mailgun Webhook] Unexpected error:', error)
 
     // If this is already a H3Error from createError(), re-throw it
     if ((error as any).statusCode) {

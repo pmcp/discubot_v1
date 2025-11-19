@@ -42,7 +42,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Fetch database schema using direct API call (edge-compatible)
-    console.log(`[Notion Schema] Fetching schema for database ${databaseId}`)
+    logger.debug(`[Notion Schema] Fetching schema for database ${databaseId}`)
 
     // Get database metadata using direct fetch (no SDK)
     const database = await $fetch(`https://api.notion.com/v1/databases/${databaseId}`, {
@@ -53,19 +53,19 @@ export default defineEventHandler(async (event) => {
       }
     }) as any
 
-    console.log(`[Notion Schema] Database metadata:`, JSON.stringify(database, null, 2))
+    logger.debug(`[Notion Schema] Database metadata:`, JSON.stringify(database, null, 2))
 
     // Handle both old format (properties directly on database) and new format (data_sources)
     let dataSourceProperties: Record<string, any>
 
     // Check if database has properties directly (old format with API version 2022-06-28)
     if ((database as any).properties) {
-      console.log('[Notion Schema] Using old format - properties found directly on database')
+      logger.debug('[Notion Schema] Using old format - properties found directly on database')
       dataSourceProperties = (database as any).properties
     }
     // Check if database uses new data sources format
     else if ((database as any).data_sources && (database as any).data_sources.length > 0) {
-      console.log('[Notion Schema] Using new format - fetching from data sources')
+      logger.debug('[Notion Schema] Using new format - fetching from data sources')
       const dataSources = (database as any).data_sources
       const dataSourceId = dataSources[0].id
 
@@ -79,7 +79,7 @@ export default defineEventHandler(async (event) => {
         })
         dataSourceProperties = (dataSource as any).properties
       } catch (fetchError: any) {
-        console.error('[Notion Schema] Data source fetch failed, falling back to query')
+        logger.error('[Notion Schema] Data source fetch failed, falling back to query')
 
         // Fallback: query database for schema using direct API call
         const queryResponse = await $fetch(`https://api.notion.com/v1/databases/${databaseId}/query`, {
@@ -165,7 +165,7 @@ export default defineEventHandler(async (event) => {
       properties[name] = propertyInfo
     }
 
-    console.log(`[Notion Schema] Parsed ${Object.keys(properties).length} properties`)
+    logger.debug(`[Notion Schema] Parsed ${Object.keys(properties).length} properties`)
 
     return {
       success: true,
@@ -174,9 +174,9 @@ export default defineEventHandler(async (event) => {
       properties
     }
   } catch (error: any) {
-    console.error('[Notion Schema] Error:', error)
-    console.error('[Notion Schema] Error stack:', error.stack)
-    console.error('[Notion Schema] Error details:', JSON.stringify(error, null, 2))
+    logger.error('[Notion Schema] Error:', error)
+    logger.error('[Notion Schema] Error stack:', error.stack)
+    logger.error('[Notion Schema] Error details:', JSON.stringify(error, null, 2))
 
     // Handle Notion API errors
     if (error.code === 'unauthorized') {

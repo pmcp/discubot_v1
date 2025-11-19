@@ -51,9 +51,9 @@ export default defineEventHandler(async (event) => {
     })
 
     // Debug: Log full response
-    console.log('[Notion Users] Raw API Response:', JSON.stringify(response, null, 2))
-    console.log('[Notion Users] Total results from API:', response.results?.length || 0)
-    console.log('[Notion Users] Has next cursor:', !!response.next_cursor)
+    logger.debug('[Notion Users] Raw API Response:', JSON.stringify(response, null, 2))
+    logger.debug('[Notion Users] Total results from API:', response.results?.length || 0)
+    logger.debug('[Notion Users] Has next cursor:', !!response.next_cursor)
 
     // Transform to simpler format for frontend
     const users = response.results.map((user: any) => ({
@@ -67,8 +67,8 @@ export default defineEventHandler(async (event) => {
     // Debug: Log user types breakdown
     const personCount = users.filter((u: any) => u.type === 'person').length
     const botCount = users.filter((u: any) => u.type === 'bot').length
-    console.log(`[Notion Users] User type breakdown - Persons: ${personCount}, Bots: ${botCount}`)
-    console.log('[Notion Users] All users:', users.map((u: any) => ({ name: u.name, type: u.type, email: u.email })))
+    logger.debug(`[Notion Users] User type breakdown - Persons: ${personCount}, Bots: ${botCount}`)
+    logger.debug('[Notion Users] All users:', users.map((u: any) => ({ name: u.name, type: u.type, email: u.email })))
 
     // Filter out bots if requested
     const includeBots = query.includeBots === 'true'
@@ -76,7 +76,7 @@ export default defineEventHandler(async (event) => {
       ? users
       : users.filter((u: any) => u.type === 'person')
 
-    console.log(`[Notion Users] After filtering - Returning ${filteredUsers.length} users for team ${teamId} (includeBots: ${includeBots})`)
+    logger.debug(`[Notion Users] After filtering - Returning ${filteredUsers.length} users for team ${teamId} (includeBots: ${includeBots})`)
 
     return {
       success: true,
@@ -84,7 +84,7 @@ export default defineEventHandler(async (event) => {
       total: filteredUsers.length
     }
   } catch (error: any) {
-    console.error('[Notion Users] Error:', error)
+    logger.error('[Notion Users] Error:', error)
 
     // Handle Notion API errors
     if (error.code === 'unauthorized') {

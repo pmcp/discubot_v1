@@ -23,6 +23,7 @@ import type {
   ThreadMessage,
 } from '~/layers/discubot/types'
 import { AdapterError } from './base'
+import { logger } from '../utils/logger'
 
 /**
  * Slack API base URL
@@ -370,7 +371,7 @@ export class SlackAdapter implements DiscussionSourceAdapter {
       const [channelId, threadTs] = threadId.split(':')
 
       if (!channelId || !threadTs) {
-        console.warn('Invalid thread ID format, cannot post reply')
+        logger.warn('Invalid thread ID format, cannot post reply')
         return false
       }
 
@@ -389,20 +390,20 @@ export class SlackAdapter implements DiscussionSourceAdapter {
       })
 
       if (!response.ok) {
-        console.error(`Failed to post Slack reply: ${response.status} ${response.statusText}`)
+        logger.error(`Failed to post Slack reply: ${response.status} ${response.statusText}`)
         return false
       }
 
       const data = await response.json() as SlackPostMessageResponse
 
       if (!data.ok) {
-        console.error(`Failed to post Slack reply: ${data.error || 'Unknown error'}`)
+        logger.error(`Failed to post Slack reply: ${data.error || 'Unknown error'}`)
         return false
       }
 
       return true
     } catch (error) {
-      console.error('Failed to post Slack reply:', error)
+      logger.error('Failed to post Slack reply:', error)
       return false
     }
   }
@@ -425,7 +426,7 @@ export class SlackAdapter implements DiscussionSourceAdapter {
       const [channelId, threadTs] = threadId.split(':')
 
       if (!channelId || !threadTs) {
-        console.warn('Invalid thread ID format, cannot remove reaction')
+        logger.warn('Invalid thread ID format, cannot remove reaction')
         return false
       }
 
@@ -444,7 +445,7 @@ export class SlackAdapter implements DiscussionSourceAdapter {
       })
 
       if (!response.ok) {
-        console.error(`Failed to remove Slack reaction: ${response.status} ${response.statusText}`)
+        logger.error(`Failed to remove Slack reaction: ${response.status} ${response.statusText}`)
         return false
       }
 
@@ -453,14 +454,14 @@ export class SlackAdapter implements DiscussionSourceAdapter {
       if (!data.ok) {
         // Don't log error if reaction doesn't exist
         if (data.error !== 'no_reaction') {
-          console.error(`Failed to remove Slack reaction: ${data.error || 'Unknown error'}`)
+          logger.error(`Failed to remove Slack reaction: ${data.error || 'Unknown error'}`)
         }
         return data.error === 'no_reaction' // Consider no_reaction as success
       }
 
       return true
     } catch (error) {
-      console.error('Failed to remove Slack reaction:', error)
+      logger.error('Failed to remove Slack reaction:', error)
       return false
     }
   }
@@ -487,7 +488,7 @@ export class SlackAdapter implements DiscussionSourceAdapter {
       const [channelId, threadTs] = threadId.split(':')
 
       if (!channelId || !threadTs) {
-        console.warn('Invalid thread ID format, cannot update status')
+        logger.warn('Invalid thread ID format, cannot update status')
         return false
       }
 
@@ -518,7 +519,7 @@ export class SlackAdapter implements DiscussionSourceAdapter {
       })
 
       if (!response.ok) {
-        console.error(`Failed to update Slack status: ${response.status} ${response.statusText}`)
+        logger.error(`Failed to update Slack status: ${response.status} ${response.statusText}`)
         return false
       }
 
@@ -527,14 +528,14 @@ export class SlackAdapter implements DiscussionSourceAdapter {
       if (!data.ok) {
         // Don't log error if reaction already exists
         if (data.error !== 'already_reacted') {
-          console.error(`Failed to update Slack status: ${data.error || 'Unknown error'}`)
+          logger.error(`Failed to update Slack status: ${data.error || 'Unknown error'}`)
         }
         return data.error === 'already_reacted' // Consider already_reacted as success
       }
 
       return true
     } catch (error) {
-      console.error('Failed to update Slack status:', error)
+      logger.error('Failed to update Slack status:', error)
       return false
     }
   }
@@ -610,7 +611,7 @@ export class SlackAdapter implements DiscussionSourceAdapter {
       const data = await response.json() as SlackAuthTestResponse
       return data.ok
     } catch (error) {
-      console.error('Failed to test Slack connection:', error)
+      logger.error('Failed to test Slack connection:', error)
       return false
     }
   }
@@ -684,14 +685,14 @@ export class SlackAdapter implements DiscussionSourceAdapter {
       })
 
       if (!response.ok) {
-        console.error(`Failed to fetch Slack user info: ${response.status} ${response.statusText}`)
+        logger.error(`Failed to fetch Slack user info: ${response.status} ${response.statusText}`)
         return null
       }
 
       const data = await response.json() as SlackUserInfoResponse
 
       if (!data.ok || !data.user) {
-        console.error(`Failed to fetch Slack user info: ${data.error || 'Unknown error'}`)
+        logger.error(`Failed to fetch Slack user info: ${data.error || 'Unknown error'}`)
         return null
       }
 
@@ -705,7 +706,7 @@ export class SlackAdapter implements DiscussionSourceAdapter {
         avatar: user.profile?.image_72,
       }
     } catch (error) {
-      console.error('Failed to fetch Slack user info:', error)
+      logger.error('Failed to fetch Slack user info:', error)
       return null
     }
   }

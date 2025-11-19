@@ -218,38 +218,38 @@ export function runSecurityChecks(): {
 export function logSecurityChecks(): void {
   const results = runSecurityChecks()
 
-  console.log('\n' + '='.repeat(60))
-  console.log('🔒 SECURITY CHECK RESULTS')
-  console.log('='.repeat(60))
+  logger.debug('\n' + '='.repeat(60))
+  logger.debug('🔒 SECURITY CHECK RESULTS')
+  logger.debug('='.repeat(60))
 
   if (results.errors.length > 0) {
-    console.log('\n❌ ERRORS:')
+    logger.debug('\n❌ ERRORS:')
     for (const error of results.errors) {
-      console.log(`  - ${error.message}`)
+      logger.debug(`  - ${error.message}`)
       if (error.recommendation) {
-        console.log(`    💡 ${error.recommendation}`)
+        logger.debug(`    💡 ${error.recommendation}`)
       }
     }
   }
 
   if (results.warnings.length > 0) {
-    console.log('\n⚠️  WARNINGS:')
+    logger.debug('\n⚠️  WARNINGS:')
     for (const warning of results.warnings) {
-      console.log(`  - ${warning.message}`)
+      logger.debug(`  - ${warning.message}`)
       if (warning.recommendation) {
-        console.log(`    💡 ${warning.recommendation}`)
+        logger.debug(`    💡 ${warning.recommendation}`)
       }
     }
   }
 
   if (results.info.length > 0) {
-    console.log('\n✅ PASSED:')
+    logger.debug('\n✅ PASSED:')
     for (const check of results.info) {
-      console.log(`  - ${check.message}`)
+      logger.debug(`  - ${check.message}`)
     }
   }
 
-  console.log('\n' + '='.repeat(60))
-  console.log(`📊 ${results.summary}`)
-  console.log('='.repeat(60) + '\n')
+  logger.debug('\n' + '='.repeat(60))
+  logger.debug(`📊 ${results.summary}`)
+  logger.debug('='.repeat(60) + '\n')
 }

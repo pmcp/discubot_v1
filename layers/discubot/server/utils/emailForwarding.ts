@@ -2,6 +2,7 @@ import { findUserById } from '@@/server/database/queries/users'
 import { sendEmail } from '@@/server/services/email'
 import { getDiscubotConfigsByIds } from '#layers/discubot/collections/configs/server/database/queries'
 import { updateDiscubotInboxMessage } from '#layers/discubot/collections/inboxMessages/server/database/queries'
+import { logger } from '../utils/logger'
 
 export interface ForwardEmailParams {
   inboxMessageId: string
@@ -84,7 +85,7 @@ export async function forwardEmailToConfigOwner(
     }
   }
   catch (error) {
-    console.error('[Email Forwarding] Failed to forward email:', error)
+    logger.error('[Email Forwarding] Failed to forward email:', error)
     return {
       forwarded: false,
       error: (error as Error).message,

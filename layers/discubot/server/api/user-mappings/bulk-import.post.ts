@@ -63,12 +63,12 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    console.log(`[Bulk Import] Starting import of ${mappings.length} mappings for team ${teamId}`)
+    logger.debug(`[Bulk Import] Starting import of ${mappings.length} mappings for team ${teamId}`)
 
     // Call bulk import service
     const result = await bulkImportMappings(event, teamId, mappings)
 
-    console.log(`[Bulk Import] Complete: ${result.success} success, ${result.failed} failed`)
+    logger.debug(`[Bulk Import] Complete: ${result.success} success, ${result.failed} failed`)
 
     return {
       success: true,
@@ -78,7 +78,7 @@ export default defineEventHandler(async (event) => {
       total: mappings.length
     }
   } catch (error: any) {
-    console.error('[Bulk Import] Error:', error)
+    logger.error('[Bulk Import] Error:', error)
 
     // Pass through already formatted errors
     if (error.statusCode) {

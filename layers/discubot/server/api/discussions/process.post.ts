@@ -172,7 +172,7 @@ export default defineEventHandler(async (event) => {
     // 1. Read and validate request
     const body = await readBody(event)
 
-    console.log('[Processor Endpoint] Received request', {
+    logger.debug('[Processor Endpoint] Received request', {
       type: body?.type,
       discussionId: body?.discussionId,
       teamId: body?.parsed?.teamId,
@@ -196,7 +196,7 @@ export default defineEventHandler(async (event) => {
 
     switch (body.type) {
       case 'direct': {
-        console.log('[Processor Endpoint] Processing direct discussion', {
+        logger.debug('[Processor Endpoint] Processing direct discussion', {
           sourceType: body.parsed.sourceType,
           sourceThreadId: body.parsed.sourceThreadId,
           hasThread: !!body.options?.thread,
@@ -210,7 +210,7 @@ export default defineEventHandler(async (event) => {
       }
 
       case 'reprocess': {
-        console.log('[Processor Endpoint] Reprocessing discussion', {
+        logger.debug('[Processor Endpoint] Reprocessing discussion', {
           discussionId: body.discussionId,
         })
 
@@ -219,7 +219,7 @@ export default defineEventHandler(async (event) => {
       }
 
       case 'retry': {
-        console.log('[Processor Endpoint] Retrying failed discussion', {
+        logger.debug('[Processor Endpoint] Retrying failed discussion', {
           discussionId: body.discussionId,
         })
 
@@ -237,7 +237,7 @@ export default defineEventHandler(async (event) => {
 
     const processingTime = Date.now() - startTime
 
-    console.log('[Processor Endpoint] Processing complete', {
+    logger.debug('[Processor Endpoint] Processing complete', {
       type: body.type,
       discussionId: result.discussionId,
       notionTaskCount: result.notionTasks.length,
@@ -267,7 +267,7 @@ export default defineEventHandler(async (event) => {
     }
   }
   catch (error) {
-    console.error('[Processor Endpoint] Processing failed:', error)
+    logger.error('[Processor Endpoint] Processing failed:', error)
 
     // If this is already a H3Error from createError(), re-throw it
     if ((error as any).statusCode) {

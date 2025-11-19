@@ -13,6 +13,7 @@
  */
 
 import crypto from 'node:crypto'
+import { logger } from '../utils/logger'
 
 /**
  * Replay attack prevention window (5 minutes)
@@ -61,7 +62,7 @@ export function verifySlackSignature(
     const signature = (headers['x-slack-signature'] || headers['X-Slack-Signature']) as string | undefined
 
     if (!timestamp || !signature) {
-      console.warn('[Webhook Security] Missing Slack signature headers')
+      logger.warn('[Webhook Security] Missing Slack signature headers')
       return false
     }
 
@@ -71,7 +72,7 @@ export function verifySlackSignature(
     const timeDiff = Math.abs(currentTime - requestTime)
 
     if (timeDiff > TIMESTAMP_TOLERANCE_MS) {
-      console.warn('[Webhook Security] Slack request timestamp outside tolerance window', {
+      logger.warn('[Webhook Security] Slack request timestamp outside tolerance window', {
         requestTime: new Date(requestTime).toISOString(),
         currentTime: new Date(currentTime).toISOString(),
         diffMinutes: (timeDiff / 60000).toFixed(2),
@@ -93,7 +94,7 @@ export function verifySlackSignature(
     )
   }
   catch (error) {
-    console.error('[Webhook Security] Error verifying Slack signature:', error)
+    logger.error('[Webhook Security] Error verifying Slack signature:', error)
     return false
   }
 }
@@ -144,7 +145,7 @@ export function verifyMailgunSignature(
     const timeDiff = Math.abs(currentTime - requestTime)
 
     if (timeDiff > TIMESTAMP_TOLERANCE_MS) {
-      console.warn('[Webhook Security] Mailgun request timestamp outside tolerance window', {
+      logger.warn('[Webhook Security] Mailgun request timestamp outside tolerance window', {
         requestTime: new Date(requestTime).toISOString(),
         currentTime: new Date(currentTime).toISOString(),
         diffMinutes: (timeDiff / 60000).toFixed(2),
@@ -166,7 +167,7 @@ export function verifyMailgunSignature(
     )
   }
   catch (error) {
-    console.error('[Webhook Security] Error verifying Mailgun signature:', error)
+    logger.error('[Webhook Security] Error verifying Mailgun signature:', error)
     return false
   }
 }

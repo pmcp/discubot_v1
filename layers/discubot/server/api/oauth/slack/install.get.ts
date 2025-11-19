@@ -95,7 +95,7 @@ export default defineEventHandler(async (event) => {
     // Optional: Add user scopes if needed (for actions on behalf of users)
     // slackAuthUrl.searchParams.set('user_scope', 'users:read')
 
-    console.log('[OAuth] Initiating Slack OAuth flow', {
+    logger.debug('[OAuth] Initiating Slack OAuth flow', {
       teamId,
       state: state.substring(0, 8) + '...',
       redirectUri,
@@ -105,7 +105,7 @@ export default defineEventHandler(async (event) => {
     return sendRedirect(event, slackAuthUrl.toString(), 302)
   }
   catch (error) {
-    console.error('[OAuth] Failed to initiate Slack OAuth flow:', error)
+    logger.error('[OAuth] Failed to initiate Slack OAuth flow:', error)
 
     // Return user-friendly error
     throw createError({

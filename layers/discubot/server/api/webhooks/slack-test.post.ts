@@ -4,17 +4,17 @@
  */
 
 export default defineEventHandler(async (event) => {
-  console.log('========== SLACK TEST ENDPOINT HIT ==========')
-  console.log('Method:', event.method)
-  console.log('Path:', event.path)
-  console.log('Headers:', getHeaders(event))
+  logger.debug('========== SLACK TEST ENDPOINT HIT ==========')
+  logger.debug('Method:', event.method)
+  logger.debug('Path:', event.path)
+  logger.debug('Headers:', getHeaders(event))
 
   const body = await readBody(event)
-  console.log('Body:', JSON.stringify(body))
+  logger.debug('Body:', JSON.stringify(body))
 
   // If it's URL verification, respond
   if (body && body.type === 'url_verification') {
-    console.log('URL verification challenge received:', body.challenge)
+    logger.debug('URL verification challenge received:', body.challenge)
     return { challenge: body.challenge }
   }
 

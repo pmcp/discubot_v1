@@ -21,6 +21,7 @@ import type {
   TaskDetectionResult,
 } from '#layers/discubot/types'
 import { retryWithBackoff } from '../utils/retry'
+import { logger } from '../utils/logger'
 
 /**
  * In-memory cache for AI responses
@@ -156,7 +157,7 @@ function buildSummaryPrompt(
 
   // If custom prompt is provided, use it with context
   if (customPrompt) {
-    console.log('[AI Service] Using custom prompt template:', customPrompt)
+    logger.debug('[AI Service] Using custom prompt template:', customPrompt)
 
     // First, provide the custom instructions
     prompt = `${customPrompt}\n\n`
@@ -221,7 +222,7 @@ async function generateSummary(
   // Build prompt with optional custom prompt (similar to Figno prototype)
   const prompt = buildSummaryPrompt(thread, sourceType, summaryPrompt)
 
-  console.log('[AI Service] Built summary prompt:', {
+  logger.debug('[AI Service] Built summary prompt:', {
     hasCustomPrompt: !!summaryPrompt,
     customPromptLength: summaryPrompt?.length,
     promptLength: prompt.length,
@@ -262,9 +263,7 @@ async function generateSummary(
 
   const result = JSON.parse(jsonMatch[0])
 
-  console.log(
-    `[AI Service] Generated summary in ${Date.now() - startTime}ms`,
-  )
+  logger.debug('Generated summary', { duration: Date.now() - startTime })
 
   return {
     summary: result.summary,
@@ -506,15 +505,13 @@ Respond with ONLY valid JSON in this exact format:
 
   const result = JSON.parse(jsonMatch[0])
 
-  console.log(
-    `[AI Service] Detected ${result.tasks.length} task(s) in ${Date.now() - startTime}ms`,
-  )
+  logger.debug('Detected tasks', { count: result.tasks.length, duration: Date.now() - startTime })
 
   // Log detailed task information for debugging user mappings
-  console.log(`[AI Service] 🔍 Task Detection Debug - Full result:`)
+  logger.debug(`[AI Service] 🔍 Task Detection Debug - Full result:`)
   for (let i = 0; i < result.tasks.length; i++) {
     const task = result.tasks[i]
-    console.log(`[AI Service] 🔍 Task ${i + 1}:`, {
+    logger.debug(`[AI Service] 🔍 Task ${i + 1}:`, {
       title: task.title,
       actionItems: task.actionItems?.length || 0,
       assignee: task.assignee,
@@ -525,16 +522,16 @@ Respond with ONLY valid JSON in this exact format:
     })
 
     if (task.assignee) {
-      console.log(`[AI Service] ✅ AI extracted assignee: "${task.assignee}" (this will be looked up in user mappings)`)
+      logger.debug(`[AI Service] ✅ AI extracted assignee: "${task.assignee}" (this will be looked up in user mappings)`)
     } else {
-      console.log(`[AI Service] ⚠️  AI did not extract an assignee - returned null`)
-      console.log(`[AI Service] 💡 Tip: Ensure discussion clearly mentions user with Slack ID (U...) or email`)
+      logger.debug(`[AI Service] ⚠️  AI did not extract an assignee - returned null`)
+      logger.debug(`[AI Service] 💡 Tip: Ensure discussion clearly mentions user with Slack ID (U...) or email`)
     }
 
     if (task.actionItems && task.actionItems.length > 0) {
-      console.log(`[AI Service] ✅ AI extracted ${task.actionItems.length} action items for this task`)
+      logger.debug(`[AI Service] ✅ AI extracted ${task.actionItems.length} action items for this task`)
     } else {
-      console.log(`[AI Service] ⚠️  No action items extracted for this task`)
+      logger.debug(`[AI Service] ⚠️  No action items extracted for this task`)
     }
   }
 
@@ -562,15 +559,15 @@ export async function analyzeDiscussion(
     const cached = getCachedAnalysis(cacheKey)
 
     if (cached) {
-      console.log(`[AI Service] Cache hit for thread ${thread.id}`)
+      logger.debug(`[AI Service] Cache hit for thread ${thread.id}`)
       return cached
     }
 
-    console.log(`[AI Service] Cache miss for thread ${thread.id}`)
+    logger.debug(`[AI Service] Cache miss for thread ${thread.id}`)
   }
 
   // Perform AI analysis
-  console.log(`[AI Service] Analyzing thread ${thread.id}...`)
+  logger.debug(`[AI Service] Analyzing thread ${thread.id}...`)
 
   const [summary, taskDetection] = await Promise.all([
     generateSummary(thread, options),
@@ -590,14 +587,10 @@ export async function analyzeDiscussion(
   if (!options.skipCache) {
     const cacheKey = generateCacheKey(thread)
     setCachedAnalysis(cacheKey, result)
-    console.log(
-      `[AI Service] Cached analysis for thread ${thread.id}`,
-    )
+    logger.debug('Cached analysis for thread', { threadId: thread.id })
   }
 
-  console.log(
-    `[AI Service] Completed analysis in ${processingTime}ms`,
-  )
+  logger.info('Completed analysis', { processingTime })
 
   return result
 }
@@ -609,7 +602,7 @@ export async function analyzeDiscussion(
 export function clearAnalysisCache(): void {
   const size = analysisCache.size
   analysisCache.clear()
-  console.log(`[AI Service] Cleared ${size} cached analyses`)
+  logger.debug(`[AI Service] Cleared ${size} cached analyses`)
 }
 
 /**
@@ -654,8 +647,6 @@ export function cleanupExpiredCache(): void {
   const removed = before - analysisCache.size
 
   if (removed > 0) {
-    console.log(
-      `[AI Service] Cleaned up ${removed} expired cache entries`,
-    )
+    logger.debug('Cleaned up expired cache entries', { removed })
   }
 }

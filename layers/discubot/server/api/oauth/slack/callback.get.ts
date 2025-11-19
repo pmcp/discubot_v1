@@ -54,7 +54,7 @@ export default defineEventHandler(async (event) => {
 
     // Handle authorization denial
     if (error) {
-      console.error('[OAuth] User denied authorization:', error)
+      logger.error('[OAuth] User denied authorization:', error)
       throw createError({
         statusCode: 403,
         statusMessage: `Slack authorization denied: ${error}`,
@@ -80,7 +80,7 @@ export default defineEventHandler(async (event) => {
     const stateData = await hubKV().get<{ teamId: string; createdAt: number }>(`oauth:state:${state}`)
 
     if (!stateData) {
-      console.error('[OAuth] Invalid or expired state token')
+      logger.error('[OAuth] Invalid or expired state token')
       throw createError({
         statusCode: 403,
         statusMessage: 'Invalid or expired authorization request',
@@ -110,7 +110,7 @@ export default defineEventHandler(async (event) => {
     // Build redirect URI (must match install.get.ts)
     const redirectUri = `${baseUrl}/api/oauth/slack/callback`
 
-    console.log('[OAuth] Exchanging code for access token', {
+    logger.debug('[OAuth] Exchanging code for access token', {
       teamId,
       codePrefix: code.substring(0, 10) + '...',
     })
@@ -132,7 +132,7 @@ export default defineEventHandler(async (event) => {
     })
 
     if (!tokenResponse.ok) {
-      console.error('[OAuth] Token exchange failed:', tokenResponse.status, tokenResponse.statusText)
+      logger.error('[OAuth] Token exchange failed:', tokenResponse.status, tokenResponse.statusText)
       throw createError({
         statusCode: 502,
         statusMessage: 'Failed to exchange authorization code',
@@ -142,14 +142,14 @@ export default defineEventHandler(async (event) => {
     const tokenData = await tokenResponse.json() as SlackOAuthResponse
 
     if (!tokenData.ok || !tokenData.access_token) {
-      console.error('[OAuth] Token exchange error:', tokenData.error)
+      logger.error('[OAuth] Token exchange error:', tokenData.error)
       throw createError({
         statusCode: 502,
         statusMessage: `Slack OAuth error: ${tokenData.error || 'Unknown error'}`,
       })
     }
 
-    console.log('[OAuth] Successfully obtained access token', {
+    logger.debug('[OAuth] Successfully obtained access token', {
       teamId,
       slackTeamId: tokenData.team?.id,
       slackTeamName: tokenData.team?.name,
@@ -170,7 +170,7 @@ export default defineEventHandler(async (event) => {
     return sendRedirect(event, successUrl.toString(), 302)
   }
   catch (error) {
-    console.error('[OAuth] Callback handler failed:', error)
+    logger.error('[OAuth] Callback handler failed:', error)
 
     // If it's already a createError, rethrow it
     if (error && typeof error === 'object' && 'statusCode' in error) {

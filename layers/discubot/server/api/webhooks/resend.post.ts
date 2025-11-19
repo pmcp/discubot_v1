@@ -108,14 +108,14 @@ function validateResendWebhook(payload: ResendWebhookPayload): void {
  */
 async function findConfigByRecipient(recipientEmail: string): Promise<{ config: any; teamId: string } | null> {
   try {
-    console.log('[Resend Webhook] Looking for config by email', {
+    logger.debug('[Resend Webhook] Looking for config by email', {
       recipientEmail,
     })
 
     const config = await findDiscubotConfigByEmail(recipientEmail)
 
     if (config) {
-      console.log('[Resend Webhook] Found matching config', {
+      logger.debug('[Resend Webhook] Found matching config', {
         configId: config.id,
         teamId: config.teamId,
         emailAddress: config.emailAddress,
@@ -127,10 +127,10 @@ async function findConfigByRecipient(recipientEmail: string): Promise<{ config: 
       }
     }
 
-    console.log('[Resend Webhook] No matching config found')
+    logger.debug('[Resend Webhook] No matching config found')
     return null
   } catch (error) {
-    console.error('[Resend Webhook] Error finding config:', error)
+    logger.error('[Resend Webhook] Error finding config:', error)
     return null
   }
 }
@@ -155,7 +155,7 @@ async function verifyResendWebhookSignature(
   const svixSignature = getHeader(event, 'svix-signature')
 
   if (!svixId || !svixTimestamp || !svixSignature) {
-    console.warn('[Resend Webhook] Missing Svix signature headers')
+    logger.warn('[Resend Webhook] Missing Svix signature headers')
     return false
   }
 
@@ -208,10 +208,10 @@ async function verifyResendWebhookSignature(
       }
     }
 
-    console.warn('[Resend Webhook] Signature mismatch')
+    logger.warn('[Resend Webhook] Signature mismatch')
     return false
   } catch (error) {
-    console.error('[Resend Webhook] Signature verification error:', error)
+    logger.error('[Resend Webhook] Signature verification error:', error)
     return false
   }
 }
@@ -235,7 +235,7 @@ export default defineEventHandler(async (event) => {
     // Parse the JSON payload
     const payload = JSON.parse(rawBody) as ResendWebhookPayload
 
-    console.log('[Resend Webhook] Received webhook', {
+    logger.debug('[Resend Webhook] Received webhook', {
       type: payload.type,
       emailId: payload.data?.email_id,
       from: payload.data?.from,
@@ -253,16 +253,16 @@ export default defineEventHandler(async (event) => {
       const isValid = await verifyResendWebhookSignature(event, rawBody, signingSecret)
 
       if (!isValid) {
-        console.warn('[Resend Webhook] Invalid signature detected')
+        logger.warn('[Resend Webhook] Invalid signature detected')
         throw createError({
           statusCode: 401,
           statusMessage: 'Invalid webhook signature',
         })
       }
 
-      console.log('[Resend Webhook] Signature verified successfully')
+      logger.debug('[Resend Webhook] Signature verified successfully')
     } else {
-      console.warn('[Resend Webhook] Signature verification skipped - RESEND_WEBHOOK_SIGNING_SECRET not configured')
+      logger.warn('[Resend Webhook] Signature verification skipped - RESEND_WEBHOOK_SIGNING_SECRET not configured')
     }
 
     // 3. Fetch email content from Resend API
@@ -279,13 +279,13 @@ export default defineEventHandler(async (event) => {
     let resendEmail
     try {
       resendEmail = await fetchResendEmail(payload.data.email_id, resendApiToken)
-      console.log('[Resend Webhook] Fetched email content', {
+      logger.debug('[Resend Webhook] Fetched email content', {
         emailId: resendEmail.id,
         hasHtml: !!resendEmail.html,
         hasText: !!resendEmail.text,
       })
     } catch (error) {
-      console.error('[Resend Webhook] Failed to fetch email content:', error)
+      logger.error('[Resend Webhook] Failed to fetch email content:', error)
       throw createError({
         statusCode: 422,
         statusMessage: 'Failed to fetch email from Resend API',
@@ -303,7 +303,7 @@ export default defineEventHandler(async (event) => {
       text: resendEmail.text,
     })
 
-    console.log('[Resend Webhook] Email classified', {
+    logger.debug('[Resend Webhook] Email classified', {
       messageType: classification.messageType,
       confidence: classification.confidence,
       reason: classification.reason,
@@ -317,7 +317,7 @@ export default defineEventHandler(async (event) => {
       const result = await findConfigByRecipient(recipient)
 
       if (!result) {
-        console.warn('[Resend Webhook] No matching config found for inbox message', {
+        logger.warn('[Resend Webhook] No matching config found for inbox message', {
           recipient,
           messageType: classification.messageType,
         })
@@ -366,14 +366,14 @@ export default defineEventHandler(async (event) => {
           })
 
           if (forwardResult.forwarded) {
-            console.log('[Resend Webhook] Email forwarded', {
+            logger.debug('[Resend Webhook] Email forwarded', {
               inboxMessageId: inboxMessage.id,
               forwardedTo: forwardResult.forwardedTo,
               messageType: classification.messageType,
             })
           }
           else {
-            console.warn('[Resend Webhook] Email forwarding failed', {
+            logger.warn('[Resend Webhook] Email forwarding failed', {
               inboxMessageId: inboxMessage.id,
               reason: forwardResult.error,
             })
@@ -382,7 +382,7 @@ export default defineEventHandler(async (event) => {
 
         const processingTime = Date.now() - startTime
 
-        console.log('[Resend Webhook] Inbox message stored', {
+        logger.debug('[Resend Webhook] Inbox message stored', {
           inboxMessageId: inboxMessage.id,
           messageType: classification.messageType,
           configId,
@@ -400,7 +400,7 @@ export default defineEventHandler(async (event) => {
           },
         }
       } catch (error) {
-        console.error('[Resend Webhook] Failed to store inbox message:', error)
+        logger.error('[Resend Webhook] Failed to store inbox message:', error)
         throw createError({
           statusCode: 500,
           statusMessage: 'Failed to store inbox message',
@@ -416,7 +416,7 @@ export default defineEventHandler(async (event) => {
     // This allows us to reuse the existing Figma adapter without any changes!
     const mailgunFormat = transformToMailgunFormat(resendEmail)
 
-    console.log('[Resend Webhook] Transformed to Mailgun format', {
+    logger.debug('[Resend Webhook] Transformed to Mailgun format', {
       recipient: mailgunFormat.recipient,
       from: mailgunFormat.from,
       subject: mailgunFormat.subject,
@@ -430,13 +430,13 @@ export default defineEventHandler(async (event) => {
     let parsed: ParsedDiscussion
     try {
       parsed = await adapter.parseIncoming(mailgunFormat)
-      console.log('[Resend Webhook] Successfully parsed comment email', {
+      logger.debug('[Resend Webhook] Successfully parsed comment email', {
         teamId: parsed.teamId,
         sourceThreadId: parsed.sourceThreadId,
         authorHandle: parsed.authorHandle,
       })
     } catch (error) {
-      console.error('[Resend Webhook] Failed to parse email:', error)
+      logger.error('[Resend Webhook] Failed to parse email:', error)
       throw createError({
         statusCode: 422,
         statusMessage: 'Failed to parse email',
@@ -452,7 +452,7 @@ export default defineEventHandler(async (event) => {
 
       const processingTime = Date.now() - startTime
 
-      console.log('[Resend Webhook] Successfully processed comment discussion', {
+      logger.debug('[Resend Webhook] Successfully processed comment discussion', {
         discussionId: result.discussionId,
         notionTaskCount: result.notionTasks.length,
         isMultiTask: result.isMultiTask,
@@ -474,7 +474,7 @@ export default defineEventHandler(async (event) => {
         },
       }
     } catch (error) {
-      console.error('[Resend Webhook] Failed to process discussion:', error)
+      logger.error('[Resend Webhook] Failed to process discussion:', error)
 
       // Determine if error is retryable (for webhook retry logic)
       const isRetryable = (error as any).retryable === true
@@ -494,7 +494,7 @@ export default defineEventHandler(async (event) => {
     }
   } catch (error) {
     // Handle all other unexpected errors
-    console.error('[Resend Webhook] Unexpected error:', error)
+    logger.error('[Resend Webhook] Unexpected error:', error)
 
     // If this is already a H3Error from createError(), re-throw it
     if ((error as any).statusCode) {

@@ -13,6 +13,7 @@
 
 import { eq, and } from 'drizzle-orm'
 import type { H3Event } from 'h3'
+import { logger } from '../utils/logger'
 
 export interface UserMappingInput {
   teamId: string
@@ -116,7 +117,7 @@ export async function getOrCreateUserMapping(
 
     // If no Notion user ID provided, can't create mapping
     if (!input.notionUserId) {
-      console.log(`[UserMapping] No mapping found and no notionUserId provided for ${input.sourceType}:${input.sourceUserId}`)
+      logger.debug(`[UserMapping] No mapping found and no notionUserId provided for ${input.sourceType}:${input.sourceUserId}`)
       return null
     }
 
@@ -144,11 +145,11 @@ export async function getOrCreateUserMapping(
       .returning()
       .get()
 
-    console.log(`[UserMapping] Created new mapping: ${input.sourceType}:${input.sourceUserId} -> Notion:${input.notionUserId}`)
+    logger.debug(`[UserMapping] Created new mapping: ${input.sourceType}:${input.sourceUserId} -> Notion:${input.notionUserId}`)
 
     return result as UserMappingResult
   } catch (error) {
-    console.error('[UserMapping] Error in getOrCreateUserMapping:', error)
+    logger.error('[UserMapping] Error in getOrCreateUserMapping:', error)
     throw error
   }
 }
@@ -211,7 +212,7 @@ export async function findMappingByEmail(
     const sorted = results.sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
     return sorted[0] as UserMappingResult
   } catch (error) {
-    console.error('[UserMapping] Error finding mapping by email:', error)
+    logger.error('[UserMapping] Error finding mapping by email:', error)
     return null
   }
 }
@@ -267,7 +268,7 @@ export async function syncFromSlack(
     })
 
     if (!userInfo.ok) {
-      console.error('[UserMapping] Slack API error:', userInfo.error)
+      logger.error('[UserMapping] Slack API error:', userInfo.error)
       return null
     }
 
@@ -293,7 +294,7 @@ export async function syncFromSlack(
       }
     })
   } catch (error) {
-    console.error('[UserMapping] Error syncing from Slack:', error)
+    logger.error('[UserMapping] Error syncing from Slack:', error)
     return null
   }
 }
@@ -328,7 +329,7 @@ export async function syncFromFigma(
       }
     })
   } catch (error) {
-    console.error('[UserMapping] Error syncing from Figma:', error)
+    logger.error('[UserMapping] Error syncing from Figma:', error)
     return null
   }
 }
@@ -378,10 +379,10 @@ export async function bulkImportMappings(
     } catch (error) {
       results.failed++
       results.errors.push(`${mapping.sourceType}:${mapping.sourceUserId} - ${error}`)
-      console.error('[UserMapping] Bulk import error:', error)
+      logger.error('[UserMapping] Bulk import error:', error)
     }
   }
 
-  console.log(`[UserMapping] Bulk import complete: ${results.success} success, ${results.failed} failed`)
+  logger.debug(`[UserMapping] Bulk import complete: ${results.success} success, ${results.failed} failed`)
   return results
 }
