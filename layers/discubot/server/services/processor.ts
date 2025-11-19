@@ -137,15 +137,16 @@ async function loadSourceConfig(
     }
 
     // For Figma, match by emailSlug
-    if (sourceType === 'figma' && metadata?.emailSlug) {
-      // Try to match by emailSlug first
-      if (config.emailSlug === metadata.emailSlug) {
+    if (sourceType === 'figma') {
+      // Match by emailSlug (required for Figma)
+      if (metadata?.emailSlug && config.emailSlug === metadata.emailSlug) {
         return true
       }
     }
 
-    // Fallback: match by teamId directly
-    return config.teamId === teamId
+    // No fallback - we require explicit matching by source identifiers
+    // to prevent accidentally using wrong configs
+    return false
   })
 
   if (!matchingConfig) {
