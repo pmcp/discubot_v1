@@ -302,52 +302,174 @@ async function detectTasks(
   // Use customTaskPrompt if available, fallback to customPrompt for backward compatibility
   const taskPrompt = options.customTaskPrompt || options.customPrompt
 
-  const prompt = `Analyze this discussion and identify actionable tasks.
+  const prompt = `<task>
+Analyze this discussion and identify actionable tasks. Extract task-specific action items for each task.
+</task>
 
-Discussion:
+<discussion>
 ${messages}
+</discussion>
 
-${taskPrompt || ''}
+${taskPrompt ? `<custom_instructions>\n${taskPrompt}\n</custom_instructions>` : ''}
 
-Instructions:
-- Identify specific, actionable tasks mentioned or implied
-- Extract title, description, and metadata for each task
-- Determine if there are multiple distinct tasks (isMultiTask: true/false)
-- Maximum ${maxTasks} tasks
-- If no clear tasks, return empty array
+<instructions>
 
-CRITICAL - Confidence Rules:
+## Task Detection Guidelines
+
+1. **Identify Distinct Tasks**: Look for specific, actionable work items mentioned or implied
+2. **Maximum Tasks**: Extract up to ${maxTasks} tasks
+3. **Empty Array**: If no clear tasks exist, return empty array
+4. **Multi-Task Detection**: Set isMultiTask=true if 2+ distinct tasks exist
+
+## Action Items Extraction (CRITICAL)
+
+For each task, extract **task-specific action items** - concrete steps needed to complete ONLY this task.
+
+<action_items_rules>
+- Action items must be SPECIFIC to the individual task, not global discussion insights
+- Each task should have 2-6 actionable checklist items
+- Focus on WHAT needs to be done for THIS task, not WHY decisions were made
+- Avoid duplicating the same action items across multiple tasks
+- If task is simple, fewer items are okay (even 1-2)
+- If no clear action items exist for a task, return null or empty array
+
+GOOD task-specific action items:
+✅ "Create collapsible nav component with 48px/240px states"
+✅ "Add aria-label attributes to all navigation items"
+✅ "Test responsive behavior on mobile devices"
+
+BAD action items (too generic/global):
+❌ "Analytics showed Dashboard is used 68% of the time" (this is context, not an action)
+❌ "Rejected bottom nav pattern in favor of side nav" (this is a decision, not a task step)
+❌ "Team decided to use Lucide icons" (this is background, not what to do)
+</action_items_rules>
+
+<examples>
+Example 1 - Single task:
+Discussion: "The login button needs to be bigger and have better contrast for accessibility."
+Result:
+{
+  "isMultiTask": false,
+  "tasks": [{
+    "title": "Improve login button accessibility",
+    "description": "Increase size and contrast of login button to meet WCAG standards",
+    "actionItems": [
+      "Increase button size to minimum 44x44px touch target",
+      "Update button colors to meet WCAG AA contrast ratio (4.5:1)",
+      "Test with screen reader to verify button announcement"
+    ],
+    "priority": "medium",
+    "type": "improvement"
+  }]
+}
+
+Example 2 - Multiple related tasks:
+Discussion: "We need to redesign the navigation. Build a collapsible side nav, add accessibility features, and test it on mobile."
+Result:
+{
+  "isMultiTask": true,
+  "tasks": [
+    {
+      "title": "Build collapsible side navigation component",
+      "description": "Create a responsive side nav that collapses on mobile",
+      "actionItems": [
+        "Create nav component with collapsed (48px) and expanded (240px) states",
+        "Add smooth 200ms transitions between states",
+        "Implement localStorage to save user preference",
+        "Add 6 primary navigation items with icons"
+      ],
+      "priority": "high",
+      "type": "feature"
+    },
+    {
+      "title": "Add accessibility features to navigation",
+      "description": "Ensure navigation meets WCAG standards",
+      "actionItems": [
+        "Add aria-label attributes with full text for each nav item",
+        "Implement aria-current for active navigation state",
+        "Add 2px focus ring with high contrast colors",
+        "Test tooltip accessibility with screen readers"
+      ],
+      "priority": "high",
+      "type": "improvement"
+    },
+    {
+      "title": "Test navigation on mobile devices",
+      "description": "Verify responsive behavior and usability across breakpoints",
+      "actionItems": [
+        "Test collapsed state on mobile (<768px)",
+        "Verify transitions and animations are smooth",
+        "Test touch interactions and gestures",
+        "Validate localStorage persistence across sessions"
+      ],
+      "priority": "medium",
+      "type": "improvement"
+    }
+  ]
+}
+</examples>
+
+## Field Standardization
+
+<field_rules>
+### Confidence Rules (CRITICAL)
 - ONLY fill fields if you are confident in the value
 - If uncertain about priority, type, assignee, or other fields, return null
 - Better to return null than guess incorrectly
 - This maintains data quality and prevents incorrect field mappings
 
-Field Standardization:
-- priority: Use ONLY "low", "medium", "high", "urgent", or null (if uncertain)
-- type: Use ONLY "bug", "feature", "question", "improvement", or null (if uncertain)
-- assignee: Extract the Notion user ID from mentions in format "@Name (notion-uuid)"
-  - Return ONLY the UUID part (e.g., from "@John Doe (abc-123-def)" return "abc-123-def")
-  - If multiple people mentioned, pick the most relevant person for the task
-  - If no clear assignee or no UUID available, return null
-- tags: Extract relevant tags if mentioned, otherwise null
-- dueDate: Extract if explicitly mentioned, otherwise null
+### Priority
+Use ONLY: "low" | "medium" | "high" | "urgent" | null
+- "urgent": Blocking issue, must be done immediately
+- "high": Important work, should be done soon
+- "medium": Normal priority work
+- "low": Nice to have, can wait
+- null: If uncertain
 
-Respond in JSON format:
+### Type
+Use ONLY: "bug" | "feature" | "question" | "improvement" | null
+- "bug": Something is broken and needs fixing
+- "feature": New functionality or capability
+- "question": Needs clarification or investigation
+- "improvement": Enhancement to existing functionality
+- null: If uncertain
+
+### Assignee
+Extract the Notion user ID from mentions in format "@Name (notion-uuid)"
+- Return ONLY the UUID part (e.g., from "@John Doe (abc-123-def)" return "abc-123-def")
+- If multiple people mentioned, pick the most relevant person for the task
+- If no clear assignee or no UUID available, return null
+
+### Tags
+Extract relevant technical or categorical tags if mentioned (e.g., ["navigation", "accessibility", "mobile"])
+Return null if no clear tags
+
+### Due Date
+Extract only if explicitly mentioned (format: "YYYY-MM-DD")
+Return null if not mentioned or unclear
+</field_rules>
+
+</instructions>
+
+<response_format>
+Respond with ONLY valid JSON in this exact format:
 {
   "isMultiTask": true|false,
   "tasks": [
     {
-      "title": "...",
-      "description": "...",
+      "title": "Concise task title (5-10 words)",
+      "description": "Clear description of what needs to be done (1-2 sentences)",
+      "actionItems": ["Step 1", "Step 2", "Step 3"] or null,
       "priority": "low"|"medium"|"high"|"urgent"|null,
       "type": "bug"|"feature"|"question"|"improvement"|null,
-      "assignee": "U123ABC"|"user@example.com"|null,
-      "dueDate": "2024-01-15"|null,
+      "assignee": "uuid-string"|null,
+      "dueDate": "YYYY-MM-DD"|null,
       "tags": ["tag1", "tag2"]|null
     }
   ],
   "confidence": 0.0-1.0
-}`
+}
+</response_format>`
 
   const startTime = Date.now()
 
@@ -394,6 +516,7 @@ Respond in JSON format:
     const task = result.tasks[i]
     console.log(`[AI Service] 🔍 Task ${i + 1}:`, {
       title: task.title,
+      actionItems: task.actionItems?.length || 0,
       assignee: task.assignee,
       priority: task.priority,
       type: task.type,
@@ -406,6 +529,12 @@ Respond in JSON format:
     } else {
       console.log(`[AI Service] ⚠️  AI did not extract an assignee - returned null`)
       console.log(`[AI Service] 💡 Tip: Ensure discussion clearly mentions user with Slack ID (U...) or email`)
+    }
+
+    if (task.actionItems && task.actionItems.length > 0) {
+      console.log(`[AI Service] ✅ AI extracted ${task.actionItems.length} action items for this task`)
+    } else {
+      console.log(`[AI Service] ⚠️  No action items extracted for this task`)
     }
   }
 

@@ -56,6 +56,8 @@ export interface AISummary {
 export interface DetectedTask {
   title: string
   description: string
+  /** Task-specific action items (concrete steps for THIS task only) */
+  actionItems?: string[] | null
   /** Priority level - AI returns null if uncertain */
   priority?: 'low' | 'medium' | 'high' | 'urgent' | null
   /** Task type - AI returns null if uncertain */

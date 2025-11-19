@@ -280,7 +280,7 @@ function buildTaskContent(
 ): any[] {
   const blocks: any[] = []
 
-  // AI Summary callout
+  // AI Summary callout (concise, task-focused)
   if (aiSummary.summary) {
     blocks.push({
       object: 'block',
@@ -297,8 +297,8 @@ function buildTaskContent(
     })
   }
 
-  // Action items as checkboxes
-  if (aiSummary.keyPoints && aiSummary.keyPoints.length > 0) {
+  // Task-specific action items (NEW)
+  if (task.actionItems && task.actionItems.length > 0) {
     blocks.push({
       object: 'block',
       type: 'heading_3',
@@ -306,13 +306,13 @@ function buildTaskContent(
         rich_text: [
           {
             type: 'text',
-            text: { content: '📋 Key Action Items' },
+            text: { content: '📋 This Task Requires' },
           },
         ],
       },
     })
 
-    for (const point of aiSummary.keyPoints) {
+    for (const item of task.actionItems) {
       blocks.push({
         object: 'block',
         type: 'to_do',
@@ -321,12 +321,41 @@ function buildTaskContent(
           rich_text: [
             {
               type: 'text',
-              text: { content: point },
+              text: { content: item },
             },
           ],
         },
       })
     }
+  }
+
+  // Discussion Context (collapsible) - Global insights from discussion
+  if (aiSummary.keyPoints && aiSummary.keyPoints.length > 0) {
+    blocks.push({
+      object: 'block',
+      type: 'toggle',
+      toggle: {
+        rich_text: [
+          {
+            type: 'text',
+            text: { content: '🔍 Discussion Context' },
+            annotations: { bold: true },
+          },
+        ],
+        children: aiSummary.keyPoints.map(point => ({
+          object: 'block',
+          type: 'bulleted_list_item',
+          bulleted_list_item: {
+            rich_text: [
+              {
+                type: 'text',
+                text: { content: point },
+              },
+            ],
+          },
+        })),
+      },
+    })
   }
 
   // Participants with @mentions (if userMentions provided)
@@ -401,7 +430,7 @@ function buildTaskContent(
     divider: {},
   })
 
-  // Thread content
+  // Thread content summary (task-specific description)
   blocks.push({
     object: 'block',
     type: 'heading_2',
@@ -425,6 +454,92 @@ function buildTaskContent(
           text: { content: task.description.substring(0, 2000) },
         },
       ],
+    },
+  })
+
+  // Full Discussion Thread (collapsible)
+  const threadMessages: any[] = []
+
+  // Add root message
+  threadMessages.push({
+    object: 'block',
+    type: 'paragraph',
+    paragraph: {
+      rich_text: [
+        {
+          type: 'text',
+          text: { content: `${thread.rootMessage.authorHandle}:` },
+          annotations: { bold: true },
+        },
+      ],
+    },
+  })
+  threadMessages.push({
+    object: 'block',
+    type: 'paragraph',
+    paragraph: {
+      rich_text: [
+        {
+          type: 'text',
+          text: { content: thread.rootMessage.content.substring(0, 2000) },
+        },
+      ],
+    },
+  })
+
+  // Add replies
+  for (const reply of thread.replies) {
+    threadMessages.push({
+      object: 'block',
+      type: 'paragraph',
+      paragraph: {
+        rich_text: [
+          {
+            type: 'text',
+            text: { content: '—' },
+          },
+        ],
+      },
+    })
+    threadMessages.push({
+      object: 'block',
+      type: 'paragraph',
+      paragraph: {
+        rich_text: [
+          {
+            type: 'text',
+            text: { content: `${reply.authorHandle}:` },
+            annotations: { bold: true },
+          },
+        ],
+      },
+    })
+    threadMessages.push({
+      object: 'block',
+      type: 'paragraph',
+      paragraph: {
+        rich_text: [
+          {
+            type: 'text',
+            text: { content: reply.content.substring(0, 2000) },
+          },
+        ],
+      },
+    })
+  }
+
+  blocks.push({
+    object: 'block',
+    type: 'toggle',
+    toggle: {
+      rich_text: [
+        {
+          type: 'text',
+          text: { content: '💬 Full Discussion Thread' },
+          annotations: { bold: true },
+        },
+      ],
+      children: threadMessages,
     },
   })
 

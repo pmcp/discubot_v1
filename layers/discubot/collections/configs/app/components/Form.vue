@@ -564,6 +564,7 @@ Respond in JSON format:
             <template #content>
               <div class="mt-2 p-3 bg-gray-50 dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-800">
                 <pre class="text-xs font-mono whitespace-pre-wrap">Analyze this discussion and identify actionable tasks.
+Extract task-specific action items for each task.
 
 Discussion:
 {discussion messages}
@@ -572,7 +573,8 @@ Discussion:
 
 Instructions:
 - Identify specific, actionable tasks mentioned or implied
-- Extract title, description, and priority for each task
+- Extract task-specific action items (2-6 concrete steps per task)
+- Action items must be SPECIFIC to the individual task, not global insights
 - Determine if there are multiple distinct tasks (isMultiTask: true/false)
 - Maximum 5 tasks
 - If no clear tasks, return empty array
@@ -584,9 +586,11 @@ Respond in JSON format:
     {
       "title": "...",
       "description": "...",
-      "priority": "low|medium|high|urgent",
-      "assignee": "...",
-      "tags": ["..."]
+      "actionItems": ["Step 1", "Step 2", "..."] or null,
+      "priority": "low|medium|high|urgent|null",
+      "type": "bug|feature|question|improvement|null",
+      "assignee": "uuid-or-handle" or null,
+      "tags": ["..."] or null
     }
   ],
   "confidence": 0.0-1.0
