@@ -23,6 +23,7 @@ import type {
   NotionTaskResult,
 } from '#layers/discubot/types'
 import { retryWithBackoff } from '../utils/retry'
+import { logger } from '../utils/logger'
 
 /**
  * Notion API Version
@@ -79,11 +80,11 @@ async function notionRequest(
   try {
     // Log sanitized request body for debugging
     if (options.body) {
-      console.log('[Notion API] 🔍 Request to:', url)
-      console.log('[Notion API] 🔍 Method:', options.method)
-      // Create a safe copy without sensitive data for logging
-      const safeBody = JSON.parse(JSON.stringify(options.body))
-      console.log('[Notion API] 🔍 Request body:', JSON.stringify(safeBody, null, 2))
+      logger.debug('Notion API request', {
+        url,
+        method: options.method,
+        bodyPreview: JSON.stringify(options.body).substring(0, 200),
+      })
     }
 
     const response = await $fetch(url, {
@@ -96,12 +97,12 @@ async function notionRequest(
       body: options.body ? JSON.stringify(options.body) : undefined,
     })
 
-    console.log('[Notion API] ✅ Request successful')
+    logger.debug('Notion API request successful', { url })
     return response
   } catch (error: any) {
     // Extract detailed error information from Notion API
     const errorDetails = error.data || error.response?._data || {}
-    console.error('[Notion API] ❌ Request failed:', {
+    logger.error('Notion API request failed', error, {
       url,
       method: options.method,
       status: error.status || error.statusCode,
@@ -179,15 +180,15 @@ async function buildTaskProperties(
       : rawNotionProperty?.value || rawNotionProperty?.name || null
 
     if (!notionProperty) {
-      console.warn(`[Notion] ⚠️ Invalid notionProperty format for field "${aiField}":`, rawNotionProperty)
+      logger.warn('Invalid notionProperty format', { aiField, rawNotionProperty })
       continue
     }
 
-    console.log(`[Notion] 🔍 Mapping field "${aiField}" to Notion property "${notionProperty}" (type: ${propertyType})`)
+    logger.debug('Mapping field to Notion property', { aiField, notionProperty, propertyType })
 
     // Special handling for 'people' type (assignee field)
     if (propertyType === 'people') {
-      console.log(`[Notion] 🔍 Assignee field - AI extracted value: "${value}"`)
+      logger.debug('Assignee field - AI extracted value', { value })
 
       // Check if the value is already a Notion UUID (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
       const isNotionUuid = typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
@@ -197,42 +198,43 @@ async function buildTaskProperties(
       if (isNotionUuid) {
         // AI returned Notion UUID directly (new flow with @Name (uuid) format)
         notionUserId = value
-        console.log(`[Notion] ✅ AI returned Notion UUID directly: ${notionUserId}`)
+        logger.debug('AI returned Notion UUID directly', { notionUserId })
       } else {
         // Old flow: AI returned source user ID, need to map to Notion ID
-        console.log(`[Notion] 🔍 Value is not a UUID, attempting user mapping lookup`)
-        console.log(`[Notion] 🔍 User mappings available: ${userMappings ? userMappings.size : 0}`)
+        logger.debug('Value is not a UUID, attempting user mapping lookup', {
+          value,
+          userMappingsAvailable: userMappings ? userMappings.size : 0
+        })
 
         if (!userMappings) {
-          console.warn(`[Notion] ❌ No user mappings Map provided for assignee field: ${value}`)
+          logger.warn('No user mappings Map provided for assignee field', { value })
           continue
         }
 
         if (userMappings.size === 0) {
-          console.warn(`[Notion] ⚠️  User mappings Map is empty - no mappings to lookup`)
+          logger.warn('User mappings Map is empty - no mappings to lookup')
         } else {
-          console.log(`[Notion] 🔍 Available mapping keys: ${Array.from(userMappings.keys()).join(', ')}`)
+          logger.debug('Available mapping keys', { keys: Array.from(userMappings.keys()) })
         }
 
         const lookupKey = String(value)
-        console.log(`[Notion] 🔍 Looking up key: "${lookupKey}"`)
+        logger.debug('Looking up key', { lookupKey })
         notionUserId = userMappings.get(lookupKey)
 
         if (!notionUserId) {
-          console.warn(`[Notion] ❌ No user mapping found for assignee: "${value}"`)
-          console.warn(`[Notion] 💡 Tip: Ensure sourceUserId in your mapping exactly matches: "${value}"`)
+          logger.warn('No user mapping found for assignee', { value, tip: 'Ensure sourceUserId in your mapping exactly matches this value' })
           continue
         }
 
-        console.log(`[Notion] ✅ Found mapping: ${value} -> ${notionUserId}`)
+        logger.debug('Found mapping', { value, notionUserId })
       }
 
       const formattedProperty = formatNotionProperty(notionUserId, propertyType)
       if (formattedProperty) {
         properties[notionProperty] = formattedProperty
-        console.log(`[Notion] ✅ Successfully set assignee to property "${notionProperty}": ${notionUserId}`)
+        logger.debug('Successfully set assignee to property', { notionProperty, notionUserId })
       } else {
-        console.warn(`[Notion] ⚠️  formatNotionProperty returned null for assignee: ${notionUserId}`)
+        logger.warn('formatNotionProperty returned null for assignee', { notionUserId })
       }
       continue
     }
@@ -251,7 +253,7 @@ async function buildTaskProperties(
     const formattedProperty = formatNotionProperty(transformedValue, propertyType)
     if (formattedProperty) {
       properties[notionProperty] = formattedProperty
-      console.log(`[Notion] Mapped ${aiField}: ${value} -> ${notionProperty} (${propertyType})`)
+      logger.debug('Mapped field', { aiField, value, notionProperty, propertyType })
     }
   }
 
@@ -360,8 +362,10 @@ function buildTaskContent(
 
   // Participants with @mentions (if userMentions provided)
   if (thread.participants.length > 0) {
-    console.log(`[Notion] 💬 Building participants section with ${thread.participants.length} participants`)
-    console.log(`[Notion] 💬 User mentions available: ${userMentions ? userMentions.size : 0}`)
+    logger.debug('Building participants section', {
+      participantCount: thread.participants.length,
+      userMentionsAvailable: userMentions ? userMentions.size : 0
+    })
 
     const participantRichText: any[] = [
       {
@@ -380,7 +384,7 @@ function buildTaskContent(
 
       if (notionUserId) {
         // Add proper @mention
-        console.log(`[Notion] ✅ Creating @mention for participant ${participantId} → ${notionUserId}`)
+        logger.debug('Creating @mention for participant', { participantId, notionUserId })
         const mentionObject = {
           type: 'mention',
           mention: {
@@ -391,12 +395,12 @@ function buildTaskContent(
             },
           },
         }
-        console.log('[Notion] 🔍 Mention object structure:', JSON.stringify(mentionObject, null, 2))
+        logger.debug('Mention object structure', { mentionObject })
         participantRichText.push(mentionObject)
       }
       else {
         // Fallback to plain text if no mapping
-        console.log(`[Notion] ⚠️  No mention mapping for participant ${participantId}, using plain text`)
+        logger.debug('No mention mapping for participant, using plain text', { participantId })
         participantRichText.push({
           type: 'text',
           text: { content: `@${participantId}` },
@@ -412,7 +416,7 @@ function buildTaskContent(
       }
     }
 
-    console.log('[Notion] 🔍 Complete participantRichText array:', JSON.stringify(participantRichText, null, 2))
+    logger.debug('Complete participantRichText array', { participantRichText })
 
     blocks.push({
       object: 'block',
@@ -457,6 +461,11 @@ function buildTaskContent(
     },
   })
 
+
+  // Helper to get display name (resolved name or fallback to ID)
+  const getDisplayName = (authorHandle: string, authorName?: string) => {
+    return authorName ? `@${authorName}` : authorHandle
+  }
   // Full Discussion Thread (collapsible)
   const threadMessages: any[] = []
 
@@ -604,10 +613,12 @@ function buildTaskContent(
   const authorHandle = thread.rootMessage.authorHandle
   const authorNotionId = userMentions?.get(authorHandle)
 
-  console.log(`[Notion] 🔍 Metadata - Author handle: "${authorHandle}"`)
-  console.log(`[Notion] 🔍 Metadata - Author Notion ID: "${authorNotionId || 'not found'}"`)
+  logger.debug('Metadata - Author info', {
+    authorHandle,
+    authorNotionId: authorNotionId || 'not found'
+  })
   if (userMentions) {
-    console.log(`[Notion] 🔍 Metadata - Available user mentions: ${Array.from(userMentions.keys()).join(', ')}`)
+    logger.debug('Metadata - Available user mentions', { mentions: Array.from(userMentions.keys()) })
   }
 
   // Basic metadata items
@@ -666,7 +677,7 @@ function buildTaskContent(
     })
   }
 
-  console.log('[Notion] 🔍 Complete blocks array (children):', JSON.stringify(blocks, null, 2))
+  logger.debug('Complete blocks array (children)', { blocksCount: blocks.length })
 
   return blocks
 }
@@ -687,7 +698,7 @@ export async function createNotionTask(
   fieldMapping?: Record<string, any>,
   userMappings?: Map<string, string>,
 ): Promise<NotionTaskResult> {
-  console.log('[Notion Service] Creating task:', {
+  logger.info('Creating Notion task', {
     title: task.title,
     databaseId: config.databaseId,
     sourceType: config.sourceType,
@@ -720,10 +731,7 @@ export async function createNotionTask(
 
   const duration = Date.now() - startTime
 
-  console.log(
-    `[Notion Service] Task created successfully in ${duration}ms:`,
-    page.id,
-  )
+  logger.info('Task created successfully', { taskId: page.id, duration })
 
   return {
     id: page.id,
@@ -753,7 +761,7 @@ export async function createNotionTasks(
   fieldMapping?: Record<string, any>,
   userMappings?: Map<string, string>,
 ): Promise<NotionTaskResult[]> {
-  console.log('[Notion Service] Creating batch of tasks:', {
+  logger.info('Creating batch of tasks', {
     taskCount: tasks.length,
     titles: tasks.map(t => t.title),
   })
@@ -769,9 +777,11 @@ export async function createNotionTasks(
       const result = await createNotionTask(task, thread, aiSummary, config, userMentions, fieldMapping, userMappings)
       results.push(result)
 
-      console.log(
-        `[Notion Service] Created task ${i + 1}/${tasks.length}: ${result.id}`,
-      )
+      logger.info('Created task in batch', {
+        index: i + 1,
+        total: tasks.length,
+        taskId: result.id,
+      })
 
       // Rate limiting: 200ms delay between requests (respects 3 req/sec limit)
       if (i < tasks.length - 1) {
@@ -779,19 +789,19 @@ export async function createNotionTasks(
       }
     }
     catch (error) {
-      console.error(
-        `[Notion Service] Failed to create task "${task?.title}":`,
-        error,
-      )
+      logger.error('Failed to create task', error, {
+        title: task?.title,
+      })
       throw error // Fail fast on errors
     }
   }
 
   const duration = Date.now() - startTime
 
-  console.log(
-    `[Notion Service] Successfully created ${results.length} tasks in ${duration}ms`,
-  )
+  logger.info('Successfully created tasks', {
+    count: results.length,
+    duration,
+  })
 
   return results
 }
@@ -846,7 +856,7 @@ export async function testNotionConnection(config: {
       title = database.title[0]?.plain_text || title
     }
 
-    console.log('[Notion Service] Connection test successful', {
+    logger.info('Connection test successful', {
       databaseId: config.databaseId,
       title,
     })
@@ -861,7 +871,7 @@ export async function testNotionConnection(config: {
     }
   }
   catch (error) {
-    console.error('[Notion Service] Connection test failed:', error)
+    logger.error('Connection test failed', error)
 
     const errorMessage = (error as any).body?.message
       || (error as Error).message
