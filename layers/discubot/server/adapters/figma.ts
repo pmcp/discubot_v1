@@ -255,9 +255,9 @@ export class FigmaAdapter implements DiscussionSourceAdapter {
         .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
         .map(c => this.convertToThreadMessage(c))
 
-      // Extract participants
+      // Extract participants (using Figma user IDs)
       const participantHandles = new Set<string>()
-      participantHandles.add(rootComment.user.handle)
+      participantHandles.add(rootComment.user.id) // Use user ID instead of handle
       replies.forEach(r => participantHandles.add(r.authorHandle))
 
       return {
@@ -577,13 +577,23 @@ export class FigmaAdapter implements DiscussionSourceAdapter {
 
   /**
    * Convert Figma comment to ThreadMessage format
+   *
+   * Uses Figma user ID as authorHandle for reliable user mapping.
+   * The handle (username) is included in metadata for display purposes.
    */
   private convertToThreadMessage(comment: FigmaComment): ThreadMessage {
     return {
       id: comment.id,
-      authorHandle: comment.user.handle,
+      // Use Figma user ID as authorHandle for user mapping lookup
+      // This is more reliable than handle (username) which can change
+      authorHandle: comment.user.id,
       content: comment.message,
       timestamp: new Date(comment.created_at),
+      metadata: {
+        figmaUserId: comment.user.id,
+        figmaUserHandle: comment.user.handle,
+        figmaUserAvatar: comment.user.img_url,
+      },
     }
   }
 
