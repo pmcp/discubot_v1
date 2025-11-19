@@ -294,11 +294,11 @@
             </div>
 
             <UFormField label="Notion Property" name="notionFieldMapping.priority.notionProperty" size="sm">
-              <!-- @vue-expect-error: value-attribute extracts string value from select menu item object -->
+              <!-- @vue-expect-error: value-key extracts string value from select menu item object -->
               <USelectMenu
                 v-model="fieldMappings.priority.notionProperty"
                 :items="notionPropertyOptions"
-                value-attribute="value"
+                value-key="value"
                 placeholder="Select a property..."
                 size="md"
                 class="w-full"
@@ -339,11 +339,11 @@
             </div>
 
             <UFormField label="Notion Property" name="notionFieldMapping.type.notionProperty" size="sm">
-              <!-- @vue-expect-error: value-attribute extracts string value from select menu item object -->
+              <!-- @vue-expect-error: value-key extracts string value from select menu item object -->
               <USelectMenu
                 v-model="fieldMappings.type.notionProperty"
                 :items="notionPropertyOptions"
-                value-attribute="value"
+                value-key="value"
                 placeholder="Select a property..."
                 size="md"
                 class="w-full"
@@ -384,11 +384,11 @@
             </div>
 
             <UFormField label="Notion Property" name="notionFieldMapping.assignee.notionProperty" size="sm">
-              <!-- @vue-expect-error: value-attribute extracts string value from select menu item object -->
+              <!-- @vue-expect-error: value-key extracts string value from select menu item object -->
               <USelectMenu
                 v-model="fieldMappings.assignee.notionProperty"
                 :items="notionPropertyOptions"
-                value-attribute="value"
+                value-key="value"
                 placeholder="Select a property..."
                 size="md"
                 class="w-full"
