@@ -1021,7 +1021,7 @@ export async function processDiscussion(
             thread,
             aiAnalysis.summary,
             notionConfig,
-            userMappings, // userMentions (for @mentions in content) - full data with names
+            notionUserMappings, // userMentions (for @mentions in content) - userId -> notionId for API
             fieldMapping,
             notionUserMappings, // assigneeMappings - just userId -> notionId for API
           )
@@ -1039,7 +1039,7 @@ export async function processDiscussion(
           thread,
           aiAnalysis.summary,
           notionConfig,
-          userMappings, // userMentions (for @mentions in content) - full data with names
+          notionUserMappings, // userMentions (for @mentions in content) - userId -> notionId for API
           fieldMapping,
           notionUserMappings, // assigneeMappings - just userId -> notionId for API
         )
