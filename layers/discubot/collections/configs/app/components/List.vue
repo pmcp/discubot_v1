@@ -101,8 +101,8 @@ const enhancedColumns = computed(() => {
   const relevantColumns = [
     { accessorKey: 'name', header: 'Name' },
     { accessorKey: 'sourceType', header: 'Source Type' },
-    { accessorKey: 'oauthStatus', header: 'OAuth Status' },
-    { accessorKey: 'workspaceName', header: 'Workspace' },
+    { key: 'oauthStatus', header: 'OAuth Status' },
+    { key: 'workspaceName', header: 'Workspace' },
     { accessorKey: 'active', header: 'Active' },
     { accessorKey: 'lastUpdated', header: 'Last Updated' }
   ]
