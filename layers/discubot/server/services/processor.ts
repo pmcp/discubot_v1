@@ -462,6 +462,8 @@ async function buildThread(
 
   // Load user mappings to convert user IDs to names + Notion IDs for AI
   let userIdToMentionMap = new Map<string, { name: string; notionId: string }>()
+  let handleToMentionMap = new Map<string, { name: string; notionId: string }>() // For Figma @handle mentions
+
   if (teamId) {
     try {
       const { getAllDiscubotUserMappings } = await import('#layers/discubot/collections/usermappings/server/database/queries')
@@ -471,14 +473,24 @@ async function buildThread(
       for (const mapping of allUserMappings) {
         if (mapping.sourceType === parsed.sourceType && mapping.active) {
           const displayName = mapping.notionUserName || mapping.sourceUserName || mapping.sourceUserId
-          userIdToMentionMap.set(String(mapping.sourceUserId), {
+          const mentionData = {
             name: String(displayName),
             notionId: String(mapping.notionUserId)
-          })
+          }
+
+          userIdToMentionMap.set(String(mapping.sourceUserId), mentionData)
+
+          // For Figma: also map by source user name (handle) for @mention matching
+          if (parsed.sourceType === 'figma' && mapping.sourceUserName) {
+            handleToMentionMap.set(String(mapping.sourceUserName), mentionData)
+          }
         }
       }
 
       console.log(`[Processor] 👤 Loaded ${userIdToMentionMap.size} user mappings for mention conversion`)
+      if (handleToMentionMap.size > 0) {
+        console.log(`[Processor] 👤 Loaded ${handleToMentionMap.size} handle-based mappings for Figma @mentions`)
+      }
     } catch (error) {
       console.warn('[Processor] Failed to load user mappings for mention conversion:', error)
     }
@@ -490,31 +502,52 @@ async function buildThread(
   const convertMentions = (content: string): string => {
     let converted = content
 
-    // First, remove bot mentions entirely
-    if (botUserId) {
-      converted = converted.replace(new RegExp(`<@${botUserId}>`, 'g'), '').trim()
-    }
+    if (parsed.sourceType === 'slack') {
+      // Slack format: <@U123ABC456>
 
-    // Then convert remaining user IDs to @Name (NotionID) for AI
-    userIdToMentionMap.forEach((mention, userId) => {
-      // Convert <@U123...> to @Name (notion-uuid)
-      converted = converted.replace(
-        new RegExp(`<@${userId}>`, 'g'),
-        `@${mention.name} (${mention.notionId})`
-      )
-    })
+      // First, remove bot mentions entirely
+      if (botUserId) {
+        converted = converted.replace(new RegExp(`<@${botUserId}>`, 'g'), '').trim()
+      }
+
+      // Then convert remaining user IDs to @Name (NotionID)
+      userIdToMentionMap.forEach((mention, userId) => {
+        converted = converted.replace(
+          new RegExp(`<@${userId}>`, 'g'),
+          `@${mention.name} (${mention.notionId})`
+        )
+      })
+    } else if (parsed.sourceType === 'figma') {
+      // Figma format: @handle (e.g., @Maarten)
+
+      // Convert @handle mentions to @Name (NotionID)
+      handleToMentionMap.forEach((mention, handle) => {
+        // Match @handle but not email-like patterns (@example.com)
+        // Use word boundary to match whole usernames only
+        converted = converted.replace(
+          new RegExp(`@${handle}(?!\\S)`, 'gi'), // Case-insensitive, not followed by non-whitespace
+          `@${mention.name} (${mention.notionId})`
+        )
+      })
+    }
 
     return converted
   }
 
-  if (botUserId || userIdToMentionMap.size > 0) {
-    console.log('[Processor] 🤖 Converting user mentions for AI analysis')
+  if (botUserId || userIdToMentionMap.size > 0 || handleToMentionMap.size > 0) {
+    console.log(`[Processor] 🤖 Converting ${parsed.sourceType} user mentions for AI analysis`)
     if (botUserId) {
       console.log(`[Processor] 🤖 Filtering bot mentions: ${botUserId}`)
     }
 
     // Convert root message
+    const originalContent = thread.rootMessage.content
     thread.rootMessage.content = convertMentions(thread.rootMessage.content)
+
+    if (originalContent !== thread.rootMessage.content) {
+      console.log(`[Processor] 🔄 Root message before: "${originalContent.substring(0, 100)}..."`)
+      console.log(`[Processor] 🔄 Root message after: "${thread.rootMessage.content.substring(0, 100)}..."`)
+    }
 
     // Convert all replies
     thread.replies = thread.replies.map((reply: any) => ({
