@@ -187,37 +187,50 @@ async function buildTaskProperties(
 
     // Special handling for 'people' type (assignee field)
     if (propertyType === 'people') {
-      console.log(`[Notion] 🔍 Assignee Mapping Debug - AI extracted assignee: "${value}"`)
-      console.log(`[Notion] 🔍 Assignee Mapping Debug - User mappings available: ${userMappings ? userMappings.size : 0}`)
+      console.log(`[Notion] 🔍 Assignee field - AI extracted value: "${value}"`)
 
-      if (!userMappings) {
-        console.warn(`[Notion] ❌ No user mappings Map provided for assignee field: ${value}`)
-        continue
-      }
+      // Check if the value is already a Notion UUID (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+      const isNotionUuid = typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
 
-      if (userMappings.size === 0) {
-        console.warn(`[Notion] ⚠️  User mappings Map is empty - no mappings to lookup`)
+      let notionUserId: string | undefined
+
+      if (isNotionUuid) {
+        // AI returned Notion UUID directly (new flow with @Name (uuid) format)
+        notionUserId = value
+        console.log(`[Notion] ✅ AI returned Notion UUID directly: ${notionUserId}`)
       } else {
-        console.log(`[Notion] 🔍 Available mapping keys: ${Array.from(userMappings.keys()).join(', ')}`)
+        // Old flow: AI returned source user ID, need to map to Notion ID
+        console.log(`[Notion] 🔍 Value is not a UUID, attempting user mapping lookup`)
+        console.log(`[Notion] 🔍 User mappings available: ${userMappings ? userMappings.size : 0}`)
+
+        if (!userMappings) {
+          console.warn(`[Notion] ❌ No user mappings Map provided for assignee field: ${value}`)
+          continue
+        }
+
+        if (userMappings.size === 0) {
+          console.warn(`[Notion] ⚠️  User mappings Map is empty - no mappings to lookup`)
+        } else {
+          console.log(`[Notion] 🔍 Available mapping keys: ${Array.from(userMappings.keys()).join(', ')}`)
+        }
+
+        const lookupKey = String(value)
+        console.log(`[Notion] 🔍 Looking up key: "${lookupKey}"`)
+        notionUserId = userMappings.get(lookupKey)
+
+        if (!notionUserId) {
+          console.warn(`[Notion] ❌ No user mapping found for assignee: "${value}"`)
+          console.warn(`[Notion] 💡 Tip: Ensure sourceUserId in your mapping exactly matches: "${value}"`)
+          continue
+        }
+
+        console.log(`[Notion] ✅ Found mapping: ${value} -> ${notionUserId}`)
       }
-
-      // Resolve source user ID to Notion user ID
-      const lookupKey = String(value)
-      console.log(`[Notion] 🔍 Looking up key: "${lookupKey}"`)
-      const notionUserId = userMappings.get(lookupKey)
-
-      if (!notionUserId) {
-        console.warn(`[Notion] ❌ No user mapping found for assignee: "${value}"`)
-        console.warn(`[Notion] 💡 Tip: Ensure sourceUserId in your mapping exactly matches: "${value}"`)
-        continue
-      }
-
-      console.log(`[Notion] ✅ Found mapping: ${value} -> ${notionUserId}`)
 
       const formattedProperty = formatNotionProperty(notionUserId, propertyType)
       if (formattedProperty) {
         properties[notionProperty] = formattedProperty
-        console.log(`[Notion] ✅ Successfully mapped assignee: ${value} -> ${notionUserId} to property "${notionProperty}"`)
+        console.log(`[Notion] ✅ Successfully set assignee to property "${notionProperty}": ${notionUserId}`)
       } else {
         console.warn(`[Notion] ⚠️  formatNotionProperty returned null for assignee: ${notionUserId}`)
       }
