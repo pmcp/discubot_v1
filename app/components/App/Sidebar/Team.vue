@@ -25,9 +25,29 @@ const links = computed(() => [
     to: `/dashboard/${currentTeam.value.slug}`,
   },
   {
-    label: 'Posts',
-    icon: 'i-lucide-file-text',
-    to: `/dashboard/${currentTeam.value.slug}/posts`,
+    label: 'Configs',
+    icon: 'i-lucide-settings',
+    to: `/dashboard/${currentTeam.value.slug}/discubot/configs`,
+  },
+  {
+    label: 'User Mappings',
+    icon: 'i-lucide-users',
+    to: `/dashboard/${currentTeam.value.slug}/discubot/user-mappings`,
+  },
+  {
+    label: 'Jobs',
+    icon: 'i-lucide-activity',
+    to: `/dashboard/${currentTeam.value.slug}/discubot/jobs`,
+  },
+  {
+    label: 'Discussions',
+    icon: 'i-lucide-message-square',
+    to: `/dashboard/${currentTeam.value.slug}/discubot/discussions`,
+  },
+  {
+    label: 'Email Inbox',
+    icon: 'i-lucide-inbox',
+    to: `/dashboard/${currentTeam.value.slug}/discubot/inbox`,
   },
 ])
 
