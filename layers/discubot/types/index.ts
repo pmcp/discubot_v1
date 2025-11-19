@@ -217,6 +217,16 @@ export interface SourceConfig {
   autoSync: boolean
   /** Source-specific settings (e.g., Slack workspace ID) */
   settings: Record<string, any>
+  /** Source-specific metadata (e.g., Slack bot user ID, team IDs) */
+  sourceMetadata?: Record<string, any>
+  /** AI summary prompt override */
+  aiSummaryPrompt?: string
+  /** AI task detection prompt override */
+  aiTaskPrompt?: string
+  /** Notion field mapping configuration */
+  notionFieldMapping?: Record<string, any>
+  /** Webhook URL for receiving events */
+  webhookUrl?: string
   /** Whether this config is active */
   active: boolean
 }

@@ -447,6 +447,7 @@ async function buildThread(
   parsed: ParsedDiscussion,
   config: SourceConfig,
   threadInput?: DiscussionThread,
+  teamId?: string,
 ): Promise<DiscussionThread> {
   // If thread provided directly, use it (for testing)
   if (threadInput) {
@@ -458,6 +459,72 @@ async function buildThread(
   const { getAdapter } = await import('../adapters')
   const adapter = getAdapter(parsed.sourceType)
   const thread = await adapter.fetchThread(parsed.sourceThreadId, config)
+
+  // Load user mappings to convert user IDs to names + Notion IDs for AI
+  let userIdToMentionMap = new Map<string, { name: string; notionId: string }>()
+  if (teamId) {
+    try {
+      const { getAllDiscubotUserMappings } = await import('#layers/discubot/collections/usermappings/server/database/queries')
+      const allUserMappings = await getAllDiscubotUserMappings(teamId)
+
+      // Build map of sourceUserId -> { name, notionId }
+      for (const mapping of allUserMappings) {
+        if (mapping.sourceType === parsed.sourceType && mapping.active) {
+          const displayName = mapping.notionUserName || mapping.sourceUserName || mapping.sourceUserId
+          userIdToMentionMap.set(String(mapping.sourceUserId), {
+            name: String(displayName),
+            notionId: String(mapping.notionUserId)
+          })
+        }
+      }
+
+      console.log(`[Processor] 👤 Loaded ${userIdToMentionMap.size} user mappings for mention conversion`)
+    } catch (error) {
+      console.warn('[Processor] Failed to load user mappings for mention conversion:', error)
+    }
+  }
+
+  // Convert user ID mentions to readable names with Notion IDs and filter out bot
+  const botUserId = config.sourceMetadata?.botUserId
+
+  const convertMentions = (content: string): string => {
+    let converted = content
+
+    // First, remove bot mentions entirely
+    if (botUserId) {
+      converted = converted.replace(new RegExp(`<@${botUserId}>`, 'g'), '').trim()
+    }
+
+    // Then convert remaining user IDs to @Name (NotionID) for AI
+    userIdToMentionMap.forEach((mention, userId) => {
+      // Convert <@U123...> to @Name (notion-uuid)
+      converted = converted.replace(
+        new RegExp(`<@${userId}>`, 'g'),
+        `@${mention.name} (${mention.notionId})`
+      )
+    })
+
+    return converted
+  }
+
+  if (botUserId || userIdToMentionMap.size > 0) {
+    console.log('[Processor] 🤖 Converting user mentions for AI analysis')
+    if (botUserId) {
+      console.log(`[Processor] 🤖 Filtering bot mentions: ${botUserId}`)
+    }
+
+    // Convert root message
+    thread.rootMessage.content = convertMentions(thread.rootMessage.content)
+
+    // Convert all replies
+    thread.replies = thread.replies.map((reply: any) => ({
+      ...reply,
+      content: convertMentions(reply.content)
+    }))
+
+    console.log('[Processor] ✅ User mentions converted to @Name (NotionID) format for AI')
+  }
+
   return thread
 }
 
@@ -646,7 +713,7 @@ export async function processDiscussion(
       stage: 'thread_building',
     })
 
-    const thread = await buildThread(parsed, config, options.thread)
+    const thread = await buildThread(parsed, config, options.thread, actualTeamId)
     console.log('[Processor] Thread built:', {
       id: thread.id,
       messages: thread.replies.length + 1,

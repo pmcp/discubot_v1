@@ -325,8 +325,10 @@ CRITICAL - Confidence Rules:
 Field Standardization:
 - priority: Use ONLY "low", "medium", "high", "urgent", or null (if uncertain)
 - type: Use ONLY "bug", "feature", "question", "improvement", or null (if uncertain)
-- assignee: Return Slack user ID (format: U...) or email address, NOT display names
-  - If only display name available and cannot determine ID/email, return null
+- assignee: Extract the Notion user ID from mentions in format "@Name (notion-uuid)"
+  - Return ONLY the UUID part (e.g., from "@John Doe (abc-123-def)" return "abc-123-def")
+  - If multiple people mentioned, pick the most relevant person for the task
+  - If no clear assignee or no UUID available, return null
 - tags: Extract relevant tags if mentioned, otherwise null
 - dueDate: Extract if explicitly mentioned, otherwise null
 
