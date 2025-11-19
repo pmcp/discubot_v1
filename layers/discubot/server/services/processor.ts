@@ -38,6 +38,7 @@ import { analyzeDiscussion } from './ai'
 import { createNotionTask, createNotionTasks } from './notion'
 import { retryWithBackoff } from '../utils/retry'
 import { SYSTEM_USER_ID } from '../utils/constants'
+import { logger } from '../utils/logger'
 import { eq, and } from 'drizzle-orm'
 
 /**
@@ -196,7 +197,7 @@ async function saveDiscussion(
   actualTeamId: string,
   status: DiscussionStatus = 'pending',
 ): Promise<string> {
-  console.log('[Processor] Saving discussion to database:', {
+  logger.debug('Saving discussion to database', {
     sourceType: parsed.sourceType,
     sourceThreadId: parsed.sourceThreadId,
     status,
@@ -242,7 +243,7 @@ async function saveDiscussion(
     )
   }
 
-  console.log('[Processor] Discussion saved with ID:', discussion.id)
+  logger.info('Discussion saved', { discussionId: discussion.id })
 
   return discussion.id
 }
@@ -255,7 +256,7 @@ async function updateDiscussionStatus(
   status: DiscussionStatus,
   error?: string,
 ): Promise<void> {
-  console.log('[Processor] Updating discussion status:', {
+  logger.debug('Updating discussion status', {
     discussionId,
     status,
     error,
@@ -287,7 +288,7 @@ async function updateDiscussionStatus(
     },
   )
 
-  console.log('[Processor] Discussion status updated')
+  logger.debug('Discussion status updated', { discussionId, status })
 }
 
 /**
@@ -301,10 +302,10 @@ async function updateDiscussionMetadata(
   discussionId: string,
   thread: DiscussionThread,
 ): Promise<void> {
-  console.log('[Processor] Updating discussion metadata:', {
+  logger.debug('Updating discussion metadata', {
     discussionId,
     authorHandle: thread.rootMessage.authorHandle,
-    participants: thread.participants,
+    participantCount: thread.participants.length,
   })
 
   // Verify teamId is available
@@ -333,7 +334,7 @@ async function updateDiscussionMetadata(
     },
   )
 
-  console.log('[Processor] Discussion metadata updated with correct values from thread')
+  logger.debug('Discussion metadata updated')
 }
 
 /**
@@ -581,82 +582,50 @@ async function buildThread(
     } else if (parsed.sourceType === 'figma') {
       // Figma format: @handle (e.g., @Maarten)
 
-      console.log(`[Processor] 🔍 DEBUG: Starting Figma mention conversion`)
-      console.log(`[Processor] 🔍 DEBUG: Original content: "${content}"`)
-      console.log(`[Processor] 🔍 DEBUG: handleToMentionMap has ${handleToMentionMap.size} entries`)
-
       // First, remove bot mentions entirely (before converting user mentions)
       const botHandle = config.sourceMetadata?.botHandle
       if (botHandle) {
-        console.log(`[Processor] 🤖 Filtering Figma bot mentions: @${botHandle}`)
         // Escape special regex characters in handle
         const escapedBotHandle = botHandle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
         // Match @bothandle with word boundary (case-insensitive)
         const botPattern = new RegExp(`@${escapedBotHandle}(?!\\S)`, 'gi')
-        const beforeFilter = converted
         converted = converted.replace(botPattern, '').trim()
         // Clean up multiple spaces
         converted = converted.replace(/\s+/g, ' ').trim()
-
-        if (beforeFilter !== converted) {
-          console.log(`[Processor] 🤖 ✅ Bot mentions filtered! Before: "${beforeFilter}"`)
-          console.log(`[Processor] 🤖 ✅ Bot mentions filtered! After: "${converted}"`)
-        }
       }
 
       // Convert @handle mentions to @Name (NotionID)
       handleToMentionMap.forEach((mention, handle) => {
-        console.log(`[Processor] 🔍 DEBUG: Trying to convert handle: "${handle}" to ${mention.name} (${mention.notionId})`)
-
         // Escape special regex characters in handle
         const escapedHandle = handle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
         const pattern = `@${escapedHandle}(?!\\S)` // Case-insensitive, not followed by non-whitespace
 
-        console.log(`[Processor] 🔍 DEBUG: Regex pattern: "${pattern}"`)
-
         const regex = new RegExp(pattern, 'gi')
-        const beforeConvert = converted
         converted = converted.replace(
           regex,
           `@${mention.name} (${mention.notionId})`
         )
-
-        if (beforeConvert !== converted) {
-          console.log(`[Processor] 🔍 DEBUG: ✅ Converted! Before: "${beforeConvert}"`)
-          console.log(`[Processor] 🔍 DEBUG: ✅ Converted! After: "${converted}"`)
-        } else {
-          console.log(`[Processor] 🔍 DEBUG: ❌ No match found for pattern "${pattern}" in content "${beforeConvert}"`)
-        }
       })
-
-      console.log(`[Processor] 🔍 DEBUG: Final converted content: "${converted}"`)
     }
 
     return converted
   }
 
   if (botUserId || userIdToMentionMap.size > 0 || handleToMentionMap.size > 0) {
-    console.log(`[Processor] 🤖 Converting ${parsed.sourceType} user mentions for AI analysis`)
-    if (botUserId) {
-      console.log(`[Processor] 🤖 Filtering bot mentions: ${botUserId}`)
-    }
+    logger.debug('Converting user mentions for AI', {
+      sourceType: parsed.sourceType,
+      hasBot: !!botUserId,
+      mappingCount: userIdToMentionMap.size + handleToMentionMap.size
+    })
 
     // Convert root message
-    const originalContent = thread.rootMessage.content
     thread.rootMessage.content = convertMentions(thread.rootMessage.content)
-
-    if (originalContent !== thread.rootMessage.content) {
-      console.log(`[Processor] 🔄 Root message before: "${originalContent.substring(0, 100)}..."`)
-      console.log(`[Processor] 🔄 Root message after: "${thread.rootMessage.content.substring(0, 100)}..."`)
-    }
 
     // Convert all replies
     thread.replies = thread.replies.map((reply: any) => ({
       ...reply,
       content: convertMentions(reply.content)
     }))
-
-    console.log('[Processor] ✅ User mentions converted to @Name (NotionID) format for AI')
   }
 
   return thread
@@ -973,31 +942,19 @@ export async function processDiscussion(
       const { getAllDiscubotUserMappings } = await import('#layers/discubot/collections/usermappings/server/database/queries')
       const allUserMappings = await getAllDiscubotUserMappings(actualTeamId)
 
-      console.log(`[Processor] 🔍 User Mapping Debug - Total mappings in DB: ${allUserMappings.length}`)
-      console.log(`[Processor] 🔍 User Mapping Debug - Using actualTeamId (internal): ${actualTeamId}`)
-      console.log(`[Processor] 🔍 User Mapping Debug - Source Type: ${parsed.sourceType}`)
-      console.log(`[Processor] 🔍 User Mapping Debug - FYI: parsed.teamId (source identifier): ${parsed.teamId}`)
-
       // Filter by sourceType and active status, then build Map for efficient lookup
       const userMappings = new Map<string, string>()
       for (const mapping of allUserMappings) {
-        console.log(`[Processor] 🔍 Checking mapping: sourceType="${mapping.sourceType}", active=${mapping.active}, sourceUserId="${mapping.sourceUserId}"`)
-
         if (mapping.sourceType === parsed.sourceType && mapping.active) {
           userMappings.set(String(mapping.sourceUserId), String(mapping.notionUserId))
-          console.log(`[Processor] ✅ Added mapping: ${mapping.sourceUserId} → ${mapping.notionUserId}`)
-        } else {
-          const reasons = []
-          if (mapping.sourceType !== parsed.sourceType) reasons.push(`sourceType mismatch (got "${mapping.sourceType}", need "${parsed.sourceType}")`)
-          if (!mapping.active) reasons.push('inactive')
-          console.log(`[Processor] ❌ Skipped mapping: ${reasons.join(', ')}`)
         }
       }
 
-      console.log(`[Processor] 📊 Final user mappings loaded: ${userMappings.size} active mappings for ${parsed.sourceType}`)
-      if (userMappings.size > 0) {
-        console.log(`[Processor] 📋 Mapping keys: ${Array.from(userMappings.keys()).join(', ')}`)
-      }
+      logger.debug('User mappings loaded', {
+        total: allUserMappings.length,
+        active: userMappings.size,
+        sourceType: parsed.sourceType
+      })
 
       // Get field mapping configuration
       const fieldMapping = config.notionFieldMapping || {}

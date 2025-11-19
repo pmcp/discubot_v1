@@ -49,13 +49,20 @@ export interface LogEntry {
  */
 const config = {
   // Minimum log level to output (can be overridden by LOG_LEVEL env var)
-  minLevel: (process.env.LOG_LEVEL as LogLevel) || 'info',
+  // Production default is 'warn' to reduce noise
+  minLevel: (process.env.LOG_LEVEL as LogLevel) || (process.env.NODE_ENV === 'production' ? 'warn' : 'info'),
 
   // Pretty print in development, JSON in production
   pretty: process.env.NODE_ENV !== 'production',
 
   // Include stack traces in error logs
   includeStackTrace: true,
+
+  // Maximum size of context objects in production (bytes)
+  maxContextSize: 1024, // 1KB limit per log entry context
+
+  // Maximum string length for individual context values
+  maxStringLength: 200,
 }
 
 /**
@@ -109,6 +116,93 @@ function serializeError(error: any): LogEntry['error'] {
 }
 
 /**
+ * Truncate string to maximum length
+ */
+function truncateString(str: string, maxLength: number): string {
+  if (str.length <= maxLength) return str
+  return str.substring(0, maxLength - 3) + '...'
+}
+
+/**
+ * Sanitize context object to prevent excessive log sizes
+ * - Truncates long strings
+ * - Limits object depth
+ * - Removes circular references
+ * - Estimates total size
+ */
+function sanitizeContext(context?: LogContext): LogContext | undefined {
+  if (!context || Object.keys(context).length === 0) return undefined
+
+  // In development, allow more verbose logging
+  if (config.pretty) {
+    return sanitizeContextHelper(context, 3)
+  }
+
+  // In production, be more aggressive with sanitization
+  const sanitized = sanitizeContextHelper(context, 2)
+  const serialized = JSON.stringify(sanitized)
+
+  // If still too large, truncate individual values further
+  if (serialized.length > config.maxContextSize) {
+    return sanitizeContextHelper(context, 1, config.maxStringLength / 2)
+  }
+
+  return sanitized
+}
+
+/**
+ * Helper to recursively sanitize context objects
+ */
+function sanitizeContextHelper(obj: any, maxDepth: number, maxStrLen?: number): any {
+  const maxStringLength = maxStrLen || config.maxStringLength
+
+  if (maxDepth === 0) return '[Object]'
+
+  if (obj === null || obj === undefined) return obj
+
+  // Handle primitive types
+  if (typeof obj === 'string') {
+    return truncateString(obj, maxStringLength)
+  }
+
+  if (typeof obj === 'number' || typeof obj === 'boolean') {
+    return obj
+  }
+
+  // Handle arrays
+  if (Array.isArray(obj)) {
+    // Limit array size in production
+    const limit = config.pretty ? 100 : 10
+    const limited = obj.slice(0, limit)
+    return limited.map(item => sanitizeContextHelper(item, maxDepth - 1, maxStrLen))
+  }
+
+  // Handle objects
+  if (typeof obj === 'object') {
+    const result: any = {}
+    let keyCount = 0
+    const maxKeys = config.pretty ? 50 : 20
+
+    for (const [key, value] of Object.entries(obj)) {
+      if (keyCount++ >= maxKeys) {
+        result['...'] = `${Object.keys(obj).length - maxKeys} more keys`
+        break
+      }
+
+      // Skip functions
+      if (typeof value === 'function') continue
+
+      result[key] = sanitizeContextHelper(value, maxDepth - 1, maxStrLen)
+    }
+
+    return result
+  }
+
+  // Fallback for other types
+  return String(obj).substring(0, maxStringLength)
+}
+
+/**
  * Format log entry for pretty printing (development)
  */
 function formatPretty(entry: LogEntry): string {
@@ -155,8 +249,8 @@ function log(level: LogLevel, message: string, error?: any, context?: LogContext
   const entry: LogEntry = {
     timestamp: formatTimestamp(),
     level,
-    message,
-    context,
+    message: truncateString(message, 500), // Prevent extremely long messages
+    context: sanitizeContext(context),
     error: serializeError(error),
     duration,
   }
