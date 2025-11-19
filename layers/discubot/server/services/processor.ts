@@ -346,7 +346,7 @@ async function updateDiscussionResults(
   aiAnalysis: AIAnalysisResult,
   notionTasks: NotionTaskResult[],
 ): Promise<void> {
-  console.log('[Processor] Updating discussion with results:', {
+  logger.debug('Updating discussion with results', {
     discussionId,
     taskCount: notionTasks.length,
   })
@@ -384,7 +384,7 @@ async function updateDiscussionResults(
     },
   )
 
-  console.log('[Processor] Discussion results saved')
+  logger.debug('Discussion results saved')
 }
 
 /**
@@ -397,7 +397,7 @@ async function saveTaskRecords(
   jobId: string,
   parsed: ParsedDiscussion,
 ): Promise<string[]> {
-  console.log('[Processor] Saving task records:', {
+  logger.debug('Saving task records', {
     count: notionTasks.length,
     discussionId,
     jobId,
@@ -405,7 +405,7 @@ async function saveTaskRecords(
 
   // Verify teamId is available
   if (!currentTeamId) {
-    console.error('[Processor] TeamId not available for task creation')
+    logger.error('TeamId not available for task creation')
     return []
   }
 
@@ -424,7 +424,7 @@ async function saveTaskRecords(
 
       // Skip if notionTask is undefined
       if (!notionTask) {
-        console.warn('[Processor] Skipping undefined notionTask at index:', i)
+        logger.warn('Skipping undefined notionTask', { index: i })
         continue
       }
 
@@ -456,16 +456,15 @@ async function saveTaskRecords(
 
         if (task?.id) {
           taskIds.push(task.id)
-          console.log('[Processor] Task record created:', {
+          logger.debug('Task record created', {
             taskId: task.id,
             notionPageId: notionTask.id,
             title: aiTask?.title || parsed.title,
           })
         }
       } catch (error) {
-        console.error('[Processor] Failed to create task record:', {
+        logger.error('Failed to create task record', error, {
           notionPageId: notionTask.id,
-          error,
         })
         // Continue processing other tasks even if one fails
       }
@@ -486,12 +485,12 @@ async function saveTaskRecords(
         },
       )
 
-      console.log('[Processor] Discussion updated with task IDs:', taskIds)
+      logger.debug('Discussion updated with task IDs', { taskIds })
     }
 
     return taskIds
   } catch (error) {
-    console.error('[Processor] Failed to save task records:', error)
+    logger.error('Failed to save task records', error)
     // Don't fail processing if task record creation fails
     return []
   }
@@ -511,7 +510,7 @@ async function buildThread(
 ): Promise<DiscussionThread> {
   // If thread provided directly, use it (for testing)
   if (threadInput) {
-    console.log('[Processor] Using provided thread input')
+    logger.debug('Using provided thread input')
     return threadInput
   }
 
@@ -547,12 +546,12 @@ async function buildThread(
         }
       }
 
-      console.log(`[Processor] 👤 Loaded ${userIdToMentionMap.size} user mappings for mention conversion`)
-      if (handleToMentionMap.size > 0) {
-        console.log(`[Processor] 👤 Loaded ${handleToMentionMap.size} handle-based mappings for Figma @mentions`)
-      }
+      logger.debug('Loaded user mappings for mention conversion', {
+        userIdMappings: userIdToMentionMap.size,
+        handleMappings: handleToMentionMap.size,
+      })
     } catch (error) {
-      console.warn('[Processor] Failed to load user mappings for mention conversion:', error)
+      logger.warn('Failed to load user mappings for mention conversion', error)
     }
   }
 
@@ -669,7 +668,7 @@ export async function processDiscussion(
   let jobId: string | undefined
   let actualTeamId: string = parsed.teamId // Will be updated to config.teamId after config loads
 
-  console.log('[Processor] Starting discussion processing:', {
+  logger.info('Processing discussion', {
     sourceType: parsed.sourceType,
     sourceThreadId: parsed.sourceThreadId,
     title: parsed.title,
@@ -681,7 +680,6 @@ export async function processDiscussion(
     // ============================================================================
     // STAGE 1: Validation
     // ============================================================================
-    console.log('[Processor] Stage 1: Validation')
 
     validateParsedDiscussion(parsed)
 
@@ -696,22 +694,21 @@ export async function processDiscussion(
 
       await adapter.updateStatus(parsed.sourceThreadId, 'pending', tempConfig)
 
-      console.log('[Processor] Initial status reaction added (eyes)')
+      logger.debug('Initial status reaction added')
     } catch (error) {
       // Don't fail if initial reaction fails
-      console.error('[Processor] Failed to add initial status reaction:', error)
+      logger.warn('Failed to add initial status reaction', error)
     }
 
     // ============================================================================
     // STAGE 2: Config Loading
     // ============================================================================
-    console.log('[Processor] Stage 2: Config Loading')
     let config: SourceConfig
 
     if (options.config) {
       // Use provided config (for testing)
       config = options.config
-      console.log('[Processor] Using provided config')
+      logger.debug('Using provided config')
     }
     else {
       // Load from database (Phase 3+)
@@ -720,9 +717,9 @@ export async function processDiscussion(
 
     // Update actualTeamId to use the correct team ID from config
     actualTeamId = config.teamId
-    console.log('[Processor] Resolved team IDs:', {
-      sourceIdentifier: parsed.teamId, // Slack workspace ID or Figma email slug
-      actualTeamId: config.teamId, // Actual Discubot team ID from database
+    logger.debug('Resolved team IDs', {
+      sourceIdentifier: parsed.teamId,
+      actualTeamId: config.teamId,
     })
 
     // ============================================================================
@@ -759,13 +756,12 @@ export async function processDiscussion(
       })
 
       jobId = job?.id
-      console.log('[Processor] Job created with correct teamId:', {
+      logger.debug('Job created', {
         jobId,
         teamId: config.teamId,
-        emailSlug: parsed.teamId,
       })
     } catch (error) {
-      console.error('[Processor] Failed to create job record:', error)
+      logger.error('Failed to create job record', error)
       // Don't fail processing if job creation fails
     }
 
@@ -797,12 +793,12 @@ export async function processDiscussion(
           },
         )
 
-        console.log('[Processor] Linked discussion to job:', {
+        logger.debug('Linked discussion to job', {
           discussionId,
           jobId,
         })
       } catch (error) {
-        console.error('[Processor] Failed to link discussion to job:', error)
+        logger.error('Failed to link discussion to job', error)
         // Don't fail processing if linking fails
       }
     }
@@ -810,14 +806,13 @@ export async function processDiscussion(
     // ============================================================================
     // STAGE 3: Thread Building
     // ============================================================================
-    console.log('[Processor] Stage 3: Thread Building')
     await updateDiscussionStatus(discussionId, 'processing')
     await updateJobStatus(jobId, actualTeamId, {
       stage: 'thread_building',
     })
 
     const thread = await buildThread(parsed, config, options.thread, actualTeamId)
-    console.log('[Processor] Thread built:', {
+    logger.info('Thread built', {
       id: thread.id,
       messages: thread.replies.length + 1,
       participants: thread.participants.length,
@@ -834,7 +829,7 @@ export async function processDiscussion(
       // Update sourceThreadId to include comment ID (format: fileKey:commentId)
       parsed.sourceThreadId = `${fileKey}:${thread.id}`
 
-      console.log('[Processor] Updated Figma URLs:', {
+      logger.debug('Updated Figma URLs', {
         sourceUrl: parsed.sourceUrl,
         sourceThreadId: parsed.sourceThreadId,
       })
@@ -858,9 +853,9 @@ export async function processDiscussion(
         const { getAdapter } = await import('../adapters')
         const adapter = getAdapter(parsed.sourceType)
         await adapter.updateStatus(parsed.sourceThreadId, 'pending', config)
-        console.log('[Processor] Added eyes emoji to Figma comment:', thread.id)
+        logger.debug('Added eyes emoji to Figma comment', { commentId: thread.id })
       } catch (error) {
-        console.error('[Processor] Failed to add eyes emoji to Figma comment:', error)
+        logger.warn('Failed to add eyes emoji to Figma comment', error)
         // Don't fail the whole process for emoji failures
       }
     }
@@ -868,7 +863,6 @@ export async function processDiscussion(
     // ============================================================================
     // STAGE 4: AI Analysis
     // ============================================================================
-    console.log('[Processor] Stage 4: AI Analysis')
     await updateJobStatus(jobId, actualTeamId, {
       stage: 'ai_analysis',
     })
@@ -897,11 +891,9 @@ export async function processDiscussion(
       const customSummaryPrompt = config.aiSummaryPrompt || undefined
       const customTaskPrompt = config.aiTaskPrompt || undefined
 
-      console.log('[Processor] Using custom prompts:', {
+      logger.debug('Using custom prompts', {
         hasSummaryPrompt: !!customSummaryPrompt,
         hasTaskPrompt: !!customTaskPrompt,
-        summaryPromptLength: customSummaryPrompt?.length,
-        taskPromptLength: customTaskPrompt?.length,
       })
 
       aiAnalysis = await analyzeDiscussion(thread, {
@@ -910,8 +902,7 @@ export async function processDiscussion(
         customTaskPrompt,
       })
 
-      console.log('[Processor] AI analysis complete:', {
-        summary: aiAnalysis.summary.summary,
+      logger.info('AI analysis complete', {
         taskCount: aiAnalysis.taskDetection.tasks.length,
         isMultiTask: aiAnalysis.taskDetection.isMultiTask,
         cached: aiAnalysis.cached,
@@ -921,7 +912,6 @@ export async function processDiscussion(
     // ============================================================================
     // STAGE 5: Task Creation
     // ============================================================================
-    console.log('[Processor] Stage 5: Task Creation')
     await updateDiscussionStatus(discussionId, 'analyzed')
     await updateJobStatus(jobId, actualTeamId, {
       stage: 'task_creation',
@@ -962,17 +952,17 @@ export async function processDiscussion(
       const tasks = aiAnalysis.taskDetection.tasks
 
       if (tasks.length === 0) {
-        console.log('[Processor] No tasks detected, skipping Notion creation')
+        logger.info('No tasks detected, skipping Notion creation')
       }
       else if (tasks.length === 1) {
         // Single task
         const task = tasks[0]
         if (!task) {
-          console.log('[Processor] Task is undefined, skipping')
+          logger.warn('Task is undefined, skipping')
         }
         else {
-          console.log('[Processor] Creating single Notion task')
-          console.log('[Processor] 💬 Passing user mappings for @mentions in task content')
+          logger.info('Creating single Notion task')
+          logger.debug('Passing user mappings for @mentions in task content')
 
           const result = await createNotionTask(
             task,
@@ -989,8 +979,8 @@ export async function processDiscussion(
       }
       else {
         // Multiple tasks
-        console.log(`[Processor] Creating ${tasks.length} Notion tasks`)
-        console.log('[Processor] 💬 Passing user mappings for @mentions in task content')
+        logger.info('Creating multiple Notion tasks', { count: tasks.length })
+        logger.debug('Passing user mappings for @mentions in task content')
 
         notionTasks = await createNotionTasks(
           tasks,
@@ -1003,7 +993,7 @@ export async function processDiscussion(
         )
       }
 
-      console.log('[Processor] Notion tasks created:', {
+      logger.info('Notion tasks created', {
         count: notionTasks.length,
         ids: notionTasks.map(t => t.id),
       })
@@ -1020,13 +1010,12 @@ export async function processDiscussion(
       }
     }
     else {
-      console.log('[Processor] Skipping Notion task creation')
+      logger.info('Skipping Notion task creation')
     }
 
     // ============================================================================
     // STAGE 6: Finalization
     // ============================================================================
-    console.log('[Processor] Stage 6: Finalization')
     await updateJobStatus(jobId, actualTeamId, {
       stage: 'notification',
     })
@@ -1061,14 +1050,13 @@ export async function processDiscussion(
       // Update status with completed emoji/reaction
       await adapter.updateStatus(parsed.sourceThreadId, 'completed', config)
 
-      console.log('[Processor] Notification sent to source:', {
+      logger.info('Notification sent to source', {
         sourceType: parsed.sourceType,
-        sourceThreadId: parsed.sourceThreadId,
         taskCount: notionTasks.length,
       })
     } catch (error) {
       // Don't fail the entire process if notification fails
-      console.error('[Processor] Failed to send notification to source:', error)
+      logger.error('Failed to send notification to source', error)
     }
 
     const processingTime = Date.now() - startTime
@@ -1089,19 +1077,19 @@ export async function processDiscussion(
           taskIds: notionTasks.map(t => t.id),
         })
 
-        console.log('[Processor] Job finalized:', {
+        logger.debug('Job finalized', {
           jobId,
-          processingTime: `${processingTime}ms`,
+          processingTime,
         })
       } catch (error) {
-        console.error('[Processor] Failed to finalize job:', error)
+        logger.error('Failed to finalize job', error)
         // Don't fail processing if job finalization fails
       }
     }
 
-    console.log('[Processor] Processing complete:', {
+    logger.info('Processing complete', {
       discussionId,
-      processingTime: `${processingTime}ms`,
+      processingTime,
       taskCount: notionTasks.length,
     })
 
@@ -1114,7 +1102,7 @@ export async function processDiscussion(
     }
   }
   catch (error) {
-    console.error('[Processor] Processing failed:', error)
+    logger.error('Processing failed', error)
 
     // Update discussion status to failed
     if (discussionId) {
@@ -1146,12 +1134,12 @@ export async function processDiscussion(
           errorStack: errorStack || null,
         })
 
-        console.log('[Processor] Job marked as failed:', {
+        logger.warn('Job marked as failed', {
           jobId,
           error: errorMessage,
         })
       } catch (updateError) {
-        console.error('[Processor] Failed to update job with error:', updateError)
+        logger.error('Failed to update job with error', updateError)
         // Don't fail processing if job update fails
       }
     }
@@ -1178,7 +1166,7 @@ export async function processDiscussion(
 export async function processDiscussionById(
   discussionId: string,
 ): Promise<ProcessingResult> {
-  console.log('[Processor] Processing discussion by ID:', discussionId)
+  logger.info('Processing discussion by ID', { discussionId })
 
   // TODO Phase 3: Load discussion from database
   // const discussion = await loadDiscussion(discussionId)
@@ -1214,7 +1202,7 @@ export async function processDiscussionById(
 export async function retryFailedDiscussion(
   discussionId: string,
 ): Promise<ProcessingResult> {
-  console.log('[Processor] Retrying failed discussion:', discussionId)
+  logger.info('Retrying failed discussion', { discussionId })
 
   return await retryWithBackoff(
     () => processDiscussionById(discussionId),
@@ -1261,7 +1249,7 @@ async function updateJobStatus(
   },
 ): Promise<void> {
   if (!jobId) {
-    console.warn('[Processor] Cannot update job: jobId is undefined')
+    logger.warn('Cannot update job: jobId is undefined')
     return
   }
 
@@ -1272,13 +1260,13 @@ async function updateJobStatus(
 
     await updateDiscubotJob(jobId, teamId, SYSTEM_USER_ID, updates)
 
-    console.log('[Processor] Job updated:', {
+    logger.debug('Job updated', {
       jobId,
       status: updates.status,
       stage: updates.stage,
     })
   } catch (error) {
-    console.error('[Processor] Failed to update job:', error)
+    logger.error('Failed to update job', error)
     // Don't fail processing if job update fails
   }
 }

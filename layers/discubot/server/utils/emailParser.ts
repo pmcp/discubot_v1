@@ -11,6 +11,7 @@
  */
 
 import * as cheerio from 'cheerio'
+import { logger } from './logger'
 
 export interface ParsedEmail {
   /** Plain text content of the comment */
@@ -73,11 +74,11 @@ export async function followClickFigmaRedirect(url: string): Promise<string | nu
       // Extract location header from redirect response
       const location = response.headers.get('location')
       if (!location) {
-        console.log('[EmailParser] No location header in redirect response')
+        logger.debug('No location header in redirect response')
         return null
       }
 
-      console.log('[EmailParser] Redirect location:', location)
+      logger.debug('Redirect location', { location })
 
       // Decode the URL (may be URL-encoded)
       const decoded = decodeURIComponent(location)
@@ -85,20 +86,20 @@ export async function followClickFigmaRedirect(url: string): Promise<string | nu
       // Extract file key from decoded destination URL
       const fileMatch = decoded.match(/figma\.com\/(?:file|design|proto)\/([a-zA-Z0-9]+)/)
       if (fileMatch?.[1]) {
-        console.log('[EmailParser] Extracted file key from redirect:', fileMatch[1])
+        logger.debug('Extracted file key from redirect', { fileKey: fileMatch[1] })
         return fileMatch[1]
       }
 
-      console.log('[EmailParser] No file key found in redirect destination')
+      logger.debug('No file key found in redirect destination')
       return null
     } finally {
       clearTimeout(timeoutId)
     }
   } catch (error: any) {
     if (error.name === 'AbortError') {
-      console.log('[EmailParser] Redirect request timed out after 3s')
+      logger.debug('Redirect request timed out after 3s')
     } else {
-      console.error('[EmailParser] Error following redirect:', error.message)
+      logger.warn('Error following redirect', error)
     }
     return null
   }
@@ -262,14 +263,14 @@ export function extractTextFromHtml(html: string): string {
     // Use the longest @Figbot mention (most complete comment)
     for (const mention of figbotMentions) {
       if (mention.length > 7) { // More than just "@Figbot"
-        console.log('[EmailParser] Found @Figbot comment:', mention.trim())
+        logger.debug('Found @Figbot comment', { mention: mention.trim() })
         return mention.trim()
       }
     }
 
     // If we only found bare "@Figbot" mentions, use the first one
     if (figbotMentions.length > 0) {
-      console.log('[EmailParser] Found bare @Figbot mention:', figbotMentions[0].trim())
+      logger.debug('Found bare @Figbot mention', { mention: figbotMentions[0].trim() })
       return figbotMentions[0].trim()
     }
   }
@@ -277,7 +278,7 @@ export function extractTextFromHtml(html: string): string {
   // Priority 2: Look for mentions in table cells (Figma's structure)
   const tableCellResult = extractTableCellMentions(html)
   if (tableCellResult) {
-    console.log('[EmailParser] Found comment in table cell:', tableCellResult.text)
+    logger.debug('Found comment in table cell', { text: tableCellResult.text })
     return tableCellResult.text
   }
 
@@ -289,13 +290,13 @@ export function extractTextFromHtml(html: string): string {
   allMentions = filterCSSRules(allMentions)
 
   if (allMentions.length > 0) {
-    console.log('[EmailParser] Found non-CSS mentions:', allMentions.length)
+    logger.debug('Found non-CSS mentions', { count: allMentions.length })
 
     // Try to extract each mention with context
     for (const mention of allMentions) {
       const contextText = extractMentionWithContext(html, mention)
       if (contextText) {
-        console.log('[EmailParser] Extracted mention with context:', contextText)
+        logger.debug('Extracted mention with context', { contextText })
         return contextText
       }
     }
@@ -303,7 +304,7 @@ export function extractTextFromHtml(html: string): string {
     // Fallback: Use the first valid mention
     for (const mention of allMentions) {
       if (mention.length > 2) { // More than just "@"
-        console.log('[EmailParser] Using mention as fallback:', mention.trim())
+        logger.debug('Using mention as fallback', { mention: mention.trim() })
         return mention.trim()
       }
     }
@@ -333,7 +334,7 @@ export function extractTextFromHtml(html: string): string {
       const text = element.text().trim()
       // Make sure we got substantial text (more than just whitespace)
       if (text.length > 5) {
-        console.log('[EmailParser] Found comment text using selector:', selector)
+        logger.debug('Found comment text using selector', { selector })
         return text
       }
     }
@@ -356,13 +357,13 @@ export function extractTextFromHtml(html: string): string {
   if (substantialLines.length > 0) {
     // Return the first substantial line (likely the comment text)
     const commentText = substantialLines[0]
-    console.log('[EmailParser] Found comment text from substantial lines')
+    logger.debug('Found comment text from substantial lines')
     return commentText
   }
 
   // Fallback 2: get all text content
   const allText = $('body').text().trim()
-  console.log('[EmailParser] Using full body text as fallback')
+  logger.debug('Using full body text as fallback')
   return allText
 }
 
@@ -422,7 +423,7 @@ export function extractFigmaLink(html: string): string | null {
   // This is the "View in Figma" button that Figma includes in emails
   const universalLink = $('a[universal="true"]').attr('href')
   if (universalLink && universalLink.startsWith('http')) {
-    console.log('[EmailParser] Found universal Figma link:', universalLink)
+    logger.debug('Found universal Figma link', { link: universalLink })
     return universalLink
   }
 
@@ -444,7 +445,7 @@ export function extractFigmaLink(html: string): string | null {
   })
 
   if (viewInFigmaLink) {
-    console.log('[EmailParser] Found "View in Figma" link:', viewInFigmaLink)
+    logger.debug('Found "View in Figma" link', { link: viewInFigmaLink })
     return viewInFigmaLink
   }
 
@@ -473,11 +474,11 @@ export function extractFigmaLink(html: string): string | null {
   })
 
   if (figmaComLink) {
-    console.log('[EmailParser] Found Figma.com link:', figmaComLink)
+    logger.debug('Found Figma.com link', { link: figmaComLink })
     return figmaComLink
   }
 
-  console.log('[EmailParser] No Figma link found')
+  logger.debug('No Figma link found')
   return null
 }
 
@@ -611,7 +612,7 @@ export function findCommentByText<T extends { message: string }>(
     }
   }
 
-  console.log('[EmailParser] Fuzzy match result:', {
+  logger.debug('Fuzzy match result', {
     searchText: searchText.substring(0, 100),
     bestScore,
     found: !!bestMatch,
@@ -698,19 +699,18 @@ export async function parseEmailAsync(emailData: {
   const html = emailData['body-html'] || ''
   const plainText = emailData['stripped-text'] || emailData['body-plain'] || ''
 
-  console.log('[EmailParser] Parsing email (async)', {
+  logger.debug('Parsing email (async)', {
     hasHtml: !!html,
     hasPlainText: !!plainText,
     htmlLength: html.length,
     plainTextLength: plainText.length,
-    plainTextPreview: plainText.substring(0, 200),
   })
 
   // Extract text content
   const trimmedPlainText = plainText?.trim() || ''
   const text = trimmedPlainText || (html ? extractTextFromHtml(html) : '')
 
-  console.log('[EmailParser] Extracted text', {
+  logger.debug('Extracted text', {
     textLength: text.length,
     textPreview: text.substring(0, 200),
   })
@@ -736,7 +736,7 @@ export async function parseEmailAsync(emailData: {
     const emailKeyMatch = emailData.from.match(/comments-([a-zA-Z0-9]+)@/i)
     if (emailKeyMatch) {
       fileKey = emailKeyMatch[1]
-      console.log('[EmailParser] Priority 1: Extracted file key from sender email:', fileKey)
+      logger.debug('Priority 1: Extracted file key from sender email', { fileKey })
     }
   }
 
@@ -745,13 +745,13 @@ export async function parseEmailAsync(emailData: {
     const clickFigmaLink = html.match(/href="(https?:\/\/click\.figma\.com[^"]+)"/)
     if (clickFigmaLink?.[1]) {
       const redirectUrl = clickFigmaLink[1]
-      console.log('[EmailParser] Priority 2: Found click.figma.com redirect URL, following...')
+      logger.debug('Priority 2: Found click.figma.com redirect URL, following...')
 
       // Follow the redirect to get the actual file key
       const extractedKey = await followClickFigmaRedirect(redirectUrl)
       if (extractedKey) {
         fileKey = extractedKey
-        console.log('[EmailParser] Priority 2: Extracted file key from redirect:', fileKey)
+        logger.debug('Priority 2: Extracted file key from redirect', { fileKey })
       }
     }
   }
@@ -762,7 +762,7 @@ export async function parseEmailAsync(emailData: {
       const extracted = extractFileKeyFromUrl(link)
       if (extracted) {
         fileKey = extracted
-        console.log('[EmailParser] Priority 3: Extracted file key from direct link:', fileKey)
+        logger.debug('Priority 3: Extracted file key from direct link', { fileKey })
         break
       }
     }
@@ -783,7 +783,7 @@ export async function parseEmailAsync(emailData: {
         const potentialKey = uploadHash.match(/^[a-zA-Z0-9]{22,40}/)
         if (potentialKey) {
           fileKey = potentialKey[0]
-          console.log('[EmailParser] Priority 4: Extracted file key from upload URL:', fileKey)
+          logger.debug('Priority 4: Extracted file key from upload URL', { fileKey })
           break
         }
       }
@@ -797,16 +797,16 @@ export async function parseEmailAsync(emailData: {
     const keyMatches = html.match(keyPattern)
     if (keyMatches && keyMatches.length > 0) {
       fileKey = keyMatches[0]
-      console.log('[EmailParser] Priority 5: Found potential file key from 40-char hash:', fileKey)
+      logger.debug('Priority 5: Found potential file key from 40-char hash', { fileKey })
     }
   }
 
   // Debug: Log if still no file key found
   if (!fileKey && html) {
-    console.log('[EmailParser] No file key found. Looking for any Figma URLs...')
+    logger.debug('No file key found, checking for any Figma URLs')
     const anyFigmaUrl = html.match(/figma\.com[^"'\s]*/gi)
     if (anyFigmaUrl) {
-      console.log('[EmailParser] Found Figma URLs:', anyFigmaUrl.slice(0, 5))
+      logger.debug('Found Figma URLs', { urls: anyFigmaUrl.slice(0, 5) })
     }
   }
 
@@ -851,19 +851,18 @@ export function parseEmail(emailData: {
   const html = emailData['body-html'] || ''
   const plainText = emailData['stripped-text'] || emailData['body-plain'] || ''
 
-  console.log('[EmailParser] Parsing email', {
+  logger.debug('Parsing email', {
     hasHtml: !!html,
     hasPlainText: !!plainText,
     htmlLength: html.length,
     plainTextLength: plainText.length,
-    plainTextPreview: plainText.substring(0, 200),
   })
 
   // Extract text content
   const trimmedPlainText = plainText?.trim() || ''
   const text = trimmedPlainText || (html ? extractTextFromHtml(html) : '')
 
-  console.log('[EmailParser] Extracted text', {
+  logger.debug('Extracted text', {
     textLength: text.length,
     textPreview: text.substring(0, 200),
   })
@@ -889,7 +888,7 @@ export function parseEmail(emailData: {
     const emailKeyMatch = emailData.from.match(/comments-([a-zA-Z0-9]+)@/i)
     if (emailKeyMatch) {
       fileKey = emailKeyMatch[1]
-      console.log('[EmailParser] Priority 1: Extracted file key from sender email:', fileKey)
+      logger.debug('Priority 1: Extracted file key from sender email', { fileKey })
     }
   }
 
@@ -898,17 +897,17 @@ export function parseEmail(emailData: {
     const clickFigmaLink = html.match(/href="(https?:\/\/click\.figma\.com[^"]+)"/)
     if (clickFigmaLink?.[1]) {
       const redirectUrl = clickFigmaLink[1]
-      console.log('[EmailParser] Priority 2: Found click.figma.com redirect URL')
+      logger.debug('Priority 2: Found click.figma.com redirect URL')
 
       try {
         const decoded = decodeURIComponent(redirectUrl)
         const fileMatch = decoded.match(/figma\.com\/file\/([a-zA-Z0-9]+)/)
         if (fileMatch?.[1]) {
           fileKey = fileMatch[1]
-          console.log('[EmailParser] Priority 2: Extracted file key from redirect URL:', fileKey)
+          logger.debug('Priority 2: Extracted file key from redirect URL', { fileKey })
         }
       } catch (e) {
-        console.log('[EmailParser] Priority 2: Could not decode redirect URL')
+        logger.debug('Priority 2: Could not decode redirect URL')
       }
     }
   }
@@ -919,7 +918,7 @@ export function parseEmail(emailData: {
       const extracted = extractFileKeyFromUrl(link)
       if (extracted) {
         fileKey = extracted
-        console.log('[EmailParser] Priority 3: Extracted file key from direct link:', fileKey)
+        logger.debug('Priority 3: Extracted file key from direct link', { fileKey })
         break
       }
     }
@@ -940,7 +939,7 @@ export function parseEmail(emailData: {
         const potentialKey = uploadHash.match(/^[a-zA-Z0-9]{22,40}/)
         if (potentialKey) {
           fileKey = potentialKey[0]
-          console.log('[EmailParser] Priority 4: Extracted file key from upload URL:', fileKey)
+          logger.debug('Priority 4: Extracted file key from upload URL', { fileKey })
           break
         }
       }
@@ -954,16 +953,16 @@ export function parseEmail(emailData: {
     const keyMatches = html.match(keyPattern)
     if (keyMatches && keyMatches.length > 0) {
       fileKey = keyMatches[0]
-      console.log('[EmailParser] Priority 5: Found potential file key from 40-char hash:', fileKey)
+      logger.debug('Priority 5: Found potential file key from 40-char hash', { fileKey })
     }
   }
 
   // Debug: Log if still no file key found
   if (!fileKey && html) {
-    console.log('[EmailParser] No file key found. Looking for any Figma URLs...')
+    logger.debug('No file key found, checking for any Figma URLs')
     const anyFigmaUrl = html.match(/figma\.com[^"'\s]*/gi)
     if (anyFigmaUrl) {
-      console.log('[EmailParser] Found Figma URLs:', anyFigmaUrl.slice(0, 5))
+      logger.debug('Found Figma URLs', { urls: anyFigmaUrl.slice(0, 5) })
     }
   }
 
