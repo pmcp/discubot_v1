@@ -230,7 +230,7 @@
         </UFormField>
 
         <!-- Fetch Schema Button -->
-        <div v-if="state.notionDatabaseId && state.notionToken" class="p-4 bg-muted/30 rounded-lg border border-gray-200 dark:border-gray-800">
+        <div v-if="state.notionDatabaseId && state.notionToken" class="p-4 rounded-lg border border-default space-y-3">
           <div class="flex items-start justify-between gap-4">
             <div class="flex-1">
               <h4 class="text-sm font-semibold mb-1">Auto-Generate Field Mappings</h4>
@@ -287,13 +287,13 @@
           </p>
 
           <!-- Priority Mapping -->
-          <div class="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 space-y-3">
+          <div class="p-4 rounded-lg border border-default space-y-3">
             <div class="flex items-center gap-2">
               <h5 class="text-sm font-medium">Priority</h5>
-              <UBadge color="neutral" variant="subtle" size="xs">AI Field</UBadge>
+              <UBadge color="neutral" variant="subtle" size="sm">AI Field</UBadge>
             </div>
 
-            <UFormField label="Notion Property" name="notionFieldMapping.priority.notionProperty" size="sm">
+            <UFormField label="Notion Property" name="notionFieldMapping.priority.notionProperty">
               <!-- @vue-expect-error: value-key extracts string value from select menu item object -->
               <USelectMenu
                 v-model="fieldMappings.priority.notionProperty"
@@ -332,10 +332,10 @@
           </div>
 
           <!-- Type Mapping -->
-          <div class="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 space-y-3">
+          <div class="p-4 rounded-lg border border-default space-y-3">
             <div class="flex items-center gap-2">
               <h5 class="text-sm font-medium">Type</h5>
-              <UBadge color="neutral" variant="subtle" size="xs">AI Field</UBadge>
+              <UBadge color="neutral" variant="subtle" size="sm">AI Field</UBadge>
             </div>
 
             <UFormField label="Notion Property" name="notionFieldMapping.type.notionProperty" size="sm">
@@ -377,10 +377,10 @@
           </div>
 
           <!-- Assignee Mapping -->
-          <div class="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 space-y-3">
+          <div class="p-4 rounded-lg border border-default space-y-3">
             <div class="flex items-center gap-2">
               <h5 class="text-sm font-medium">Assignee</h5>
-              <UBadge color="neutral" variant="subtle" size="xs">AI Field</UBadge>
+              <UBadge color="neutral" variant="subtle" size="sm">AI Field</UBadge>
             </div>
 
             <UFormField label="Notion Property" name="notionFieldMapping.assignee.notionProperty" size="sm">
