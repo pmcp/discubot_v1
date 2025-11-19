@@ -15,7 +15,7 @@
     </template>
 
     <!-- Custom cell for OAuth Status -->
-    <template #cell-oauthStatus="{ row }">
+    <template #oauthStatus-cell="{ row }">
       <div class="flex items-center gap-2">
         <span
           v-if="hasOAuthConnection(row)"
@@ -36,7 +36,7 @@
     </template>
 
     <!-- Custom cell for Workspace Name -->
-    <template #cell-workspaceName="{ row }">
+    <template #workspaceName-cell="{ row }">
       <div class="text-sm">
         <span v-if="getWorkspaceName(row)" class="font-medium">
           {{ getWorkspaceName(row) }}
@@ -48,7 +48,7 @@
     </template>
 
     <!-- Custom cell for Last Updated -->
-    <template #cell-lastUpdated="{ row }">
+    <template #lastUpdated-cell="{ row }">
       <div class="text-xs text-muted-foreground">
         {{ formatDate(row.updatedAt) }}
       </div>
