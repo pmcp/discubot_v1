@@ -2,8 +2,8 @@
 
 **Project Start Date**: 2025-11-20
 **Expected Completion**: TBD (21-29 hours estimated)
-**Current Phase**: Phase 6 - Custom UI Components (In Progress)
-**Overall Progress**: 86% (30/35 tasks complete)
+**Current Phase**: Phase 6 - Custom UI Components (Complete ✅)
+**Overall Progress**: 89% (31/35 tasks complete)
 
 > **📋 Reference Documentation**: See [flows-redesign-brief.md](./briefings/flows-redesign-brief.md) for complete architecture, decisions, and schema designs.
 
@@ -13,10 +13,10 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 30 / 35 |
-| Remaining Tasks | 5 |
-| Hours Logged | 21.4 / 21-29 |
-| Current Phase | Phase 6 - Custom UI Components (In Progress) |
+| Tasks Completed | 31 / 35 |
+| Remaining Tasks | 4 |
+| Hours Logged | 22.4 / 21-29 |
+| Current Phase | Phase 6 - Custom UI Components (Complete ✅) |
 | Days Elapsed | 0 |
 | Blockers | 0 |
 | Tests Passing | TBD |
@@ -323,9 +323,9 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
 
 ## Phase 6: Custom UI Components 🎨
 
-**Status**: In Progress
-**Progress**: 4/5 tasks (80%)
-**Time**: 9.0h / 8-10h estimated
+**Status**: Complete ✅
+**Progress**: 5/5 tasks (100%)
+**Time**: 10.0h / 8-10h estimated
 **Goal**: Build custom UI in temporary location (safe from regeneration)
 
 - [x] Task 6.1: Build FlowBuilder Wizard (3-4h) ✅
@@ -366,7 +366,7 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
   - Create new flow button
   - Files: `layers/discubot/components/flows/FlowList.vue`
 
-- [ ] Task 6.5: Update Dashboard Pages (1h)
+- [x] Task 6.5: Update Dashboard Pages (1h) ✅
   - Update `/dashboard/[team]/flows` to use FlowList
   - Update `/dashboard/[team]/flows/[id]/edit` to use FlowBuilder
   - Update navigation: "Configs" → "Flows"
@@ -374,7 +374,7 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
   - Test routing
   - Files: `app/pages/dashboard/[team]/flows/*.vue`
 
-**Checkpoint**: ✅ Custom UI built, flows manageable via UI, inputs/outputs configurable.
+**Checkpoint**: ✅ **Phase 6 Complete!** Custom UI built, dashboard pages updated, flows fully manageable via UI, all navigation updated. Ready for Phase 7 - Testing & Validation.
 
 ---
 
@@ -516,6 +516,58 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
 ---
 
 ## Daily Log
+
+### 2025-11-20 - Day 1 (Continued - Phase 6 Task 6.5)
+**Focus**: Phase 6 - Custom UI Components (Task 6.5) ✅ COMPLETE
+**Hours**: 1h / 1h estimated
+**Completed**:
+- [x] Task 6.5: Update Dashboard Pages ✅
+
+**Task 6.5 Notes**:
+  - Created comprehensive dashboard pages for flows
+  - Pages created:
+    - `flows.vue` - Main list page using FlowList component
+    - `flows/create.vue` - Create new flow page with FlowBuilder
+    - `flows/[id].vue` - Edit flow page with FlowBuilder and flow loading
+  - Updated dashboard index page:
+    - Changed "Total Configs" stat to "Total Flows" with workflow icon
+    - Changed "New Source Config" action to "New Flow" (navigates to create page)
+    - Changed "View All Configs" action to "View All Flows"
+    - Changed collection link card from "Source Configs" to "Flows"
+    - Updated description: "Multi-input/output workflows with AI routing"
+  - Script updates:
+    - Added flows data fetching with useCollectionQuery('discubotFlows')
+    - Updated stats calculation to include totalFlows and activeFlows
+    - Updated refreshActivity to include flows refresh
+    - Removed createNewConfig function (now uses router link)
+  - Features implemented:
+    - Breadcrumb navigation on all pages ("Back to Flows", "Back to Dashboard")
+    - Loading states on edit page while fetching flow
+    - Error states on edit page if flow fetch fails
+    - Dynamic page title on edit page ("Edit [Flow Name]")
+    - FlowBuilder integration in both create and edit modes
+    - Proper event handling (saved event navigates back to list)
+  - All pages use Nuxt UI 4 components (UIcon, UButton, etc.)
+  - Proper routing structure: `/dashboard/[team]/discubot/flows`
+  - Auth middleware applied to all pages
+  - No new type errors introduced (verified with npx nuxt typecheck)
+  - Files:
+    - `layers/discubot/app/pages/dashboard/[team]/discubot/flows.vue`
+    - `layers/discubot/app/pages/dashboard/[team]/discubot/flows/create.vue`
+    - `layers/discubot/app/pages/dashboard/[team]/discubot/flows/[id].vue`
+    - `layers/discubot/app/pages/dashboard/[team]/index.vue` (updated)
+
+**Notes**:
+- **MAJOR MILESTONE**: Phase 6 Complete! 🎉
+- All custom UI components built and integrated
+- Dashboard fully updated with flows navigation
+- Users can now create, edit, and manage flows through the UI
+- Replaced configs-focused UI with flows-focused UI
+- Clean, maintainable pages following Nuxt patterns
+- Ready for Phase 7: Testing & Validation
+- Next: Integration testing (Task 7.1)
+
+---
 
 ### 2025-11-20 - Day 1 (Continued - Phase 6 Task 6.4)
 **Focus**: Phase 6 - Custom UI Components (Task 6.4) ✅ COMPLETE

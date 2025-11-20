@@ -6,17 +6,17 @@
         <UCard>
           <template #header>
             <div class="flex items-center justify-between">
-              <h3 class="text-sm font-medium text-muted-foreground">Total Configs</h3>
-              <UIcon name="i-lucide-settings" class="w-4 h-4 text-muted-foreground" />
+              <h3 class="text-sm font-medium text-muted-foreground">Total Flows</h3>
+              <UIcon name="i-lucide-workflow" class="w-4 h-4 text-muted-foreground" />
             </div>
           </template>
 
           <div class="flex items-baseline gap-2">
             <p v-if="statsLoading" class="text-2xl font-bold">...</p>
-            <p v-else class="text-2xl font-bold">{{ stats.totalConfigs }}</p>
+            <p v-else class="text-2xl font-bold">{{ stats.totalFlows }}</p>
           </div>
           <p class="text-xs text-muted-foreground mt-1">
-            {{ stats.activeConfigs }} active
+            {{ stats.activeFlows }} active
           </p>
         </UCard>
 
@@ -85,21 +85,21 @@
           <UButton
             color="primary"
             icon="i-lucide-plus"
-            @click="createNewConfig"
+            :to="`/dashboard/${currentTeam?.slug}/discubot/flows/create`"
             class="w-full justify-center sm:justify-start"
-            aria-label="Create new source configuration"
+            aria-label="Create new flow"
           >
-            <span class="hidden sm:inline">New Source Config</span>
+            <span class="hidden sm:inline">New Flow</span>
           </UButton>
           <UButton
             color="neutral"
             variant="outline"
-            icon="i-lucide-settings"
-            :to="`/dashboard/${currentTeam?.slug}/discubot/configs`"
+            icon="i-lucide-workflow"
+            :to="`/dashboard/${currentTeam?.slug}/discubot/flows`"
             class="w-full justify-center sm:justify-start"
-            aria-label="View all source configurations"
+            aria-label="View all flows"
           >
-            <span>View All Configs</span>
+            <span>View All Flows</span>
           </UButton>
           <UButton
             color="neutral"
@@ -235,21 +235,21 @@
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <UCard
           class="hover:shadow-lg transition-all cursor-pointer active:scale-[0.98]"
-          @click="navigateTo(`/dashboard/${currentTeam?.slug}/discubot/configs`)"
+          @click="navigateTo(`/dashboard/${currentTeam?.slug}/discubot/flows`)"
           role="link"
           tabindex="0"
-          @keydown.enter="navigateTo(`/dashboard/${currentTeam?.slug}/discubot/configs`)"
-          @keydown.space.prevent="navigateTo(`/dashboard/${currentTeam?.slug}/discubot/configs`)"
-          aria-label="Go to source configurations"
+          @keydown.enter="navigateTo(`/dashboard/${currentTeam?.slug}/discubot/flows`)"
+          @keydown.space.prevent="navigateTo(`/dashboard/${currentTeam?.slug}/discubot/flows`)"
+          aria-label="Go to flows"
         >
           <div class="flex items-center gap-3 sm:gap-4">
             <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <UIcon name="i-lucide-settings" class="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+              <UIcon name="i-lucide-workflow" class="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
             </div>
             <div class="flex-1 min-w-0">
-              <h4 class="text-sm font-semibold truncate">Source Configs</h4>
+              <h4 class="text-sm font-semibold truncate">Flows</h4>
               <p class="text-xs text-muted-foreground mt-0.5 sm:mt-1 line-clamp-1 sm:line-clamp-none">
-                Manage Figma and Slack integrations
+                Multi-input/output workflows with AI routing
               </p>
             </div>
             <UIcon name="i-lucide-chevron-right" class="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground flex-shrink-0" />
@@ -289,6 +289,7 @@ const { currentTeam } = useTeam()
 const { open: openCrouton } = useCrouton()
 
 // Data fetching
+const { items: flows, pending: flowsPending, refresh: refreshFlows } = await useCollectionQuery('discubotFlows')
 const { items: configs, pending: configsPending, refresh: refreshConfigs } = await useCollectionQuery('discubotConfigs')
 const { items: jobs, pending: jobsPending, refresh: refreshJobs } = await useCollectionQuery('discubotJobs')
 const { items: discussions, pending: discussionsPending, refresh: refreshDiscussions } = await useCollectionQuery('discubotDiscussions')
@@ -296,7 +297,7 @@ const { items: tasks, pending: tasksPending, refresh: refreshTasks } = await use
 
 // Loading states
 const statsLoading = computed(() =>
-  configsPending.value || jobsPending.value || tasksPending.value
+  flowsPending.value || jobsPending.value || tasksPending.value
 )
 const activityLoading = computed(() =>
   jobsPending.value || discussionsPending.value
@@ -309,8 +310,8 @@ const stats = computed(() => {
   const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
 
   return {
-    totalConfigs: configs.value?.length || 0,
-    activeConfigs: configs.value?.filter((c: any) => c.active).length || 0,
+    totalFlows: flows.value?.length || 0,
+    activeFlows: flows.value?.filter((f: any) => f.active).length || 0,
     activeJobs: jobs.value?.filter((j: any) => j.status === 'processing').length || 0,
     completed24h: jobs.value?.filter((j: any) =>
       j.status === 'completed' && j.completedAt && new Date(j.completedAt * 1000) > oneDayAgo
@@ -407,13 +408,9 @@ function formatRelativeTime(date: string) {
 }
 
 // Actions
-function createNewConfig() {
-  openCrouton('create', 'discubotConfigs')
-}
-
 async function refreshActivity() {
   await Promise.all([
-    refreshConfigs(),
+    refreshFlows(),
     refreshJobs(),
     refreshDiscussions(),
     refreshTasks()
