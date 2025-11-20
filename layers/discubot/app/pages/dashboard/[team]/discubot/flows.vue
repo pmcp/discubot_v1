@@ -10,7 +10,10 @@
       </NuxtLink>
     </div>
 
-    <DiscubotFlowsList />
+    <DiscubotFlowsFlowList v-if="currentTeam?.id" :team-id="currentTeam.id" />
+    <div v-else class="text-center text-muted-foreground">
+      Loading...
+    </div>
   </AppContainer>
 </template>
 
