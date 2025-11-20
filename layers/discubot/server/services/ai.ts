@@ -315,9 +315,37 @@ async function detectTasks(
   ].join('\n')
 
   const maxTasks = options.maxTasks || 5
+  const { availableDomains } = options
 
   // Use customTaskPrompt if available, fallback to customPrompt for backward compatibility
   const taskPrompt = options.customTaskPrompt || options.customPrompt
+
+  // Build domain detection instructions for tasks
+  let domainInstructions = ''
+  if (availableDomains && availableDomains.length > 0) {
+    domainInstructions = `
+### Domain Detection (CRITICAL)
+For EACH task, determine which domain it belongs to based on the work involved.
+Available domains: ${availableDomains.join(', ')}
+
+- Analyze the task's technical requirements and assign the most appropriate domain
+- Return null if the task doesn't clearly fit one domain or you're uncertain
+- Better to return null than guess incorrectly
+
+Examples:
+- "Update button colors" → "design"
+- "Fix API endpoint" → "backend"
+- "Add React component" → "frontend"
+- "Write product requirements" → "product"
+- If uncertain or spans multiple domains → null
+`
+  } else {
+    domainInstructions = `
+### Domain Detection
+For EACH task, determine which domain it belongs to if clearly identifiable (e.g., design, frontend, backend, product, etc.).
+Return null if uncertain or if the task spans multiple domains.
+`
+  }
 
   const prompt = `<task>
 Analyze this discussion and identify actionable tasks. Extract task-specific action items for each task.
@@ -337,6 +365,8 @@ ${taskPrompt ? `<custom_instructions>\n${taskPrompt}\n</custom_instructions>` : 
 2. **Maximum Tasks**: Extract up to ${maxTasks} tasks
 3. **Empty Array**: If no clear tasks exist, return empty array
 4. **Multi-Task Detection**: Set isMultiTask=true if 2+ distinct tasks exist
+
+${domainInstructions}
 
 ## Action Items Extraction (CRITICAL)
 
@@ -376,7 +406,8 @@ Result:
       "Test with screen reader to verify button announcement"
     ],
     "priority": "medium",
-    "type": "improvement"
+    "type": "improvement",
+    "domain": "design"
   }]
 }
 
@@ -396,7 +427,8 @@ Result:
         "Add 6 primary navigation items with icons"
       ],
       "priority": "high",
-      "type": "feature"
+      "type": "feature",
+      "domain": "frontend"
     },
     {
       "title": "Add accessibility features to navigation",
@@ -408,7 +440,8 @@ Result:
         "Test tooltip accessibility with screen readers"
       ],
       "priority": "high",
-      "type": "improvement"
+      "type": "improvement",
+      "domain": "frontend"
     },
     {
       "title": "Test navigation on mobile devices",
@@ -420,7 +453,8 @@ Result:
         "Validate localStorage persistence across sessions"
       ],
       "priority": "medium",
-      "type": "improvement"
+      "type": "improvement",
+      "domain": null
     }
   ]
 }
@@ -481,7 +515,8 @@ Respond with ONLY valid JSON in this exact format:
       "type": "bug"|"feature"|"question"|"improvement"|null,
       "assignee": "uuid-string"|null,
       "dueDate": "YYYY-MM-DD"|null,
-      "tags": ["tag1", "tag2"]|null
+      "tags": ["tag1", "tag2"]|null,
+      "domain": "domain-name"|null
     }
   ],
   "confidence": 0.0-1.0

@@ -3,7 +3,7 @@
 **Project Start Date**: 2025-11-20
 **Expected Completion**: TBD (21-29 hours estimated)
 **Current Phase**: Phase 3 - Backend Updates (AI & Types) 🔄 In Progress
-**Overall Progress**: 37% (13/35 tasks complete)
+**Overall Progress**: 40% (14/35 tasks complete)
 
 > **📋 Reference Documentation**: See [flows-redesign-brief.md](./briefings/flows-redesign-brief.md) for complete architecture, decisions, and schema designs.
 
@@ -13,9 +13,9 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 13 / 35 |
-| Remaining Tasks | 22 |
-| Hours Logged | 5.15 / 21-29 |
+| Tasks Completed | 14 / 35 |
+| Remaining Tasks | 21 |
+| Hours Logged | 6.15 / 21-29 |
 | Current Phase | Phase 3 - Backend Updates (AI & Types) |
 | Days Elapsed | 0 |
 | Blockers | 0 |
@@ -148,8 +148,8 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
 ## Phase 3: Backend Updates - AI & Types 🤖
 
 **Status**: In Progress
-**Progress**: 2/5 tasks (40%)
-**Time**: 1.0h / 2-3h estimated
+**Progress**: 3/5 tasks (60%)
+**Time**: 2.0h / 2-3h estimated
 **Goal**: Update AI service to detect domains, update type definitions
 
 - [x] Task 3.1: Update DetectedTask Interface (0.5h) ✅
@@ -172,12 +172,14 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
   - ✅ Run typecheck - No new errors introduced
   - Files: `layers/discubot/types/index.ts`, `layers/discubot/server/services/ai.ts`
 
-- [ ] Task 3.3: Update AI Task Detection Prompt (1h)
-  - Modify `detectTasks()` in ai.ts
-  - Add instruction: "For each task, determine the domain"
-  - Provide domain vocabulary from flow
-  - Example output: `{ title: "...", domain: "design", ... }`
-  - Ensure AI returns null for uncertain domains
+- [x] Task 3.3: Update AI Task Detection Prompt (1h) ✅
+  - ✅ Modified detectTasks() to accept availableDomains parameter
+  - ✅ Added domain detection instructions (adapts based on availableDomains)
+  - ✅ Updated examples to include domain field
+  - ✅ Updated response format JSON schema to include domain
+  - ✅ AI returns null for uncertain or multi-domain tasks
+  - ✅ Domain instructions provide clear examples and rules
+  - ✅ Run typecheck - No new errors introduced
   - Files: `layers/discubot/server/services/ai.ts`
 
 - [ ] Task 3.4: Update Flow Types (0.5h)
