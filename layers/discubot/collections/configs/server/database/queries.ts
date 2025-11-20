@@ -159,3 +159,41 @@ export async function deleteDiscubotConfig(
 
   return { success: true }
 }
+
+/**
+ * Find config by email address or email slug
+ * Used by resend webhook to match incoming emails to configs
+ */
+export async function findDiscubotConfigByEmail(emailAddress: string) {
+  const db = useDB()
+
+  // Extract email slug (part before @) for matching
+  const emailSlug = emailAddress.split('@')[0]
+
+  const [config] = await db
+    .select()
+    .from(tables.discubotConfigs)
+    .where(
+      and(
+        eq(tables.discubotConfigs.emailAddress, emailAddress)
+      )
+    )
+    .limit(1)
+
+  // If not found by exact email, try by slug
+  if (!config) {
+    const [configBySlug] = await db
+      .select()
+      .from(tables.discubotConfigs)
+      .where(
+        and(
+          eq(tables.discubotConfigs.emailSlug, emailSlug)
+        )
+      )
+      .limit(1)
+
+    return configBySlug || null
+  }
+
+  return config
+}
