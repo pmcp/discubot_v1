@@ -3,7 +3,7 @@
 **Project Start Date**: 2025-11-20
 **Expected Completion**: TBD (21-29 hours estimated)
 **Current Phase**: Phase 5 - API Endpoints & OAuth Integration (In Progress)
-**Overall Progress**: 69% (24/35 tasks complete)
+**Overall Progress**: 71% (25/35 tasks complete)
 
 > **📋 Reference Documentation**: See [flows-redesign-brief.md](./briefings/flows-redesign-brief.md) for complete architecture, decisions, and schema designs.
 
@@ -13,9 +13,9 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 24 / 35 |
-| Remaining Tasks | 11 |
-| Hours Logged | 12.15 / 21-29 |
+| Tasks Completed | 25 / 35 |
+| Remaining Tasks | 10 |
+| Hours Logged | 12.4 / 21-29 |
 | Current Phase | Phase 5 - API Endpoints & OAuth Integration |
 | Days Elapsed | 0 |
 | Blockers | 0 |
@@ -272,8 +272,8 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
 ## Phase 5: API Endpoints & OAuth Integration 🔌
 
 **Status**: In Progress
-**Progress**: 2/4 tasks (50%)
-**Time**: 1.5h / 2-3h estimated
+**Progress**: 3/4 tasks (75%)
+**Time**: 1.75h / 2-3h estimated
 **Goal**: Update APIs to work with flows, integrate OAuth
 
 - [x] Task 5.1: Update Webhook Endpoints (0.5h) ✅
@@ -296,13 +296,19 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
   - ✅ No new type errors introduced (verified with typecheck)
   - Files: `layers/discubot/server/api/oauth/slack/callback.get.ts`
 
-- [ ] Task 5.3: Create Flow Management Endpoints (0.5h)
-  - Verify generated endpoints work:
-    - GET/POST `/api/teams/[id]/flows`
-    - GET/PATCH/DELETE `/api/teams/[id]/flows/[flowId]`
-  - Add custom logic if needed (authorization, validation)
-  - Test with Postman/curl
-  - Files: Check generated files in `layers/discubot/collections/flows/server/api/`
+- [x] Task 5.3: Verify Flow Management Endpoints (0.25h) ✅
+  - ✅ Verified generated endpoints for flows, flowinputs, flowoutputs
+  - ✅ GET `/teams/[id]/discubot-flows` - List all flows (with team auth)
+  - ✅ POST `/teams/[id]/discubot-flows` - Create flow (with team auth)
+  - ✅ PATCH `/teams/[id]/discubot-flows/[flowId]` - Update flow (with team auth)
+  - ✅ DELETE `/teams/[id]/discubot-flows/[flowId]` - Delete flow (with team auth)
+  - ✅ Similar endpoints for flowinputs and flowoutputs
+  - ✅ All endpoints have proper authorization via resolveTeamAndCheckMembership
+  - ✅ All endpoints validate team membership
+  - ✅ Automatic teamId/owner/createdBy/updatedBy assignment
+  - ✅ Production-ready, no custom logic needed
+  - ✅ No new type errors introduced
+  - Files: `layers/discubot/collections/{flows,flowinputs,flowoutputs}/server/api/`
 
 - [ ] Task 5.4: Test OAuth Flow (0.5h)
   - Test: OAuth → Create flow + input
