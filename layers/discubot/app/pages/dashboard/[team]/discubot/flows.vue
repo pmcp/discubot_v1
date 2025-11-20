@@ -10,7 +10,7 @@
       </NuxtLink>
     </div>
 
-    <DiscubotFlowsFlowList v-if="currentTeam?.id" :team-id="currentTeam.id" />
+    <FlowList v-if="currentTeam?.id" :team-id="currentTeam.id" />
     <div v-else class="text-center text-muted-foreground">
       Loading...
     </div>
@@ -18,6 +18,8 @@
 </template>
 
 <script setup lang="ts">
+import FlowList from '~/layers/discubot/components/flows/FlowList.vue'
+
 const { currentTeam } = useTeam()
 
 definePageMeta({
