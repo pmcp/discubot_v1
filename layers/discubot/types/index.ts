@@ -202,8 +202,10 @@ export interface ParsedDiscussion {
 }
 
 /**
- * Source configuration from the configs collection
+ * Source configuration from the configs collection (LEGACY - replaced by Flow)
  * Contains API keys and settings for a specific source
+ *
+ * @deprecated Use Flow types (Flow, FlowInput, FlowOutput) instead
  */
 export interface SourceConfig {
   /** Config record ID */
@@ -240,6 +242,126 @@ export interface SourceConfig {
   webhookUrl?: string
   /** Whether this config is active */
   active: boolean
+}
+
+// ============================================================================
+// FLOW TYPES (v2 Architecture)
+// ============================================================================
+
+/**
+ * Flow - Multi-input/multi-output configuration with AI domain routing
+ *
+ * Replaces the old single-input/single-output SourceConfig architecture.
+ * One flow can have multiple inputs (Slack + Figma) and multiple outputs
+ * (different Notion DBs, GitHub, Linear) with AI-based domain routing.
+ */
+export interface Flow {
+  /** Flow record ID */
+  id: string
+  /** Team ID this flow belongs to */
+  teamId: string
+  /** Display name for this flow */
+  name: string
+  /** Description of what this flow handles */
+  description?: string
+  /** Available domains for AI routing (e.g., ['design', 'frontend', 'backend', 'product']) */
+  availableDomains?: string[]
+  /** Whether AI analysis is enabled */
+  aiEnabled: boolean
+  /** Optional Anthropic API key override */
+  anthropicApiKey?: string
+  /** AI summary prompt override */
+  aiSummaryPrompt?: string
+  /** AI task detection prompt override */
+  aiTaskPrompt?: string
+  /** Whether onboarding is complete */
+  onboardingComplete?: boolean
+  /** Whether this flow is active */
+  active: boolean
+  /** Creation metadata */
+  createdAt?: Date
+  createdBy?: string
+  updatedAt?: Date
+  updatedBy?: string
+}
+
+/**
+ * FlowInput - Single input source for a flow
+ *
+ * Connects external sources (Slack, Figma, email) to a flow.
+ * A flow can have multiple inputs.
+ */
+export interface FlowInput {
+  /** Input record ID */
+  id: string
+  /** Flow ID this input belongs to */
+  flowId: string
+  /** Source type (e.g., 'slack', 'figma', 'email') */
+  sourceType: string
+  /** Display name for this input */
+  name: string
+  /** Source API token/key */
+  apiToken?: string
+  /** Webhook URL for receiving events */
+  webhookUrl?: string
+  /** Webhook secret for validation */
+  webhookSecret?: string
+  /** Email address for email-based inputs (Resend) */
+  emailAddress?: string
+  /** Email slug for routing (e.g., 'figma-comments') */
+  emailSlug?: string
+  /** Source-specific metadata (e.g., Slack team ID, workspace name) */
+  sourceMetadata?: Record<string, any>
+  /** Whether this input is active */
+  active: boolean
+  /** Creation metadata */
+  createdAt?: Date
+  createdBy?: string
+  updatedAt?: Date
+  updatedBy?: string
+}
+
+/**
+ * FlowOutput - Single output destination for a flow
+ *
+ * Defines where tasks should be created (Notion, GitHub, Linear).
+ * A flow can have multiple outputs with domain-based routing.
+ */
+export interface FlowOutput {
+  /** Output record ID */
+  id: string
+  /** Flow ID this output belongs to */
+  flowId: string
+  /** Output type (e.g., 'notion', 'github', 'linear') */
+  outputType: string
+  /** Display name for this output */
+  name: string
+  /** Domain filter - tasks matching these domains will be routed here */
+  domainFilter?: string[]
+  /** Whether this is the default output (for tasks with no/null domain) */
+  isDefault: boolean
+  /** Output-specific configuration (API keys, database IDs, field mappings, etc.) */
+  outputConfig: Record<string, any>
+  /** Whether this output is active */
+  active: boolean
+  /** Creation metadata */
+  createdAt?: Date
+  createdBy?: string
+  updatedAt?: Date
+  updatedBy?: string
+}
+
+/**
+ * Output configuration for Notion outputs
+ * Stored in FlowOutput.outputConfig
+ */
+export interface NotionOutputConfig {
+  /** Notion API token */
+  notionToken: string
+  /** Notion database ID (without dashes) */
+  databaseId: string
+  /** Notion field mapping configuration */
+  fieldMapping?: Record<string, any>
 }
 
 /**

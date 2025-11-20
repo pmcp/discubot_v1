@@ -3,7 +3,7 @@
 **Project Start Date**: 2025-11-20
 **Expected Completion**: TBD (21-29 hours estimated)
 **Current Phase**: Phase 3 - Backend Updates (AI & Types) 🔄 In Progress
-**Overall Progress**: 40% (14/35 tasks complete)
+**Overall Progress**: 43% (15/35 tasks complete)
 
 > **📋 Reference Documentation**: See [flows-redesign-brief.md](./briefings/flows-redesign-brief.md) for complete architecture, decisions, and schema designs.
 
@@ -13,9 +13,9 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 14 / 35 |
-| Remaining Tasks | 21 |
-| Hours Logged | 6.15 / 21-29 |
+| Tasks Completed | 15 / 35 |
+| Remaining Tasks | 20 |
+| Hours Logged | 6.65 / 21-29 |
 | Current Phase | Phase 3 - Backend Updates (AI & Types) |
 | Days Elapsed | 0 |
 | Blockers | 0 |
@@ -148,8 +148,8 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
 ## Phase 3: Backend Updates - AI & Types 🤖
 
 **Status**: In Progress
-**Progress**: 3/5 tasks (60%)
-**Time**: 2.0h / 2-3h estimated
+**Progress**: 4/5 tasks (80%)
+**Time**: 2.5h / 2-3h estimated
 **Goal**: Update AI service to detect domains, update type definitions
 
 - [x] Task 3.1: Update DetectedTask Interface (0.5h) ✅
@@ -182,11 +182,14 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
   - ✅ Run typecheck - No new errors introduced
   - Files: `layers/discubot/server/services/ai.ts`
 
-- [ ] Task 3.4: Update Flow Types (0.5h)
-  - Create Flow, FlowInput, FlowOutput interfaces
-  - Update SourceConfig → Flow mapping logic
-  - Add domain routing types
-  - Update NotionTaskConfig to support output configs
+- [x] Task 3.4: Update Flow Types (0.5h) ✅
+  - ✅ Created Flow interface (name, description, availableDomains, AI settings, onboarding, active)
+  - ✅ Created FlowInput interface (flowId, sourceType, name, tokens, webhook/email config, metadata, active)
+  - ✅ Created FlowOutput interface (flowId, outputType, name, domainFilter, isDefault, outputConfig, active)
+  - ✅ Created NotionOutputConfig interface for Notion-specific output configuration
+  - ✅ Marked SourceConfig as @deprecated with guidance to use Flow types
+  - ✅ All metadata fields included (createdAt/By, updatedAt/By)
+  - ✅ Run typecheck - No new errors introduced
   - Files: `layers/discubot/types/index.ts`
 
 - [ ] Task 3.5: Test AI Domain Detection (0.5h)
