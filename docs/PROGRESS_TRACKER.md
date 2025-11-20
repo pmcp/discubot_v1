@@ -400,6 +400,40 @@
 
 ## Recent Daily Log
 
+### 2025-11-20 - Day 10
+**Focus**: Flows Redesign Architecture Review
+**Hours**: 0.5h
+**Completed**:
+- [x] Architecture review of flows-redesign-brief.md with Nuxt Architect agent
+- [x] Updated briefing with confidence-based routing logic
+- [x] Added webhook lookup performance optimization notes
+- [x] Resolved open questions about output priority and routing
+
+**Notes**:
+- **Architecture Review Grade**: B+ → A- (with improvements)
+- **Key Decisions**:
+  - Confidence-based routing: Each task → ONE output (no duplicates)
+  - If multiple outputs match, use specificity scoring (narrower filter = higher confidence)
+  - Clear winner threshold: 50% confidence gap required
+  - Ambiguous cases (0 or 2+ close matches) → default output
+- **Performance Optimization Identified**:
+  - Add `sourceWorkspaceId` indexed field to flow_inputs for 10-100x faster webhook lookups
+  - Document post-generation optimization task
+- **Resolved Questions**:
+  - Output priority: Use confidence-based routing with clear winner detection
+  - Domain vocabulary: Start with default list, allow per-flow customization
+  - Config import: Not needed (solo developer)
+- **Briefing Updates**:
+  - Added `calculateOutputConfidence()` function with specificity scoring
+  - Added `routeTaskToOutput()` with clear winner logic (50% gap threshold)
+  - Added 4 routing examples (clear winner, ambiguous, single match, no matches)
+  - Added webhook performance optimization section with indexed field approach
+  - Updated document version to 1.1 with changelog
+- **Architecture validated**: Core data model is clean and not over-engineered
+- **Ready for implementation**: All critical design decisions resolved
+
+---
+
 ### 2025-11-17 - Day 7 (Updated)
 **Focus**: Phase 15 - OAuth Fix, Phase 14 - Smart Field Mapping, Phase 16 - OAuth UX Improvements (All Complete!)
 **Hours**: 9.58h (575 min)
@@ -554,6 +588,25 @@
 - Can refactor to service layer later if proven necessary (3+ config creation paths)
 **Impact**: Problem solved immediately, avoided premature abstraction, service layer deferred
 **Reference**: See `/docs/briefings/oauth-service-layer-brief.md` for detailed analysis
+
+---
+
+### Decision 005: Confidence-Based Task Routing
+**Date**: 2025-11-20
+**Context**: Flows redesign needed to handle multiple outputs matching a single task. Question: Create task in all matching outputs, first match, or use confidence scoring?
+**Decision**: Implement confidence-based routing where each task goes to exactly ONE output
+**Rationale**:
+- Prevents duplicate tasks in multiple Notion databases
+- Uses output specificity (narrower domain filter = higher confidence)
+- Clear winner threshold (50% confidence gap) provides deterministic behavior
+- Ambiguous cases (0 matches or close competitors) safely route to default output
+- Provides transparency via logging for debugging
+**Implementation**:
+- Confidence score = 1 / domainFilter.length (e.g., ["design"] = 1.0, ["design", "frontend"] = 0.5)
+- Pick best match if confidence gap ≥ 50% vs runner-up
+- Otherwise route to default output
+**Impact**: Clean, predictable task routing with user control via domain filter configuration
+**Reference**: See `/docs/briefings/flows-redesign-brief.md` Challenge 2 for full implementation
 
 ---
 
