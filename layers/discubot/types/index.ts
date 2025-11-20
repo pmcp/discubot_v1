@@ -48,6 +48,8 @@ export interface AISummary {
   keyPoints: string[]
   sentiment?: 'positive' | 'neutral' | 'negative'
   confidence?: number
+  /** AI-detected primary domain for the discussion (e.g., design, frontend, backend) or null if uncertain */
+  domain?: string | null
 }
 
 /**
@@ -119,6 +121,8 @@ export interface AIAnalysisOptions {
   sourceType?: string
   /** Maximum number of tasks to detect */
   maxTasks?: number
+  /** Available domains for domain detection (e.g., ['design', 'frontend', 'backend']) */
+  availableDomains?: string[]
 }
 
 /**

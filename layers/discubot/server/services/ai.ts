@@ -132,13 +132,14 @@ function getAnthropicClient(): Anthropic {
 }
 
 /**
- * Build the summary prompt with optional custom prompt
+ * Build the summary prompt with optional custom prompt and domain detection
  * Similar to Figno prototype's buildPrompt() function
  */
 function buildSummaryPrompt(
   thread: DiscussionThread,
   sourceType?: string,
   customPrompt?: string,
+  availableDomains?: string[],
 ): string {
   // Build conversation history
   const messages = [
@@ -152,6 +153,14 @@ function buildSummaryPrompt(
   ].join('\n')
 
   const sourceContext = sourceType ? ` from ${sourceType}` : ''
+
+  // Build domain detection instructions
+  let domainInstructions = ''
+  if (availableDomains && availableDomains.length > 0) {
+    domainInstructions = `\n4. Detect the primary domain: Determine which domain this discussion primarily relates to. Available domains: ${availableDomains.join(', ')}. Return null if uncertain or if the discussion doesn't clearly fit one domain.`
+  } else {
+    domainInstructions = `\n4. Detect the primary domain: If the discussion clearly relates to a specific domain (e.g., design, frontend, backend, product, marketing, etc.), specify it. Return null if uncertain.`
+  }
 
   let prompt = ''
 
@@ -170,13 +179,17 @@ function buildSummaryPrompt(
     // Add the thread content
     prompt += `Discussion:\n${messages}\n\n`
 
+    // Add domain detection instruction
+    prompt += `\nImportant: ${domainInstructions}\n`
+
     // Request JSON format for parsing
-    prompt += `Please respond in JSON format:
+    prompt += `\nPlease respond in JSON format:
 {
   "summary": "...",
   "keyPoints": ["...", "...", "..."],
   "sentiment": "positive|neutral|negative",
-  "confidence": 0.0-1.0
+  "confidence": 0.0-1.0,
+  "domain": "domain-name"|null
 }`
   }
   else {
@@ -185,7 +198,7 @@ function buildSummaryPrompt(
 
 1. A concise summary (2-3 sentences)
 2. 3-5 key points or decisions
-3. Overall sentiment (positive, neutral, or negative)
+3. Overall sentiment (positive, neutral, or negative)${domainInstructions}
 
 Discussion:
 ${messages}
@@ -195,7 +208,8 @@ Respond in JSON format:
   "summary": "...",
   "keyPoints": ["...", "...", "..."],
   "sentiment": "positive|neutral|negative",
-  "confidence": 0.0-1.0
+  "confidence": 0.0-1.0,
+  "domain": "domain-name"|null
 }`
   }
 
@@ -214,13 +228,13 @@ async function generateSummary(
 ): Promise<AISummary> {
   const client = getAnthropicClient()
 
-  const { sourceType, customSummaryPrompt, customPrompt } = options
+  const { sourceType, customSummaryPrompt, customPrompt, availableDomains } = options
 
   // Use customSummaryPrompt if available, fallback to customPrompt for backward compatibility
   const summaryPrompt = customSummaryPrompt || customPrompt
 
-  // Build prompt with optional custom prompt (similar to Figno prototype)
-  const prompt = buildSummaryPrompt(thread, sourceType, summaryPrompt)
+  // Build prompt with optional custom prompt and domain detection (similar to Figno prototype)
+  const prompt = buildSummaryPrompt(thread, sourceType, summaryPrompt, availableDomains)
 
   logger.debug('[AI Service] Built summary prompt:', {
     hasCustomPrompt: !!summaryPrompt,
@@ -263,13 +277,17 @@ async function generateSummary(
 
   const result = JSON.parse(jsonMatch[0])
 
-  logger.debug('Generated summary', { duration: Date.now() - startTime })
+  logger.debug('Generated summary', {
+    duration: Date.now() - startTime,
+    domain: result.domain || 'not detected'
+  })
 
   return {
     summary: result.summary,
     keyPoints: result.keyPoints,
     sentiment: result.sentiment,
     confidence: result.confidence,
+    domain: result.domain || null,
   }
 }
 
