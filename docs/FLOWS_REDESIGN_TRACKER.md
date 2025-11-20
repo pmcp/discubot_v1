@@ -3,7 +3,7 @@
 **Project Start Date**: 2025-11-20
 **Expected Completion**: TBD (21-29 hours estimated)
 **Current Phase**: Phase 1 - Pre-Migration Preparation
-**Overall Progress**: 6% (2/35 tasks complete)
+**Overall Progress**: 9% (3/35 tasks complete)
 
 > **📋 Reference Documentation**: See [flows-redesign-brief.md](./briefings/flows-redesign-brief.md) for complete architecture, decisions, and schema designs.
 
@@ -13,9 +13,9 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 2 / 35 |
-| Remaining Tasks | 33 |
-| Hours Logged | 1.65 / 21-29 |
+| Tasks Completed | 3 / 35 |
+| Remaining Tasks | 32 |
+| Hours Logged | 1.9 / 21-29 |
 | Current Phase | Phase 1 - Pre-Migration Preparation |
 | Days Elapsed | 0 |
 | Blockers | 0 |
@@ -35,8 +35,8 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
 ## Phase 1: Pre-Migration Preparation 📦
 
 **Status**: In Progress
-**Progress**: 2/5 tasks (40%)
-**Time**: 1.65h / 2-3h estimated
+**Progress**: 3/5 tasks (60%)
+**Time**: 1.9h / 2-3h estimated
 **Goal**: Extract and preserve custom components before schema changes
 
 - [x] Task 1.1: Extract Custom Logic to Composables (1.5h) ✅
@@ -54,11 +54,13 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
   - Copy PromptPreviewModal.vue to `components/shared/`
   - Files: `layers/discubot/components/flows/README.md`
 
-- [ ] Task 1.3: Backup Existing Custom Components (0.25h)
-  - Backup configs Form.vue to `docs/backups/configs-Form.vue.backup`
-  - Backup configs List.vue
-  - Backup PromptPreviewModal.vue
-  - Document what custom features exist (OAuth, field mapping, etc.)
+- [x] Task 1.3: Backup Existing Custom Components (0.25h) ✅
+  - ✅ Backup configs Form.vue to `docs/backups/configs-Form.vue.backup`
+  - ✅ Backup configs List.vue to `docs/backups/configs-List.vue.backup`
+  - ✅ Backup PromptPreviewModal.vue to `docs/backups/PromptPreviewModal.vue.backup`
+  - ✅ Document what custom features exist in `docs/backups/BACKUP_DOCUMENTATION.md`
+  - Custom features documented: OAuth integration, field mapping, Notion schema fetching, prompt preview, custom table cells
+  - Files: `docs/backups/*.backup`, `docs/backups/BACKUP_DOCUMENTATION.md`
 
 - [ ] Task 1.4: Document Component Migration Plan (0.5h)
   - Create checklist of components to build
@@ -478,8 +480,8 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
 ## Daily Log
 
 ### 2025-11-20 - Day 1
-**Focus**: Pre-Migration Preparation (Tasks 1.1-1.2)
-**Hours**: 1.65h
+**Focus**: Pre-Migration Preparation (Tasks 1.1-1.3)
+**Hours**: 1.9h
 **Completed**:
 - [x] Task 1.1: Extract Custom Logic to Composables ✅
   - Created `useFlowOAuth.ts` for OAuth popup handling
@@ -493,6 +495,14 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
   - Written comprehensive README.md explaining temporary structure
   - Copied PromptPreviewModal.vue to shared components
   - Verified no new type errors in discubot layer
+- [x] Task 1.3: Backup Existing Custom Components ✅
+  - Backed up configs Form.vue (1,300+ lines with OAuth, field mapping, schema fetching, prompt preview)
+  - Backed up configs List.vue (custom OAuth status cell, workspace name cell, enhanced columns)
+  - Backed up PromptPreviewModal.vue (already copied to shared in Task 1.2)
+  - Created comprehensive `BACKUP_DOCUMENTATION.md` documenting all custom features
+  - Documented 8 major custom features in Form.vue
+  - Documented 3 custom cell types in List.vue
+  - Documented migration plan for flows components
 
 **Notes**:
 - `usePromptPreview` already existed, no extraction needed
@@ -502,6 +512,9 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
 - Temporary component structure protects custom work from Crouton regeneration
 - Components will move to collection folders in Phase 9 after schema stabilizes
 - No new type errors introduced (verified with `npx nuxt typecheck`)
+- **Backups complete**: All custom work preserved for reference during redesign
+- **Key features documented**: OAuth, field mapping, schema fetching, prompt preview, custom cells
+- **Migration insights**: Clear understanding of what needs to be rebuilt for flows
 
 ---
 
