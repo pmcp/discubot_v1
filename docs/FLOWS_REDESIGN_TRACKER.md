@@ -89,49 +89,49 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
 
 ## Phase 2: Schema Design & Collection Generation 🏗️
 
-**Status**: Not Started
-**Progress**: 0/6 tasks (0%)
-**Time**: 0h / 2-3h estimated
+**Status**: In Progress
+**Progress**: 5/6 tasks (83%)
+**Time**: 1h / 2-3h estimated
 **Goal**: Design schemas, generate collections with Crouton
 
-- [ ] Task 2.1: Create flow-schema.json (0.5h)
-  - Define flow fields: name, description, availableDomains
-  - AI settings: aiEnabled, anthropicApiKey, aiSummaryPrompt, aiTaskPrompt
-  - Status: active, onboardingComplete
-  - Audit fields: createdAt/By, updatedAt/By (via crouton metadata)
+- [x] Task 2.1: Create flow-schema.json (0.5h) ✅
+  - ✅ Define flow fields: name, description, availableDomains
+  - ✅ AI settings: aiEnabled, anthropicApiKey, aiSummaryPrompt, aiTaskPrompt
+  - ✅ Status: active, onboardingComplete
+  - ✅ Audit fields: createdAt/By, updatedAt/By (via crouton metadata)
   - Files: `crouton/schemas/flow-schema.json`
 
-- [ ] Task 2.2: Create flow-inputs-schema.json (0.5h)
-  - Define flowId with refTarget: "flows" (relationship)
-  - Input fields: sourceType, name, apiToken
-  - Webhook fields: webhookUrl, webhookSecret
-  - Email fields: emailAddress, emailSlug
-  - Source metadata: JSON column
-  - Status: active
+- [x] Task 2.2: Create flow-inputs-schema.json (0.5h) ✅
+  - ✅ Define flowId with refTarget: "flows" (relationship)
+  - ✅ Input fields: sourceType, name, apiToken
+  - ✅ Webhook fields: webhookUrl, webhookSecret
+  - ✅ Email fields: emailAddress, emailSlug
+  - ✅ Source metadata: JSON column
+  - ✅ Status: active
   - Files: `crouton/schemas/flow-inputs-schema.json`
 
-- [ ] Task 2.3: Create flow-outputs-schema.json (0.5h)
-  - Define flowId with refTarget: "flows"
-  - Output fields: outputType, name
-  - Routing: domainFilter (array), isDefault (boolean)
-  - Output config: JSON column (Notion/GitHub/Linear configs)
-  - Status: active
+- [x] Task 2.3: Create flow-outputs-schema.json (0.5h) ✅
+  - ✅ Define flowId with refTarget: "flows"
+  - ✅ Output fields: outputType, name
+  - ✅ Routing: domainFilter (array), isDefault (boolean)
+  - ✅ Output config: JSON column (Notion/GitHub/Linear configs)
+  - ✅ Status: active
   - Files: `crouton/schemas/flow-outputs-schema.json`
 
-- [ ] Task 2.4: Update user-mapping-schema.json (0.25h)
-  - Add sourceWorkspaceId field (required)
-  - Update description: "Prevents user ID collisions across workspaces"
-  - Keep existing fields: sourceType, sourceUserId, sourceUserEmail, notionUserId
+- [x] Task 2.4: Update user-mapping-schema.json (0.25h) ✅
+  - ✅ Add sourceWorkspaceId field (required)
+  - ✅ Update description: "Prevents user ID collisions across workspaces"
+  - ✅ Keep existing fields: sourceType, sourceUserId, sourceUserEmail, notionUserId
   - Files: `crouton/schemas/user-mapping-schema.json`
 
-- [ ] Task 2.5: Update crouton.config.mjs (0.25h)
-  - Add flows, flowInputs, flowOutputs to collections array
-  - Update targets to include new collections in discubot layer
-  - Ensure autoRelations: true (enables refTarget)
+- [x] Task 2.5: Update crouton.config.mjs (0.25h) ✅
+  - ✅ Add flows, flowInputs, flowOutputs to collections array
+  - ✅ Update targets to include new collections in discubot layer
+  - ✅ Ensure autoRelations: true (enables refTarget)
   - Files: `crouton/crouton.config.mjs`
 
 - [ ] Task 2.6: Generate Collections (0.5h)
-  - Run: `pnpm crouton generate`
+  - Run: `npx crouton-generate config crouton/crouton.config.mjs`
   - Verify generation:
     - `layers/discubot/collections/flows/` created
     - `layers/discubot/collections/flow-inputs/` created

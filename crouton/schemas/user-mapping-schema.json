@@ -9,6 +9,16 @@
       "group": "basic"
     }
   },
+  "sourceWorkspaceId": {
+    "type": "string",
+    "meta": {
+      "required": true,
+      "label": "Source Workspace ID",
+      "description": "Slack team ID, Figma org ID (prevents user ID collisions across workspaces)",
+      "area": "main",
+      "group": "basic"
+    }
+  },
   "sourceUserId": {
     "type": "string",
     "meta": {
