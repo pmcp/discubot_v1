@@ -18,7 +18,7 @@
 </template>
 
 <script setup lang="ts">
-import FlowList from '~/layers/discubot/components/flows/FlowList.vue'
+import FlowList from '../../../../../components/flows/FlowList.vue'
 
 const { currentTeam } = useTeam()
 
