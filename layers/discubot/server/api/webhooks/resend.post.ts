@@ -19,6 +19,12 @@
  * - notification: General notifications
  * - other: Unclassified emails
  *
+ * **Flows Support (Phase 5):**
+ * - Comment emails: Automatically finds flow by emailSlug (from recipient)
+ * - Falls back to legacy config if no flow found
+ * - Flow routing handled by processor service
+ * - Inbox messages: Still use legacy config lookup (migration TBD)
+ *
  * **Resend Webhook Payload Structure:**
  * ```json
  * {

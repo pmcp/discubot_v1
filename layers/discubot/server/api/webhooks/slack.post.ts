@@ -8,6 +8,11 @@
  * 2. app_mention events → Parse with adapter → Process discussion → Return result
  * 3. Other events → Ignore
  *
+ * **Flows Support (Phase 5):**
+ * - Automatically finds flow by slackTeamId (from event.team_id)
+ * - Falls back to legacy config if no flow found
+ * - Flow routing handled by processor service
+ *
  * @see https://api.slack.com/events-api
  */
 

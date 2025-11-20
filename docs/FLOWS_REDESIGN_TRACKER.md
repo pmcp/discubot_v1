@@ -2,8 +2,8 @@
 
 **Project Start Date**: 2025-11-20
 **Expected Completion**: TBD (21-29 hours estimated)
-**Current Phase**: Phase 4 - Backend Updates (Processor & Routing) ✅ Complete
-**Overall Progress**: 63% (22/35 tasks complete)
+**Current Phase**: Phase 5 - API Endpoints & OAuth Integration (In Progress)
+**Overall Progress**: 66% (23/35 tasks complete)
 
 > **📋 Reference Documentation**: See [flows-redesign-brief.md](./briefings/flows-redesign-brief.md) for complete architecture, decisions, and schema designs.
 
@@ -13,10 +13,10 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 22 / 35 |
-| Remaining Tasks | 13 |
-| Hours Logged | 10.65 / 21-29 |
-| Current Phase | Phase 4 - Backend Updates (Processor & Routing) |
+| Tasks Completed | 23 / 35 |
+| Remaining Tasks | 12 |
+| Hours Logged | 11.15 / 21-29 |
+| Current Phase | Phase 5 - API Endpoints & OAuth Integration |
 | Days Elapsed | 0 |
 | Blockers | 0 |
 | Tests Passing | TBD |
@@ -271,16 +271,18 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
 
 ## Phase 5: API Endpoints & OAuth Integration 🔌
 
-**Status**: Not Started
-**Progress**: 0/4 tasks (0%)
-**Time**: 0h / 2-3h estimated
+**Status**: In Progress
+**Progress**: 1/4 tasks (25%)
+**Time**: 0.5h / 2-3h estimated
 **Goal**: Update APIs to work with flows, integrate OAuth
 
-- [ ] Task 5.1: Update Webhook Endpoints (1h)
-  - Slack webhook: Find flow by slackTeamId (from input)
-  - Figma/email webhook: Find flow by emailSlug
-  - Support backward compatibility (check config if no flow found)
-  - Update error messages
+- [x] Task 5.1: Update Webhook Endpoints (0.5h) ✅
+  - ✅ Added flows support documentation to webhook headers
+  - ✅ Clarified that processor handles flow/config routing automatically
+  - ✅ Slack webhook: Uses slackTeamId (from event.team_id) via processor
+  - ✅ Resend webhook: Uses emailSlug (from recipient) via processor
+  - ✅ Backward compatibility maintained through processor fallback
+  - ✅ No new type errors introduced (verified with typecheck)
   - Files: `layers/discubot/server/api/webhooks/slack.post.ts`, `layers/discubot/server/api/webhooks/resend.post.ts`
 
 - [ ] Task 5.2: Update OAuth Callback (1h)
@@ -505,6 +507,31 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
 ---
 
 ## Daily Log
+
+### 2025-11-20 - Day 1 (Continued - Phase 5)
+**Focus**: Phase 5 - API Endpoints & OAuth Integration (Task 5.1) ✅
+**Hours**: 0.5h / 2-3h estimated
+**Completed**:
+- [x] Task 5.1: Update Webhook Endpoints ✅
+  - Added flows support documentation to both webhook endpoint headers
+  - Clarified that processor service handles flow/config routing automatically
+  - Verified Slack webhook finds flows by slackTeamId (from event.team_id)
+  - Verified Resend webhook finds flows by emailSlug (from recipient email)
+  - Backward compatibility maintained through processor's fallback to legacy configs
+  - No code changes needed - Phase 4 processor updates handle everything
+  - No new type errors introduced (verified with npx nuxt typecheck)
+
+**Notes**:
+- **Key insight**: Webhooks already support flows through the processor service!
+- Phase 4's `loadFlow()` function handles all the flow lookup logic
+- Processor automatically tries flows first, then falls back to configs
+- Webhooks just need to call `processDiscussion(parsed)` - no changes required
+- Only added documentation to clarify flows support for future developers
+- Task was simpler than expected due to good Phase 4 architecture
+- Files updated: `layers/discubot/server/api/webhooks/slack.post.ts`, `layers/discubot/server/api/webhooks/resend.post.ts`
+- Ready to begin Task 5.2: Update OAuth Callback
+
+---
 
 ### 2025-11-20 - Day 1 (Continued - Phase 4)
 **Focus**: Phase 4 - Backend Updates: Processor & Routing (Tasks 4.1-4.6) ✅ COMPLETE
