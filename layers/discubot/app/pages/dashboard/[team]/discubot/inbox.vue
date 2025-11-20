@@ -508,7 +508,10 @@ async function markAsRead(message: any) {
 function openInNewTab(message: any) {
   if (extractedLinks.value.length > 0) {
     // Open the first link (usually the most important one)
-    window.open(extractedLinks.value[0].url, '_blank', 'noopener,noreferrer')
+    const firstLink = extractedLinks.value[0]
+    if (firstLink) {
+      window.open(firstLink.url, '_blank', 'noopener,noreferrer')
+    }
   }
 }
 </script>

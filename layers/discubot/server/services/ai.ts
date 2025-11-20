@@ -166,7 +166,7 @@ function buildSummaryPrompt(
 
   // If custom prompt is provided, use it with context
   if (customPrompt) {
-    logger.debug('[AI Service] Using custom prompt template:', customPrompt)
+    logger.debug('[AI Service] Using custom prompt template:', { customPrompt })
 
     // First, provide the custom instructions
     prompt = `${customPrompt}\n\n`
@@ -265,6 +265,9 @@ async function generateSummary(
   )
 
   const content = response.content[0]
+  if (!content) {
+    throw new Error('No content in Claude response')
+  }
   if (content.type !== 'text') {
     throw new Error('Unexpected response type from Claude')
   }
@@ -546,6 +549,9 @@ Respond with ONLY valid JSON in this exact format:
   )
 
   const content = response.content[0]
+  if (!content) {
+    throw new Error('No content in Claude response')
+  }
   if (content.type !== 'text') {
     throw new Error('Unexpected response type from Claude')
   }

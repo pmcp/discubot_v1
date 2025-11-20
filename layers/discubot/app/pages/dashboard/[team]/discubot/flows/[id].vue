@@ -59,8 +59,8 @@ async function loadFlow() {
     loading.value = true
     error.value = null
 
-    const response = await $fetch(`/api/teams/${currentTeam.value?.id}/discubot-flows/${flowId.value}`)
-    if (response.data) {
+    const response = await $fetch<{ data: { name?: string } }>(`/api/teams/${currentTeam.value?.id}/discubot-flows/${flowId.value}`)
+    if (response?.data) {
       flowName.value = response.data.name || 'Flow'
     }
   } catch (e: any) {

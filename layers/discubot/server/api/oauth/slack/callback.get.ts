@@ -167,22 +167,16 @@ export default defineEventHandler(async (event) => {
     const accessToken = tokenData.access_token
 
     // Import database and queries
-    const { findDiscubotFlowsByTeam } = await import(
+    const { getAllDiscubotFlows, createDiscubotFlow } = await import(
       '#layers/discubot/collections/flows/server/database/queries'
     )
-    const { findDiscubotFlowinputsByFlow } = await import(
-      '#layers/discubot/collections/flowinputs/server/database/queries'
-    )
-    const { createDiscubotFlow } = await import(
-      '#layers/discubot/collections/flows/server/database/queries'
-    )
-    const { createDiscubotFlowinput } = await import(
+    const { getAllDiscubotFlowInputs, createDiscubotFlowInput } = await import(
       '#layers/discubot/collections/flowinputs/server/database/queries'
     )
     const { SYSTEM_USER_ID } = await import('#layers/discubot/server/utils/constants')
 
     // Check if team already has a flow (reuse if exists)
-    const existingFlows = await findDiscubotFlowsByTeam(teamId)
+    const existingFlows = await getAllDiscubotFlows(teamId)
     let flowId: string
     let isNewFlow = false
 
@@ -215,8 +209,9 @@ export default defineEventHandler(async (event) => {
     }
 
     // Check if this Slack workspace is already connected (by slackTeamId)
-    const existingInputs = await findDiscubotFlowinputsByFlow(flowId)
-    const duplicateInput = existingInputs?.find(input =>
+    const allInputs = await getAllDiscubotFlowInputs(teamId)
+    const existingInputs = allInputs?.filter(input => input.flowId === flowId) || []
+    const duplicateInput = existingInputs.find(input =>
       input.sourceType === 'slack' &&
       input.sourceMetadata?.slackTeamId === slackTeamId
     )
@@ -239,7 +234,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Create new Slack input
-    const newInput = await createDiscubotFlowinput({
+    const newInput = await createDiscubotFlowInput({
       flowId,
       sourceType: 'slack',
       name: slackTeamName,

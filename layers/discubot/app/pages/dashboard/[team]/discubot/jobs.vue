@@ -332,11 +332,11 @@ const jobStats = computed(() => {
 
 // Status filters with counts
 const statusFilters = computed(() => [
-  { label: 'All', value: 'all', count: jobStats.value.total },
-  { label: 'Processing', value: 'processing', count: jobStats.value.processing },
-  { label: 'Completed', value: 'completed', count: jobStats.value.completed },
-  { label: 'Failed', value: 'failed', count: jobStats.value.failed },
-  { label: 'Retrying', value: 'retrying', count: jobStats.value.retrying }
+  { label: 'All', value: 'all' as const, count: jobStats.value.total },
+  { label: 'Processing', value: 'processing' as const, count: jobStats.value.processing },
+  { label: 'Completed', value: 'completed' as const, count: jobStats.value.completed },
+  { label: 'Failed', value: 'failed' as const, count: jobStats.value.failed },
+  { label: 'Retrying', value: 'retrying' as const, count: jobStats.value.retrying }
 ])
 
 // Filtered jobs

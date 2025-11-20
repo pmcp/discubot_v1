@@ -366,8 +366,6 @@ async function saveDiscussion(
     rawPayload: parsed.metadata,
     metadata: {},
     threadData: {},
-    createdBy: SYSTEM_USER_ID,
-    updatedBy: SYSTEM_USER_ID,
   })
 
   if (!discussion) {
@@ -586,8 +584,6 @@ async function saveTaskRecords(
             sourceType: parsed.sourceType,
             sourceThreadId: parsed.sourceThreadId,
           },
-          createdBy: SYSTEM_USER_ID,
-          updatedBy: SYSTEM_USER_ID,
         })
 
         if (task?.id) {
@@ -677,7 +673,7 @@ async function buildThread(
         }
       }
     } catch (error) {
-      logger.warn('Failed to load Figma handle mappings', error)
+      logger.warn('Failed to load Figma handle mappings', { error })
     }
   }
 
@@ -857,7 +853,7 @@ export async function processDiscussion(
       logger.debug('Initial status reaction added')
     } catch (error) {
       // Don't fail if initial reaction fails
-      logger.warn('Failed to add initial status reaction', error)
+      logger.warn('Failed to add initial status reaction', { error })
     }
 
     // ============================================================================
@@ -978,11 +974,11 @@ export async function processDiscussion(
         stage: 'thread_building',
         attempts: 0,
         maxAttempts: 3,
-        error: null,
-        errorStack: null,
+        error: undefined,
+        errorStack: undefined,
         startedAt: new Date(),
-        completedAt: null,
-        processingTime: null,
+        completedAt: undefined,
+        processingTime: undefined,
         taskIds: [],
         metadata: {
           sourceType: parsed.sourceType,
@@ -999,10 +995,10 @@ export async function processDiscussion(
       jobId = job?.id
       logger.debug('Job created', {
         jobId,
-        teamId: config.teamId,
+        teamId: config?.teamId,
       })
     } catch (error) {
-      logger.error('Failed to create job record', error)
+      logger.error('Failed to create job record', { error })
       // Don't fail processing if job creation fails
     }
 
@@ -1108,7 +1104,7 @@ export async function processDiscussion(
         await adapter.updateStatus(parsed.sourceThreadId, 'pending', config)
         logger.debug('Added eyes emoji to Figma comment', { commentId: thread.id })
       } catch (error) {
-        logger.warn('Failed to add eyes emoji to Figma comment', error)
+        logger.warn('Failed to add eyes emoji to Figma comment', { error })
         // Don't fail the whole process for emoji failures
       }
     }
@@ -1473,7 +1469,7 @@ export async function processDiscussion(
           completedAt: new Date(),
           processingTime,
           error: errorMessage,
-          errorStack: errorStack || null,
+          errorStack: errorStack || undefined,
         })
 
         logger.warn('Job marked as failed', {
@@ -1481,7 +1477,7 @@ export async function processDiscussion(
           error: errorMessage,
         })
       } catch (updateError) {
-        logger.error('Failed to update job with error', updateError)
+        logger.error('Failed to update job with error', { updateError })
         // Don't fail processing if job update fails
       }
     }
