@@ -33,13 +33,17 @@ import type {
   NotionTaskResult,
   NotionTaskConfig,
   SourceConfig,
+  Flow,
+  FlowInput,
+  FlowOutput,
 } from '#layers/discubot/types'
 import { analyzeDiscussion } from './ai'
-import { createNotionTask, createNotionTasks } from './notion'
+import { createNotionTask, createNotionTasks, createNotionConfigFromOutput } from './notion'
 import { retryWithBackoff } from '../utils/retry'
 import { SYSTEM_USER_ID } from '../utils/constants'
 import { logger } from '../utils/logger'
 import { eq, and } from 'drizzle-orm'
+import { routeTaskToOutputs } from '../utils/domain-routing'
 
 /**
  * Module-level teamId storage for database updates
@@ -79,6 +83,17 @@ export class ProcessingError extends Error {
 }
 
 /**
+ * Complete flow with inputs and outputs
+ */
+export interface FlowWithRelations {
+  flow: Flow
+  inputs: FlowInput[]
+  outputs: FlowOutput[]
+  /** The specific input that matched this request */
+  matchedInput: FlowInput
+}
+
+/**
  * Validate parsed discussion has all required fields
  */
 function validateParsedDiscussion(parsed: ParsedDiscussion): void {
@@ -105,10 +120,131 @@ function validateParsedDiscussion(parsed: ParsedDiscussion): void {
 }
 
 /**
- * Load source configuration from database
+ * Load flow with inputs and outputs by input identifier
+ *
+ * Queries flowinputs by slackTeamId (from sourceMetadata) or emailSlug,
+ * then loads the associated flow and all its outputs.
+ *
+ * @param identifier - Slack team ID or email slug used to find the input
+ * @param sourceType - Source type ('slack' or 'figma')
+ * @param metadata - Additional metadata (e.g., emailSlug for Figma)
+ * @returns Complete flow with inputs, outputs, and matched input
+ */
+async function loadFlow(
+  identifier: string,
+  sourceType: string,
+  metadata?: Record<string, any>,
+): Promise<FlowWithRelations> {
+  const db = useDB()
+
+  // Import schemas
+  const { discubotFlowinputs } = await import(
+    '#layers/discubot/collections/flowinputs/server/database/schema'
+  )
+  const { discubotFlows } = await import(
+    '#layers/discubot/collections/flows/server/database/schema'
+  )
+  const { discubotFlowoutputs } = await import(
+    '#layers/discubot/collections/flowoutputs/server/database/schema'
+  )
+
+  // Query all active inputs of this source type
+  const inputs = await db
+    .select()
+    .from(discubotFlowinputs)
+    .where(and(
+      eq(discubotFlowinputs.sourceType, sourceType),
+      eq(discubotFlowinputs.active, true),
+    ))
+    .all()
+
+  // Find matching input
+  let matchedInput: any
+
+  if (sourceType === 'slack') {
+    // Match by slackTeamId in sourceMetadata
+    matchedInput = inputs.find(input => {
+      return input.sourceMetadata?.slackTeamId === identifier
+    })
+  } else if (sourceType === 'figma') {
+    // Match by emailSlug
+    const emailSlug = metadata?.emailSlug
+    matchedInput = inputs.find(input => {
+      return input.emailSlug === emailSlug
+    })
+  }
+
+  if (!matchedInput) {
+    throw new ProcessingError(
+      `No active flow input found for ${sourceType} identifier: ${identifier}`,
+      'flow_loading',
+      { identifier, sourceType, emailSlug: metadata?.emailSlug, availableInputs: inputs.length },
+      false,
+    )
+  }
+
+  // Load the flow
+  const [flow] = await db
+    .select()
+    .from(discubotFlows)
+    .where(and(
+      eq(discubotFlows.id, matchedInput.flowId),
+      eq(discubotFlows.active, true),
+    ))
+    .limit(1)
+
+  if (!flow) {
+    throw new ProcessingError(
+      `Flow not found or inactive for input ${matchedInput.id}`,
+      'flow_loading',
+      { flowId: matchedInput.flowId, inputId: matchedInput.id },
+      false,
+    )
+  }
+
+  // Load all inputs for this flow
+  const allInputs = await db
+    .select()
+    .from(discubotFlowinputs)
+    .where(and(
+      eq(discubotFlowinputs.flowId, flow.id),
+      eq(discubotFlowinputs.active, true),
+    ))
+    .all()
+
+  // Load all outputs for this flow
+  const outputs = await db
+    .select()
+    .from(discubotFlowoutputs)
+    .where(and(
+      eq(discubotFlowoutputs.flowId, flow.id),
+      eq(discubotFlowoutputs.active, true),
+    ))
+    .all()
+
+  logger.info('Flow loaded', {
+    flowId: flow.id,
+    flowName: flow.name,
+    inputCount: allInputs.length,
+    outputCount: outputs.length,
+    matchedInputId: matchedInput.id,
+  })
+
+  return {
+    flow: flow as Flow,
+    inputs: allInputs as FlowInput[],
+    outputs: outputs as FlowOutput[],
+    matchedInput: matchedInput as FlowInput,
+  }
+}
+
+/**
+ * Load source configuration from database (LEGACY - for backward compatibility)
  *
  * Queries the configs collection by teamId and sourceType.
  * Returns the first active config found.
+ *
+ * @deprecated Use loadFlow() instead
  */
 async function loadSourceConfig(
   teamId: string,
@@ -725,9 +861,10 @@ export async function processDiscussion(
     }
 
     // ============================================================================
-    // STAGE 2: Config Loading
+    // STAGE 2: Flow/Config Loading
     // ============================================================================
-    let config: SourceConfig
+    let config: SourceConfig | undefined
+    let flowData: FlowWithRelations | undefined
 
     if (options.config) {
       // Use provided config (for testing)
@@ -735,22 +872,62 @@ export async function processDiscussion(
       logger.debug('Using provided config')
     }
     else {
-      // Load from database (Phase 3+)
-      config = await loadSourceConfig(parsed.teamId, parsed.sourceType, parsed.metadata)
+      // Try to load flow first (flows architecture v2)
+      try {
+        flowData = await loadFlow(parsed.teamId, parsed.sourceType, parsed.metadata)
+        actualTeamId = flowData.flow.teamId
+        logger.info('Loaded flow for processing', {
+          flowId: flowData.flow.id,
+          flowName: flowData.flow.name,
+          inputCount: flowData.inputs.length,
+          outputCount: flowData.outputs.length,
+        })
+      }
+      catch (error) {
+        // Fall back to legacy config loading
+        logger.info('No flow found, falling back to legacy config', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        })
+        config = await loadSourceConfig(parsed.teamId, parsed.sourceType, parsed.metadata)
+        actualTeamId = config.teamId
+      }
     }
 
-    // Update actualTeamId to use the correct team ID from config
-    actualTeamId = config.teamId
-    logger.debug('Resolved team IDs', {
-      sourceIdentifier: parsed.teamId,
-      actualTeamId: config.teamId,
-    })
+    // Update actualTeamId
+    if (config && !flowData) {
+      actualTeamId = config.teamId
+      logger.debug('Resolved team IDs from config', {
+        sourceIdentifier: parsed.teamId,
+        actualTeamId: config.teamId,
+      })
+    }
+    else if (flowData) {
+      actualTeamId = flowData.flow.teamId
+      logger.debug('Resolved team IDs from flow', {
+        sourceIdentifier: parsed.teamId,
+        actualTeamId: flowData.flow.teamId,
+      })
+    }
 
     // ============================================================================
     // STAGE 2.5: Load User Mappings (Once, used throughout pipeline)
     // ============================================================================
     logger.info('Stage 2.5: Loading User Mappings')
     let userMappings: Map<string, { name: string; notionId: string }> | undefined
+
+    // Determine source workspace ID for filtering user mappings
+    let sourceWorkspaceId: string | undefined
+    if (flowData) {
+      // Extract from flow input's sourceMetadata
+      sourceWorkspaceId = flowData.matchedInput.sourceMetadata?.slackTeamId ||
+                          flowData.matchedInput.sourceMetadata?.figmaOrgId ||
+                          parsed.teamId
+    } else if (config) {
+      // Extract from legacy config's sourceMetadata
+      sourceWorkspaceId = config.sourceMetadata?.slackTeamId ||
+                          config.sourceMetadata?.figmaOrgId ||
+                          parsed.teamId
+    }
 
     try {
       const { getAllDiscubotUserMappings } = await import(
@@ -761,7 +938,9 @@ export async function processDiscussion(
       const userIdToMentionMap = new Map<string, { name: string; notionId: string }>()
 
       for (const mapping of allUserMappings) {
-        if (mapping.sourceType === parsed.sourceType && mapping.active) {
+        // Filter by sourceType, active status, and sourceWorkspaceId
+        const matchesWorkspace = !sourceWorkspaceId || mapping.sourceWorkspaceId === sourceWorkspaceId
+        if (mapping.sourceType === parsed.sourceType && mapping.active && matchesWorkspace) {
           const displayName = mapping.notionUserName || mapping.sourceUserName || mapping.sourceUserId
           const mentionData = {
             name: String(displayName),
@@ -772,7 +951,10 @@ export async function processDiscussion(
       }
 
       userMappings = userIdToMentionMap
-      logger.info(`Loaded ${userMappings.size} user mappings for ${parsed.sourceType}`)
+      logger.info(`Loaded ${userMappings.size} user mappings for ${parsed.sourceType}`, {
+        sourceWorkspaceId,
+        filtered: !!sourceWorkspaceId,
+      })
     }
     catch (error) {
       logger.warn('Failed to load user mappings', { error })
@@ -788,10 +970,10 @@ export async function processDiscussion(
       )
 
       const job = await createDiscubotJob({
-        teamId: actualTeamId, // Use actual team ID from config, not source identifier
+        teamId: actualTeamId,
         owner: SYSTEM_USER_ID,
         discussionId: '', // Will update after discussion is created
-        sourceConfigId: config.id,
+        sourceConfigId: flowData ? flowData.matchedInput.id : (config?.id || ''), // Use input ID for flows, config ID for legacy
         status: 'processing',
         stage: 'thread_building',
         attempts: 0,
@@ -807,6 +989,8 @@ export async function processDiscussion(
           sourceThreadId: parsed.sourceThreadId,
           emailSlug: parsed.teamId, // Store original email slug for reference
           startTimestamp: Date.now(),
+          flowId: flowData?.flow.id, // Include flow ID if using flows
+          inputId: flowData?.matchedInput.id, // Include matched input ID
         },
         createdBy: SYSTEM_USER_ID,
         updatedBy: SYSTEM_USER_ID,
@@ -823,7 +1007,8 @@ export async function processDiscussion(
     }
 
     // Save discussion record with actual team ID
-    discussionId = await saveDiscussion(parsed, config.id, actualTeamId, 'processing')
+    const sourceConfigOrInputId = flowData ? flowData.matchedInput.id : (config?.id || '')
+    discussionId = await saveDiscussion(parsed, sourceConfigOrInputId, actualTeamId, 'processing')
 
     // Update job with discussion ID (sourceConfigId already set during creation)
     if (jobId && discussionId) {
@@ -868,7 +1053,18 @@ export async function processDiscussion(
       stage: 'thread_building',
     })
 
-    const thread = await buildThread(parsed, config, options.thread, actualTeamId, userMappings)
+    // Build thread with either flow input config or legacy config
+    const threadBuildConfig = flowData
+      ? {
+          id: flowData.matchedInput.id,
+          teamId: flowData.flow.teamId,
+          sourceType: flowData.matchedInput.sourceType,
+          apiToken: flowData.matchedInput.apiToken || '',
+          sourceMetadata: flowData.matchedInput.sourceMetadata,
+        } as SourceConfig
+      : config!
+
+    const thread = await buildThread(parsed, threadBuildConfig, options.thread, actualTeamId, userMappings)
     logger.info('Thread built', {
       id: thread.id,
       messages: thread.replies.length + 1,
@@ -945,18 +1141,22 @@ export async function processDiscussion(
       }
     }
     else {
-      const customSummaryPrompt = config.aiSummaryPrompt || undefined
-      const customTaskPrompt = config.aiTaskPrompt || undefined
+      // Get AI settings from flow or config
+      const customSummaryPrompt = flowData?.flow.aiSummaryPrompt || config?.aiSummaryPrompt || undefined
+      const customTaskPrompt = flowData?.flow.aiTaskPrompt || config?.aiTaskPrompt || undefined
+      const availableDomains = flowData?.flow.availableDomains || undefined
 
-      logger.debug('Using custom prompts', {
+      logger.debug('Using AI settings', {
         hasSummaryPrompt: !!customSummaryPrompt,
         hasTaskPrompt: !!customTaskPrompt,
+        availableDomains,
       })
 
       aiAnalysis = await analyzeDiscussion(thread, {
         sourceType: parsed.sourceType,
         customSummaryPrompt,
         customTaskPrompt,
+        availableDomains, // Pass available domains for domain detection
       })
 
       logger.info('AI analysis complete', {
@@ -976,14 +1176,9 @@ export async function processDiscussion(
 
     let notionTasks: NotionTaskResult[] = []
 
-    if (!options.skipNotion && config.aiEnabled) {
-      const notionConfig: NotionTaskConfig = {
-        databaseId: config.notionDatabaseId,
-        apiKey: config.notionToken,
-        sourceType: parsed.sourceType,
-        sourceUrl: parsed.sourceUrl,
-      }
+    const aiEnabled = flowData?.flow.aiEnabled ?? config?.aiEnabled ?? false
 
+    if (!options.skipNotion && aiEnabled) {
       // Use user mappings from Stage 2.5 (already loaded once)
       // Convert to simple userId -> notionId map for Notion API
       const notionUserMappings = new Map<string, string>()
@@ -998,57 +1193,152 @@ export async function processDiscussion(
         sourceType: parsed.sourceType
       })
 
-      // Get field mapping configuration
-      const fieldMapping = config.notionFieldMapping || {}
-
       const tasks = aiAnalysis.taskDetection.tasks
 
       if (tasks.length === 0) {
         logger.info('No tasks detected, skipping Notion creation')
       }
-      else if (tasks.length === 1) {
-        // Single task
-        const task = tasks[0]
-        if (!task) {
-          logger.warn('Task is undefined, skipping')
+      else if (flowData) {
+        // ============================================================================
+        // FLOWS ARCHITECTURE: Route tasks to multiple outputs based on domain
+        // ============================================================================
+        logger.info('Processing with flows architecture', {
+          flowId: flowData.flow.id,
+          taskCount: tasks.length,
+          outputCount: flowData.outputs.length,
+        })
+
+        // Process each task
+        for (let taskIndex = 0; taskIndex < tasks.length; taskIndex++) {
+          const task = tasks[taskIndex]
+          if (!task) {
+            logger.warn('Task is undefined, skipping', { taskIndex })
+            continue
+          }
+
+          // Route task to matching outputs based on domain
+          const matchedOutputs = routeTaskToOutputs(task, flowData.outputs)
+
+          logger.info('Task routed to outputs', {
+            taskIndex,
+            taskDomain: task.domain,
+            matchedOutputCount: matchedOutputs.length,
+            outputNames: matchedOutputs.map(o => o.name),
+          })
+
+          // Create task in all matched outputs
+          for (const output of matchedOutputs) {
+            if (output.outputType !== 'notion') {
+              logger.warn('Non-Notion output types not yet supported', {
+                outputType: output.outputType,
+                outputId: output.id,
+              })
+              continue
+            }
+
+            try {
+              // Extract Notion config from output
+              const { config: notionConfig, fieldMapping } = createNotionConfigFromOutput(
+                output,
+                parsed.sourceType,
+                parsed.sourceUrl,
+              )
+
+              logger.info('Creating task in output', {
+                outputId: output.id,
+                outputName: output.name,
+                taskTitle: task.title,
+              })
+
+              const result = await createNotionTask(
+                task,
+                thread,
+                aiAnalysis.summary,
+                notionConfig,
+                notionUserMappings,
+                fieldMapping,
+                notionUserMappings,
+              )
+
+              notionTasks.push(result)
+
+              logger.info('Task created successfully in output', {
+                outputId: output.id,
+                outputName: output.name,
+                notionTaskId: result.id,
+              })
+            }
+            catch (error) {
+              logger.error('Failed to create task in output', error, {
+                outputId: output.id,
+                outputName: output.name,
+                taskTitle: task.title,
+              })
+              // Continue with other outputs even if one fails
+            }
+          }
+        }
+
+        logger.info('All tasks processed with flows', {
+          totalTasksCreated: notionTasks.length,
+          taskIds: notionTasks.map(t => t.id),
+        })
+      }
+      else if (config) {
+        // ============================================================================
+        // LEGACY CONFIG: Single output (backward compatibility)
+        // ============================================================================
+        const notionConfig: NotionTaskConfig = {
+          databaseId: config.notionDatabaseId,
+          apiKey: config.notionToken,
+          sourceType: parsed.sourceType,
+          sourceUrl: parsed.sourceUrl,
+        }
+
+        const fieldMapping = config.notionFieldMapping || {}
+
+        if (tasks.length === 1) {
+          // Single task
+          const task = tasks[0]
+          if (!task) {
+            logger.warn('Task is undefined, skipping')
+          }
+          else {
+            logger.info('Creating single Notion task (legacy config)')
+
+            const result = await createNotionTask(
+              task,
+              thread,
+              aiAnalysis.summary,
+              notionConfig,
+              notionUserMappings,
+              fieldMapping,
+              notionUserMappings,
+            )
+
+            notionTasks.push(result)
+          }
         }
         else {
-          logger.info('Creating single Notion task')
-          logger.debug('Passing user mappings for @mentions in task content')
+          // Multiple tasks
+          logger.info('Creating multiple Notion tasks (legacy config)', { count: tasks.length })
 
-          const result = await createNotionTask(
-            task,
+          notionTasks = await createNotionTasks(
+            tasks,
             thread,
             aiAnalysis.summary,
             notionConfig,
-            notionUserMappings, // userMentions (for @mentions in content) - userId -> notionId for API
+            notionUserMappings,
             fieldMapping,
-            notionUserMappings, // assigneeMappings - just userId -> notionId for API
+            notionUserMappings,
           )
-
-          notionTasks.push(result)
         }
-      }
-      else {
-        // Multiple tasks
-        logger.info('Creating multiple Notion tasks', { count: tasks.length })
-        logger.debug('Passing user mappings for @mentions in task content')
 
-        notionTasks = await createNotionTasks(
-          tasks,
-          thread,
-          aiAnalysis.summary,
-          notionConfig,
-          notionUserMappings, // userMentions (for @mentions in content) - userId -> notionId for API
-          fieldMapping,
-          notionUserMappings, // assigneeMappings - just userId -> notionId for API
-        )
+        logger.info('Notion tasks created (legacy)', {
+          count: notionTasks.length,
+          ids: notionTasks.map(t => t.id),
+        })
       }
-
-      logger.info('Notion tasks created', {
-        count: notionTasks.length,
-        ids: notionTasks.map(t => t.id),
-      })
 
       // Save task records to database
       if (notionTasks.length > 0 && discussionId && jobId) {

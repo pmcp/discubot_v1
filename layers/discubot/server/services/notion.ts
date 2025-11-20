@@ -21,6 +21,8 @@ import type {
   DiscussionThread,
   NotionTaskConfig,
   NotionTaskResult,
+  FlowOutput,
+  NotionOutputConfig,
 } from '#layers/discubot/types'
 import { retryWithBackoff } from '../utils/retry'
 import { logger } from '../utils/logger'
@@ -58,6 +60,55 @@ function getNotionApiKey(apiKey?: string): string {
   }
 
   return key
+}
+
+/**
+ * Create NotionTaskConfig from FlowOutput (for flows architecture)
+ *
+ * Extracts Notion-specific configuration from a FlowOutput's outputConfig.
+ * Validates that the output is of type 'notion' and has required fields.
+ *
+ * @param output - The flow output (must be type 'notion')
+ * @param sourceType - Source type for metadata
+ * @param sourceUrl - Source URL for deep linking
+ * @returns NotionTaskConfig ready for task creation
+ * @throws Error if output is not Notion type or missing required config
+ */
+export function createNotionConfigFromOutput(
+  output: FlowOutput,
+  sourceType: string,
+  sourceUrl: string,
+): { config: NotionTaskConfig; fieldMapping?: Record<string, any> } {
+  if (output.outputType !== 'notion') {
+    throw new Error(`Output ${output.id} is not a Notion output (type: ${output.outputType})`)
+  }
+
+  const notionConfig = output.outputConfig as NotionOutputConfig
+
+  if (!notionConfig.notionToken) {
+    throw new Error(`Output ${output.id} missing notionToken in outputConfig`)
+  }
+
+  if (!notionConfig.databaseId) {
+    throw new Error(`Output ${output.id} missing databaseId in outputConfig`)
+  }
+
+  logger.debug('Created Notion config from output', {
+    outputId: output.id,
+    outputName: output.name,
+    databaseId: notionConfig.databaseId,
+    hasFieldMapping: !!notionConfig.fieldMapping,
+  })
+
+  return {
+    config: {
+      databaseId: notionConfig.databaseId,
+      apiKey: notionConfig.notionToken,
+      sourceType,
+      sourceUrl,
+    },
+    fieldMapping: notionConfig.fieldMapping,
+  }
 }
 
 /**
