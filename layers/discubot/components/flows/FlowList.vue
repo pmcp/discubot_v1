@@ -89,12 +89,12 @@ const rows = computed(() => {
 
 // Handle create new flow
 const handleCreateFlow = () => {
-  router.push(`/dashboard/${props.teamId}/flows/new`)
+  router.push(`/dashboard/${props.teamId}/discubot/flows/new`)
 }
 
 // Handle edit flow
 const handleEditFlow = (flowId: string) => {
-  router.push(`/dashboard/${props.teamId}/flows/${flowId}/edit`)
+  router.push(`/dashboard/${props.teamId}/discubot/flows/${flowId}`)
 }
 
 // Handle delete flow (show confirmation)
