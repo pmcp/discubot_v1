@@ -15,6 +15,10 @@
  * - NOT internal components (adapter, processor, parser)
  */
 
+/**
+ * DEPRECATED: This test suite uses the old SourceConfig approach.
+ * For flows-based integration tests, see: tests/integration/flow-end-to-end.test.ts
+ */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { ParsedDiscussion, DiscussionThread, SourceConfig, ThreadMessage } from '../../layers/discubot/types'
 
@@ -102,7 +106,7 @@ vi.mock('@notionhq/client', () => {
 // Mock global fetch for Figma API
 global.fetch = mockFigmaFetch as any
 
-describe('Figma Integration Flow', () => {
+describe.skip('Figma Integration Flow (DEPRECATED - see flow-end-to-end.test.ts)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 

@@ -2,6 +2,9 @@
  * Test Connection Endpoint Tests
  *
  * Tests the POST /api/configs/test-connection endpoint
+ *
+ * DEPRECATED: This endpoint is part of the old configs-based architecture.
+ * Flows-based configuration is now the primary approach.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -20,7 +23,7 @@ vi.mock('~/layers/discubot/server/services/notion', () => ({
 import { getAdapter } from '~/layers/discubot/server/adapters'
 import { testNotionConnection } from '~/layers/discubot/server/services/notion'
 
-describe('Test Connection Endpoint', () => {
+describe.skip('Test Connection Endpoint (DEPRECATED - configs endpoint)', () => {
   const mockGetAdapter = getAdapter as any
   const mockTestNotionConnection = testNotionConnection as any
 

@@ -8,6 +8,9 @@
  * - updateStatus()
  * - validateConfig()
  * - testConnection()
+ *
+ * NOTE: The Slack adapter now only accepts 'app_mention' events, not 'message' events.
+ * This is to avoid processing every message in every channel.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -24,15 +27,15 @@ describe('SlackAdapter', () => {
   })
 
   describe('parseIncoming()', () => {
-    it('should parse valid Slack message event', async () => {
+    it('should parse valid Slack app_mention event', async () => {
       const payload = {
         type: 'event_callback',
         team_id: 'T123456',
         event: {
-          type: 'message',
+          type: 'app_mention',
           channel: 'C123456',
           user: 'U123456',
-          text: 'This is a test message',
+          text: '<@U07UWNTKPH2> This is a test message',
           ts: '1234567890.123456',
         },
       }
@@ -45,8 +48,8 @@ describe('SlackAdapter', () => {
         sourceUrl: 'slack://channel?team=T123456&id=C123456&message=1234567890123456',
         teamId: 'T123456',
         authorHandle: 'U123456',
-        title: 'This is a test message',
-        content: 'This is a test message',
+        title: '<@U07UWNTKPH2> This is a test message',
+        content: '<@U07UWNTKPH2> This is a test message',
         participants: ['U123456'],
         timestamp: new Date(1234567890123.456),
         metadata: {
@@ -58,15 +61,15 @@ describe('SlackAdapter', () => {
       })
     })
 
-    it('should parse threaded message event', async () => {
+    it('should parse threaded app_mention event', async () => {
       const payload = {
         type: 'event_callback',
         team_id: 'T123456',
         event: {
-          type: 'message',
+          type: 'app_mention',
           channel: 'C123456',
           user: 'U123456',
-          text: 'Reply in thread',
+          text: '<@U07UWNTKPH2> Reply in thread',
           ts: '1234567891.123456',
           thread_ts: '1234567890.123456', // This is a reply to another message
         },
@@ -84,17 +87,17 @@ describe('SlackAdapter', () => {
         type: 'event_callback',
         team_id: 'T123456',
         event: {
-          type: 'message',
+          type: 'app_mention',
           channel: 'C123456',
           user: 'U123456',
-          text: 'This is a very long message that should be truncated to 50 characters maximum',
+          text: '<@U07UWNTKPH2> This is a very long message that should be truncated to 50 characters maximum',
           ts: '1234567890.123456',
         },
       }
 
       const result = await adapter.parseIncoming(payload)
 
-      expect(result.title).toBe('This is a very long message that should be trun...')
+      expect(result.title).toBe('<@U07UWNTKPH2> This is a very long message that...')
       expect(result.title.length).toBe(50)
     })
 
@@ -103,18 +106,18 @@ describe('SlackAdapter', () => {
         type: 'event_callback',
         team_id: 'T123456',
         event: {
-          type: 'message',
+          type: 'app_mention',
           channel: 'C123456',
           user: 'U123456',
-          text: 'First line\nSecond line\nThird line',
+          text: '<@U07UWNTKPH2> First line\nSecond line\nThird line',
           ts: '1234567890.123456',
         },
       }
 
       const result = await adapter.parseIncoming(payload)
 
-      expect(result.title).toBe('First line')
-      expect(result.content).toBe('First line\nSecond line\nThird line')
+      expect(result.title).toBe('<@U07UWNTKPH2> First line')
+      expect(result.content).toBe('<@U07UWNTKPH2> First line\nSecond line\nThird line')
     })
 
     it('should throw error for URL verification challenge', async () => {
@@ -173,7 +176,7 @@ describe('SlackAdapter', () => {
         type: 'event_callback',
         team_id: 'T123456',
         event: {
-          type: 'message',
+          type: 'app_mention',
           channel: 'C123456',
           user: 'U123456',
           text: '',
@@ -190,7 +193,7 @@ describe('SlackAdapter', () => {
         type: 'event_callback',
         team_id: 'T123456',
         event: {
-          type: 'message',
+          type: 'app_mention',
           user: 'U123456',
           text: 'Test message',
           ts: '1234567890.123456',
@@ -206,7 +209,7 @@ describe('SlackAdapter', () => {
         type: 'event_callback',
         team_id: 'T123456',
         event: {
-          type: 'message',
+          type: 'app_mention',
           channel: 'C123456',
           text: 'Test message',
           ts: '1234567890.123456',
@@ -222,10 +225,10 @@ describe('SlackAdapter', () => {
         type: 'event_callback',
         // No team_id
         event: {
-          type: 'message',
+          type: 'app_mention',
           channel: 'C123456',
           user: 'U123456',
-          text: 'Test message',
+          text: '<@U07UWNTKPH2> Test message',
           ts: '1234567890.123456',
         },
       }

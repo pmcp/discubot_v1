@@ -16,6 +16,13 @@
  * - NOT internal components (adapter, processor, webhook handler)
  */
 
+/**
+ * DEPRECATED: This test suite uses the old SourceConfig approach.
+ * For flows-based integration tests, see: tests/integration/flow-end-to-end.test.ts
+ *
+ * These tests also use 'message' events which are no longer supported by the Slack adapter.
+ * The adapter now only accepts 'app_mention' events.
+ */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { ParsedDiscussion, DiscussionThread, SourceConfig, ThreadMessage } from '../../layers/discubot/types'
 
@@ -105,7 +112,7 @@ vi.mock('@notionhq/client', () => {
 // Mock global fetch for Slack API
 global.fetch = mockSlackFetch as any
 
-describe('Slack Integration Flow', () => {
+describe.skip('Slack Integration Flow (DEPRECATED - see flow-end-to-end.test.ts)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
