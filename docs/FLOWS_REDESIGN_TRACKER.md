@@ -2,8 +2,8 @@
 
 **Project Start Date**: 2025-11-20
 **Expected Completion**: TBD (21-29 hours estimated)
-**Current Phase**: Phase 2 - Schema Design & Collection Generation ✅ Complete
-**Overall Progress**: 31% (11/35 tasks complete)
+**Current Phase**: Phase 3 - Backend Updates (AI & Types) 🔄 In Progress
+**Overall Progress**: 34% (12/35 tasks complete)
 
 > **📋 Reference Documentation**: See [flows-redesign-brief.md](./briefings/flows-redesign-brief.md) for complete architecture, decisions, and schema designs.
 
@@ -13,10 +13,10 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 11 / 35 |
-| Remaining Tasks | 24 |
-| Hours Logged | 4.15 / 21-29 |
-| Current Phase | Phase 2 - Schema Design & Collection Generation |
+| Tasks Completed | 12 / 35 |
+| Remaining Tasks | 23 |
+| Hours Logged | 4.65 / 21-29 |
+| Current Phase | Phase 3 - Backend Updates (AI & Types) |
 | Days Elapsed | 0 |
 | Blockers | 0 |
 | Tests Passing | TBD |
@@ -147,16 +147,19 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
 
 ## Phase 3: Backend Updates - AI & Types 🤖
 
-**Status**: Not Started
-**Progress**: 0/5 tasks (0%)
-**Time**: 0h / 2-3h estimated
+**Status**: In Progress
+**Progress**: 1/5 tasks (20%)
+**Time**: 0.5h / 2-3h estimated
 **Goal**: Update AI service to detect domains, update type definitions
 
-- [ ] Task 3.1: Update DetectedTask Interface (0.5h)
-  - Add `domain?: string | null` field
-  - Update JSDoc: "AI-detected domain (design/frontend/backend/etc.) or null if uncertain"
-  - Update all usage sites
-  - Files: `layers/discubot/types/index.ts`
+- [x] Task 3.1: Update DetectedTask Interface (0.5h) ✅
+  - ✅ Add `domain?: string | null` field
+  - ✅ Update JSDoc: "AI-detected domain (design/frontend/backend/etc.) or null if uncertain"
+  - ✅ Update all usage sites (field-mapping.ts, notion.ts)
+  - ✅ Added domain to aiFieldValues in notion.ts for field mapping
+  - ✅ Added domain to aiFields array in field-mapping.ts for auto-mapping
+  - ✅ Run typecheck - No new errors introduced
+  - Files: `layers/discubot/types/index.ts`, `server/utils/field-mapping.ts`, `server/services/notion.ts`
 
 - [ ] Task 3.2: Update AI Summary Prompt (0.5h)
   - Modify `generateSummary()` in ai.ts

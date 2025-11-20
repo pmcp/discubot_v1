@@ -128,7 +128,7 @@ export function generateDefaultMapping(notionSchema: {
   const mapping: Record<string, any> = {}
 
   // AI fields that can be mapped (from DetectedTask interface)
-  const aiFields = ['priority', 'type', 'assignee', 'dueDate', 'tags']
+  const aiFields = ['priority', 'type', 'assignee', 'dueDate', 'tags', 'domain']
 
   for (const aiField of aiFields) {
     const match = findBestMatch(aiField, notionSchema.properties)

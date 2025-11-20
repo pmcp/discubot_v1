@@ -158,6 +158,7 @@ async function buildTaskProperties(
     assignee: task.assignee,
     dueDate: task.dueDate,
     tags: task.tags,
+    domain: task.domain,
   }
 
   for (const [aiField, value] of Object.entries(aiFieldValues)) {

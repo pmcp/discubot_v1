@@ -67,6 +67,8 @@ export interface DetectedTask {
   type?: 'bug' | 'feature' | 'question' | 'improvement' | null
   /** Assignee as Slack/Figma user ID or email - AI returns null if uncertain */
   assignee?: string | null
+  /** AI-detected domain (design/frontend/backend/etc.) or null if uncertain */
+  domain?: string | null
   dueDate?: Date | null
   tags?: string[] | null
 }
