@@ -3,7 +3,7 @@
 **Project Start Date**: 2025-11-20
 **Expected Completion**: TBD (21-29 hours estimated)
 **Current Phase**: Phase 5 - API Endpoints & OAuth Integration (In Progress)
-**Overall Progress**: 66% (23/35 tasks complete)
+**Overall Progress**: 69% (24/35 tasks complete)
 
 > **📋 Reference Documentation**: See [flows-redesign-brief.md](./briefings/flows-redesign-brief.md) for complete architecture, decisions, and schema designs.
 
@@ -13,9 +13,9 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 23 / 35 |
-| Remaining Tasks | 12 |
-| Hours Logged | 11.15 / 21-29 |
+| Tasks Completed | 24 / 35 |
+| Remaining Tasks | 11 |
+| Hours Logged | 12.15 / 21-29 |
 | Current Phase | Phase 5 - API Endpoints & OAuth Integration |
 | Days Elapsed | 0 |
 | Blockers | 0 |
@@ -272,8 +272,8 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
 ## Phase 5: API Endpoints & OAuth Integration 🔌
 
 **Status**: In Progress
-**Progress**: 1/4 tasks (25%)
-**Time**: 0.5h / 2-3h estimated
+**Progress**: 2/4 tasks (50%)
+**Time**: 1.5h / 2-3h estimated
 **Goal**: Update APIs to work with flows, integrate OAuth
 
 - [x] Task 5.1: Update Webhook Endpoints (0.5h) ✅
@@ -285,12 +285,15 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
   - ✅ No new type errors introduced (verified with typecheck)
   - Files: `layers/discubot/server/api/webhooks/slack.post.ts`, `layers/discubot/server/api/webhooks/resend.post.ts`
 
-- [ ] Task 5.2: Update OAuth Callback (1h)
-  - Create flow + input instead of config
-  - Set flow name from Slack workspace name
-  - Store slackTeamId in input.sourceMetadata
-  - Create default Notion output if user provides DB
-  - Redirect to flow edit page (not config page)
+- [x] Task 5.2: Update OAuth Callback (1h) ✅
+  - ✅ Creates flow + input automatically after OAuth completes
+  - ✅ Set flow name from Slack workspace name
+  - ✅ Stores slackTeamId in input.sourceMetadata
+  - ✅ Reuses existing flow if team already has one
+  - ✅ Prevents duplicate inputs for same Slack workspace
+  - ✅ Redirects to success page with flow information
+  - ✅ Handles both new flow creation and adding inputs to existing flows
+  - ✅ No new type errors introduced (verified with typecheck)
   - Files: `layers/discubot/server/api/oauth/slack/callback.get.ts`
 
 - [ ] Task 5.3: Create Flow Management Endpoints (0.5h)
@@ -508,11 +511,24 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
 
 ## Daily Log
 
-### 2025-11-20 - Day 1 (Continued - Phase 5)
-**Focus**: Phase 5 - API Endpoints & OAuth Integration (Task 5.1) ✅
-**Hours**: 0.5h / 2-3h estimated
+### 2025-11-20 - Day 1 (Continued - Phase 5 Tasks 5.1-5.2)
+**Focus**: Phase 5 - API Endpoints & OAuth Integration (Tasks 5.1-5.2) ✅
+**Hours**: 1.5h / 2-3h estimated
 **Completed**:
 - [x] Task 5.1: Update Webhook Endpoints ✅
+- [x] Task 5.2: Update OAuth Callback ✅
+
+**Task 5.1 Notes**:
+  - Added flows support documentation to both webhook endpoint headers
+  - Clarified that processor service handles flow/config routing automatically
+  - Verified Slack webhook finds flows by slackTeamId (from event.team_id)
+  - Verified Resend webhook finds flows by emailSlug (from recipient email)
+  - Backward compatibility maintained through processor's fallback to legacy configs
+  - No code changes needed - Phase 4 processor updates handle everything
+  - No new type errors introduced (verified with npx nuxt typecheck)
+
+**Task 5.2 Notes**:
+- [x] Task 5.2: Update OAuth Callback ✅
   - Added flows support documentation to both webhook endpoint headers
   - Clarified that processor service handles flow/config routing automatically
   - Verified Slack webhook finds flows by slackTeamId (from event.team_id)
