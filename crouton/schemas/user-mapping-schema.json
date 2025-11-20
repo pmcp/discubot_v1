@@ -13,6 +13,7 @@
     "type": "string",
     "meta": {
       "required": true,
+      "default": "",
       "label": "Source Workspace ID",
       "description": "Slack team ID, Figma org ID (prevents user ID collisions across workspaces)",
       "area": "main",
