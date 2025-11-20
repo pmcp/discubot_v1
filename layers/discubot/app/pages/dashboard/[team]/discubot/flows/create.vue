@@ -15,6 +15,8 @@
 </template>
 
 <script setup lang="ts">
+import FlowBuilder from '../../../../../../components/flows/FlowBuilder.vue'
+
 const { currentTeam } = useTeam()
 const router = useRouter()
 
