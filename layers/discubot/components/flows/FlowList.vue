@@ -3,7 +3,6 @@ import type { Flow, FlowInput, FlowOutput } from '~/layers/discubot/types'
 
 interface Props {
   teamId: string
-  teamSlug: string
 }
 
 const props = defineProps<Props>()
@@ -90,12 +89,12 @@ const rows = computed(() => {
 
 // Handle create new flow
 const handleCreateFlow = () => {
-  router.push(`/dashboard/${props.teamSlug}/discubot/flows/create`)
+  router.push(`/dashboard/${props.teamId}/discubot/flows/create`)
 }
 
 // Handle edit flow
 const handleEditFlow = (flowId: string) => {
-  router.push(`/dashboard/${props.teamSlug}/discubot/flows/${flowId}`)
+  router.push(`/dashboard/${props.teamId}/discubot/flows/${flowId}`)
 }
 
 // Handle delete flow (show confirmation)
