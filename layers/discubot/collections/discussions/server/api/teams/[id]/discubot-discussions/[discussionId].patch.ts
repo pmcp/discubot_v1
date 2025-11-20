@@ -2,9 +2,9 @@
 // The #crouton/team-auth alias is provided by @friendlyinternet/nuxt-crouton
 // Install: pnpm add @friendlyinternet/nuxt-crouton
 // Config: Add '@friendlyinternet/nuxt-crouton' to extends array in nuxt.config.ts
-import { updateDiscubotDiscussion } from '#layers/discubot-discussions/server/database/queries'
+import { updateDiscubotDiscussion } from '../../../../database/queries'
 import { resolveTeamAndCheckMembership } from '#crouton/team-auth'
-import type { DiscubotDiscussion } from '#layers/discubot/types'
+import type { DiscubotDiscussion } from '../../../../../types'
 
 export default defineEventHandler(async (event) => {
   const { discussionId } = getRouterParams(event)

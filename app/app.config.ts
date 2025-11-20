@@ -4,9 +4,15 @@ import { discubotJobsConfig } from '../layers/discubot/collections/jobs/app/comp
 import { discubotTasksConfig } from '../layers/discubot/collections/tasks/app/composables/useDiscubotTasks'
 import { discubotUserMappingsConfig } from '../layers/discubot/collections/usermappings/app/composables/useDiscubotUserMappings'
 import { discubotInboxMessagesConfig } from '../layers/discubot/collections/inboxmessages/app/composables/useDiscubotInboxMessages'
+import { discubotFlowsConfig } from '../layers/discubot/collections/flows/app/composables/useDiscubotFlows'
+import { discubotFlowInputsConfig } from '../layers/discubot/collections/flowinputs/app/composables/useDiscubotFlowInputs'
+import { discubotFlowOutputsConfig } from '../layers/discubot/collections/flowoutputs/app/composables/useDiscubotFlowOutputs'
 
 export default defineAppConfig({
   croutonCollections: {
+    discubotFlowOutputs: discubotFlowOutputsConfig,
+    discubotFlowInputs: discubotFlowInputsConfig,
+    discubotFlows: discubotFlowsConfig,
     discubotInboxMessages: discubotInboxMessagesConfig,
     discubotUserMappings: discubotUserMappingsConfig,
     discubotTasks: discubotTasksConfig,

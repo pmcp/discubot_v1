@@ -14,3 +14,6 @@ export { discubotJobs } from '../../../layers/discubot/collections/jobs/server/d
 export { discubotTasks } from '../../../layers/discubot/collections/tasks/server/database/schema'
 export { discubotUsermappings } from '../../../layers/discubot/collections/usermappings/server/database/schema'
 export { discubotInboxmessages } from '../../../layers/discubot/collections/inboxmessages/server/database/schema'
+export { discubotFlows } from '../../../layers/discubot/collections/flows/server/database/schema'
+export { discubotFlowinputs } from '../../../layers/discubot/collections/flowinputs/server/database/schema'
+export { discubotFlowoutputs } from '../../../layers/discubot/collections/flowoutputs/server/database/schema'

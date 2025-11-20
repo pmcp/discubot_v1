@@ -23,6 +23,7 @@ export const discubotUsermappings = sqliteTable('discubot_usermappings', {
   teamId: text('teamId').notNull(),
   owner: text('owner').notNull(),
   sourceType: text('sourceType').notNull(),
+  sourceWorkspaceId: text('sourceWorkspaceId').notNull(),
   sourceUserId: text('sourceUserId').notNull(),
   sourceUserEmail: text('sourceUserEmail'),
   sourceUserName: text('sourceUserName'),

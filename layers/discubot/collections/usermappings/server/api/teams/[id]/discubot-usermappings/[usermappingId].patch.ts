@@ -2,9 +2,9 @@
 // The #crouton/team-auth alias is provided by @friendlyinternet/nuxt-crouton
 // Install: pnpm add @friendlyinternet/nuxt-crouton
 // Config: Add '@friendlyinternet/nuxt-crouton' to extends array in nuxt.config.ts
-import { updateDiscubotUserMapping } from '#layers/discubot-usermappings/server/database/queries'
+import { updateDiscubotUserMapping } from '../../../../database/queries'
 import { resolveTeamAndCheckMembership } from '#crouton/team-auth'
-import type { DiscubotUserMapping } from '#layers/discubot/types'
+import type { DiscubotUserMapping } from '../../../../../types'
 
 export default defineEventHandler(async (event) => {
   const { usermappingId } = getRouterParams(event)
@@ -14,6 +14,7 @@ export default defineEventHandler(async (event) => {
 
   return await updateDiscubotUserMapping(usermappingId, team.id, user.id, {
     sourceType: body.sourceType,
+    sourceWorkspaceId: body.sourceWorkspaceId,
     sourceUserId: body.sourceUserId,
     sourceUserEmail: body.sourceUserEmail,
     sourceUserName: body.sourceUserName,

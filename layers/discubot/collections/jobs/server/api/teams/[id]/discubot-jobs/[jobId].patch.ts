@@ -2,9 +2,9 @@
 // The #crouton/team-auth alias is provided by @friendlyinternet/nuxt-crouton
 // Install: pnpm add @friendlyinternet/nuxt-crouton
 // Config: Add '@friendlyinternet/nuxt-crouton' to extends array in nuxt.config.ts
-import { updateDiscubotJob } from '#layers/discubot-jobs/server/database/queries'
+import { updateDiscubotJob } from '../../../../database/queries'
 import { resolveTeamAndCheckMembership } from '#crouton/team-auth'
-import type { DiscubotJob } from '#layers/discubot/types'
+import type { DiscubotJob } from '../../../../../types'
 
 export default defineEventHandler(async (event) => {
   const { jobId } = getRouterParams(event)

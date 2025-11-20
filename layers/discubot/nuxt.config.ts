@@ -18,6 +18,9 @@ export default defineNuxtConfig({
     './collections/jobs',
     './collections/tasks',
     './collections/usermappings',
-    './collections/inboxmessages'
+    './collections/inboxmessages',
+    './collections/flows',
+    './collections/flowinputs',
+    './collections/flowoutputs'
   ]
 })

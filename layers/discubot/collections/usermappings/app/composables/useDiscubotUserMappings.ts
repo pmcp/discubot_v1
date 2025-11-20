@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 export const discubotUserMappingSchema = z.object({
   sourceType: z.string().min(1, 'sourceType is required'),
+  sourceWorkspaceId: z.string().min(1, 'sourceWorkspaceId is required'),
   sourceUserId: z.string().min(1, 'sourceUserId is required'),
   sourceUserEmail: z.string().optional(),
   sourceUserName: z.string().optional(),
@@ -17,6 +18,7 @@ export const discubotUserMappingSchema = z.object({
 
 export const discubotUserMappingsColumns = [
   { accessorKey: 'sourceType', header: 'SourceType' },
+  { accessorKey: 'sourceWorkspaceId', header: 'SourceWorkspaceId' },
   { accessorKey: 'sourceUserId', header: 'SourceUserId' },
   { accessorKey: 'sourceUserEmail', header: 'SourceUserEmail' },
   { accessorKey: 'sourceUserName', header: 'SourceUserName' },
@@ -38,6 +40,7 @@ export const discubotUserMappingsConfig = {
   schema: discubotUserMappingSchema,
   defaultValues: {
     sourceType: '',
+    sourceWorkspaceId: '',
     sourceUserId: '',
     sourceUserEmail: '',
     sourceUserName: '',

@@ -6,6 +6,7 @@ export interface DiscubotUserMapping {
   teamId: string
   owner: string
   sourceType: string
+  sourceWorkspaceId: string
   sourceUserId: string
   sourceUserEmail?: string
   sourceUserName?: string

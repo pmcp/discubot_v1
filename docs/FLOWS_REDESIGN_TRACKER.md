@@ -2,8 +2,8 @@
 
 **Project Start Date**: 2025-11-20
 **Expected Completion**: TBD (21-29 hours estimated)
-**Current Phase**: Phase 1 - Pre-Migration Preparation ✅ Complete
-**Overall Progress**: 14% (5/35 tasks complete)
+**Current Phase**: Phase 2 - Schema Design & Collection Generation ✅ Complete
+**Overall Progress**: 31% (11/35 tasks complete)
 
 > **📋 Reference Documentation**: See [flows-redesign-brief.md](./briefings/flows-redesign-brief.md) for complete architecture, decisions, and schema designs.
 
@@ -13,10 +13,10 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 5 / 35 |
-| Remaining Tasks | 30 |
-| Hours Logged | 2.65 / 21-29 |
-| Current Phase | Phase 1 - Pre-Migration Preparation |
+| Tasks Completed | 11 / 35 |
+| Remaining Tasks | 24 |
+| Hours Logged | 4.15 / 21-29 |
+| Current Phase | Phase 2 - Schema Design & Collection Generation |
 | Days Elapsed | 0 |
 | Blockers | 0 |
 | Tests Passing | TBD |
@@ -89,9 +89,9 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
 
 ## Phase 2: Schema Design & Collection Generation 🏗️
 
-**Status**: In Progress
-**Progress**: 5/6 tasks (83%)
-**Time**: 1h / 2-3h estimated
+**Status**: Complete ✅
+**Progress**: 6/6 tasks (100%)
+**Time**: 1.5h / 2-3h estimated
 **Goal**: Design schemas, generate collections with Crouton
 
 - [x] Task 2.1: Create flow-schema.json (0.5h) ✅
@@ -130,19 +130,18 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
   - ✅ Ensure autoRelations: true (enables refTarget)
   - Files: `crouton/crouton.config.mjs`
 
-- [ ] Task 2.6: Generate Collections (0.5h)
-  - Run: `npx crouton-generate config crouton/crouton.config.mjs`
-  - Verify generation:
+- [x] Task 2.6: Generate Collections (0.5h) ✅
+  - ✅ Run: `npx crouton-generate config crouton/crouton.config.mjs`
+  - ✅ Verify generation:
     - `layers/discubot/collections/flows/` created
-    - `layers/discubot/collections/flow-inputs/` created
-    - `layers/discubot/collections/flow-outputs/` created
+    - `layers/discubot/collections/flowinputs/` created (not flow-inputs)
+    - `layers/discubot/collections/flowoutputs/` created (not flow-outputs)
     - Schema, queries, composables generated
     - API endpoints created
-  - Run: `npx nuxt typecheck`
-  - Fix any generation errors
-  - Commit generated files
+  - ✅ Run: `npx nuxt typecheck` - No new errors introduced
+  - ✅ Commit generated files
 
-**Checkpoint**: ✅ Collections generated, API endpoints available, types generated, ready for backend integration.
+**Checkpoint**: ✅ **Phase 2 Complete!** Collections generated successfully (flows, flowinputs, flowoutputs), API endpoints created, TypeScript types available, database schemas updated. No new type errors introduced. Ready for Phase 3 - Backend Updates (AI & Types).
 
 ---
 
