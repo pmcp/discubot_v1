@@ -226,8 +226,9 @@ git push
 1. Complete all 5 workflow steps
 2. Announce: **"✅ Task X.Y complete. Ready for context clear."**
 3. Say the code word (found at the top of CLAUDE.md)
-4. STOP and wait for user action
-5. Do NOT continue to next task automatically
+4. **End with a short prompt** - Provide a concise, actionable prompt (1-2 sentences) that can be used to start the next agent with the next step/task
+5. STOP and wait for user action
+6. Do NOT continue to next task automatically
 
 **Code word verification**: At the end of EVERY task completion, the agent MUST say the code word stated at the top of this file. This proves the agent has read CLAUDE.md and is following instructions.
 
@@ -258,10 +259,12 @@ continue with next task
 ```
 Agent: Completes Task 1.5, commits
 Agent: "✅ Task 1.5 complete. Ready for context clear."
+Agent: "Yesterday" (code word)
+Agent: "Next prompt: Continue with Task 1.6 - run migrations for the discussion layer."
 User: /clear
-User: "continue with next task"
+User: "Continue with Task 1.6 - run migrations for the discussion layer."
 New Agent: Reads PROGRESS_TRACKER.md
-New Agent: "I see Task 1.5 is complete. Starting Task 1.6..."
+New Agent: "I see Task 1.5 is complete. Starting Task 1.6 - running migrations..."
 ```
 
 ## Technology Stack
@@ -847,6 +850,7 @@ cat .claude/agents/[agent-name].md
 9. **General solutions** - Not test-specific hacks
 10. **Document in correct folder** - Follow docs/ structure above
 11. **Include agent personalities** - When using Task tool, pass personality in prompt
+12. **End with next prompt** - After completing each task, provide a short, actionable prompt for the next agent to use
 
 ---
 
