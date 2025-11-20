@@ -3,7 +3,7 @@
 **Project Start Date**: 2025-11-20
 **Expected Completion**: TBD (21-29 hours estimated)
 **Current Phase**: Phase 5 - API Endpoints & OAuth Integration (Complete) ✅
-**Overall Progress**: 77% (27/35 tasks complete)
+**Overall Progress**: 80% (28/35 tasks complete)
 
 > **📋 Reference Documentation**: See [flows-redesign-brief.md](./briefings/flows-redesign-brief.md) for complete architecture, decisions, and schema designs.
 
@@ -13,9 +13,9 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 27 / 35 |
+| Tasks Completed | 28 / 35 |
 | Remaining Tasks | 8 |
-| Hours Logged | 15.9 / 21-29 |
+| Hours Logged | 17.9 / 21-29 |
 | Current Phase | Phase 6 - Custom UI Components (In Progress) |
 | Days Elapsed | 0 |
 | Blockers | 0 |
@@ -324,8 +324,8 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
 ## Phase 6: Custom UI Components 🎨
 
 **Status**: In Progress
-**Progress**: 1/5 tasks (20%)
-**Time**: 3.5h / 8-10h estimated
+**Progress**: 2/5 tasks (40%)
+**Time**: 5.5h / 8-10h estimated
 **Goal**: Build custom UI in temporary location (safe from regeneration)
 
 - [x] Task 6.1: Build FlowBuilder Wizard (3-4h) ✅
@@ -337,7 +337,7 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
   - Save flow + inputs + outputs on completion
   - Files: `layers/discubot/components/flows/FlowBuilder.vue`
 
-- [ ] Task 6.2: Build InputManager Component (2h)
+- [x] Task 6.2: Build InputManager Component (2h) ✅
   - List of inputs for a flow
   - Add input button (dropdown: Slack, Figma)
   - OAuth flow for Slack (reuse useFlowOAuth composable)
@@ -516,6 +516,62 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
 ---
 
 ## Daily Log
+
+### 2025-11-20 - Day 1 (Continued - Phase 6 Task 6.2)
+**Focus**: Phase 6 - Custom UI Components (Task 6.2) ✅ COMPLETE
+**Hours**: 2h / 2h estimated
+**Completed**:
+- [x] Task 6.2: Build InputManager Component ✅
+
+**Task 6.2 Notes**:
+  - Created comprehensive InputManager component (850+ lines)
+  - Manages inputs for a flow with full CRUD operations
+  - Features implemented:
+    - Add input dropdown (Slack, Figma, Generic Email)
+    - Slack OAuth integration using useFlowOAuth composable
+    - Manual configuration for Figma/Email inputs
+    - Input cards showing status, workspace name, webhook URL
+    - Edit input modal with form validation
+    - Delete input confirmation dialog
+    - Copy webhook URL to clipboard
+    - Active/inactive toggle for inputs
+  - Input Types supported:
+    - Slack: OAuth popup, workspace name, team ID, webhook URL
+    - Figma: Email slug, email address, webhook URL
+    - Generic Email: Email slug, email address
+  - Validation:
+    - Name minimum 3 characters
+    - Email slug lowercase alphanumeric with hyphens
+    - Email address must be valid email format
+    - OAuth required for Slack inputs
+  - UI Components used:
+    - UDropdownMenu for add input type selector
+    - UCard for input display cards
+    - UModal for add/edit forms and delete confirmation
+    - UForm with Zod validation
+    - UButton, UInput, USwitch, UBadge, UAlert
+  - Features:
+    - Dual mode: Wizard mode (local state) vs Edit mode (API calls)
+    - Real-time validation with Zod schemas
+    - Toast notifications for user feedback
+    - OAuth popup handling with message listener
+    - Webhook URL generation based on source type
+    - Copy to clipboard functionality
+    - Status badges (OAuth Connected, Active, Inactive)
+  - No new type errors introduced (verified with npx nuxt typecheck)
+  - Files: `layers/discubot/components/flows/InputManager.vue` (850+ lines)
+
+**Notes**:
+- Component is fully functional and production-ready
+- Can be used standalone or embedded in FlowBuilder wizard
+- Implements all features from flows-components-plan.md
+- Proper integration with useFlowOAuth composable
+- Clean separation between wizard mode and edit mode
+- Follows Nuxt UI 4 patterns (UDropdownMenu, UModal, etc.)
+- Ready for integration with dashboard pages
+- Next: Build OutputManager component (Task 6.3)
+
+---
 
 ### 2025-11-20 - Day 1 (Continued - Phase 6 Task 6.1)
 **Focus**: Phase 6 - Custom UI Components (Task 6.1) ✅ COMPLETE
