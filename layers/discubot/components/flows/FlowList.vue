@@ -89,7 +89,7 @@ const rows = computed(() => {
 
 // Handle create new flow
 const handleCreateFlow = () => {
-  router.push(`/dashboard/${props.teamId}/discubot/flows/new`)
+  router.push(`/dashboard/${props.teamId}/discubot/flows/create`)
 }
 
 // Handle edit flow
