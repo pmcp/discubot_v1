@@ -3,7 +3,7 @@
 **Project Start Date**: 2025-11-20
 **Expected Completion**: TBD (21-29 hours estimated)
 **Current Phase**: Phase 6 - Custom UI Components (In Progress)
-**Overall Progress**: 83% (29/35 tasks complete)
+**Overall Progress**: 86% (30/35 tasks complete)
 
 > **📋 Reference Documentation**: See [flows-redesign-brief.md](./briefings/flows-redesign-brief.md) for complete architecture, decisions, and schema designs.
 
@@ -13,9 +13,9 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 29 / 35 |
-| Remaining Tasks | 6 |
-| Hours Logged | 20.4 / 21-29 |
+| Tasks Completed | 30 / 35 |
+| Remaining Tasks | 5 |
+| Hours Logged | 21.4 / 21-29 |
 | Current Phase | Phase 6 - Custom UI Components (In Progress) |
 | Days Elapsed | 0 |
 | Blockers | 0 |
@@ -324,8 +324,8 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
 ## Phase 6: Custom UI Components 🎨
 
 **Status**: In Progress
-**Progress**: 3/5 tasks (60%)
-**Time**: 8.0h / 8-10h estimated
+**Progress**: 4/5 tasks (80%)
+**Time**: 9.0h / 8-10h estimated
 **Goal**: Build custom UI in temporary location (safe from regeneration)
 
 - [x] Task 6.1: Build FlowBuilder Wizard (3-4h) ✅
@@ -358,7 +358,7 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
   - Show output status
   - Files: `layers/discubot/components/flows/OutputManager.vue`
 
-- [ ] Task 6.4: Build FlowList Component (1h)
+- [x] Task 6.4: Build FlowList Component (1h) ✅
   - Table of flows for team
   - Columns: Name, Inputs (count), Outputs (count), Status, Actions
   - Badges for input/output counts
@@ -516,6 +516,59 @@ Transform Discubot from single-input/single-output configs into flexible multi-i
 ---
 
 ## Daily Log
+
+### 2025-11-20 - Day 1 (Continued - Phase 6 Task 6.4)
+**Focus**: Phase 6 - Custom UI Components (Task 6.4) ✅ COMPLETE
+**Hours**: 1h / 1h estimated
+**Completed**:
+- [x] Task 6.4: Build FlowList Component ✅
+
+**Task 6.4 Notes**:
+  - Created comprehensive FlowList component (300+ lines)
+  - Displays flows in a table with all required columns
+  - Features implemented:
+    - Fetches flows, inputs, and outputs in parallel for performance
+    - Table columns: Name, Description, Inputs (count), Outputs (count), Status, Actions
+    - UBadge components for input/output counts with color coding
+    - UBadge for active/inactive status and setup incomplete warning
+    - UDropdownMenu for actions (edit/delete)
+    - Delete confirmation modal with UModal
+    - Create new flow button in header
+    - Empty state with helpful messaging
+    - Loading state with spinner
+    - Toast notifications for user feedback
+    - Proper routing to create/edit pages
+  - Count logic:
+    - Fetches all inputs/outputs for team
+    - Filters by flowId and active status
+    - Displays badge with count (e.g., "2 inputs", "3 outputs")
+  - Actions:
+    - Edit: Navigate to flow edit page
+    - Delete: Show confirmation modal, delete via API, update local state
+  - UI Components used:
+    - UTable for data display
+    - UBadge for counts and status
+    - UButton for actions
+    - UDropdownMenu for action menu
+    - UModal for delete confirmation
+  - Validation & Error Handling:
+    - Handles API errors with toast notifications
+    - Loading states during async operations
+    - Disabled state for delete button while deleting
+  - No new type errors introduced (verified with npx nuxt typecheck)
+  - Files: `layers/discubot/components/flows/FlowList.vue` (300+ lines)
+
+**Notes**:
+- Component is fully functional and production-ready
+- Fetches data efficiently with parallel requests
+- Proper error handling and user feedback
+- Follows Nuxt UI 4 patterns (UTable, UBadge, UDropdownMenu, UModal)
+- Clean, maintainable code with good TypeScript typing
+- Ready for integration with dashboard pages in Task 6.5
+- Phase 6 is 80% complete (4/5 tasks done)
+- Next: Update Dashboard Pages (Task 6.5)
+
+---
 
 ### 2025-11-20 - Day 1 (Continued - Phase 6 Task 6.3)
 **Focus**: Phase 6 - Custom UI Components (Task 6.3) ✅ COMPLETE
