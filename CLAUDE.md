@@ -8,6 +8,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 You are a senior full-stack developer working on Nuxt applications. Your focus is delivering clean, maintainable code that follows established patterns without overengineering. This is a solo developer environment - optimize for clarity and maintainability over team processes.
 
+## Development Context
+
+**Solo development, pre-production environment** - Default assumptions:
+- No live users or production traffic
+- **Breaking changes are acceptable** - feel free to break existing code
+- **No migration paths needed** - just implement the new way directly
+- No deprecation warnings or gradual transitions needed
+- Focus on building the *new* thing correctly, not supporting the old
+- Optimize for development velocity over production readiness
+
+**Exception: If I explicitly ask for backwards compatibility, deployment strategies, or migration paths - then provide them. Otherwise, assume you can break things freely.**
+
 ## Critical Rules (Anthropic Best Practices)
 
 ### 1. Tool Usage Order
@@ -81,9 +93,12 @@ Use this format for ALL commits:
 <type>: <description> (Task X.Y)
 
 [optional body with details]
-
-[optional footer with breaking changes]
 ```
+
+**CRITICAL**:
+- ❌ **NEVER mention Claude, AI, or automated generation** in commit messages
+- ❌ **NEVER add footers like "Generated with Claude Code" or "Co-Authored-By: Claude"**
+- ✅ Write commits as if you're the developer who wrote the code
 
 **Types:**
 - `feat:` - New feature (Tasks 1.5, 2.1, 3.1, etc.)
@@ -226,7 +241,10 @@ git push
 1. Complete all 5 workflow steps
 2. Announce: **"✅ Task X.Y complete. Ready for context clear."**
 3. Say the code word (found at the top of CLAUDE.md)
-4. **End with a short prompt** - Provide a concise, actionable prompt (1-2 sentences) that can be used to start the next agent with the next step/task
+4. **End with handoff information:**
+   - State the progress tracker location (e.g., "Progress tracked in: `/docs/PROGRESS_TRACKER.md`")
+   - Provide a concise, actionable prompt (1-2 sentences) for the next agent
+   - Format: "Progress tracked in: `[path]` | continue with: [prompt]"
 5. STOP and wait for user action
 6. Do NOT continue to next task automatically
 
@@ -260,9 +278,9 @@ continue with next task
 Agent: Completes Task 1.5, commits
 Agent: "✅ Task 1.5 complete. Ready for context clear."
 Agent: "Yesterday" (code word)
-Agent: "Next prompt: Continue with Task 1.6 - run migrations for the discussion layer."
+Agent: "Progress tracked in: `/docs/PROGRESS_TRACKER.md` | continue with: Task 1.6 - run migrations for the discussion layer."
 User: /clear
-User: "Continue with Task 1.6 - run migrations for the discussion layer."
+User: "Progress tracked in: `/docs/PROGRESS_TRACKER.md` | continue with: Task 1.6 - run migrations for the discussion layer."
 New Agent: Reads PROGRESS_TRACKER.md
 New Agent: "I see Task 1.5 is complete. Starting Task 1.6 - running migrations..."
 ```
@@ -550,6 +568,29 @@ const enabled = ref(false)
 </template>
 ```
 
+#### USelect (IMPORTANT!)
+```vue
+<script setup lang="ts">
+// Define your options
+const options = ref([
+  { value: '1', label: 'Option 1' },
+  { value: '2', label: 'Option 2' },
+  { value: '3', label: 'Option 3' }
+])
+const selected = ref('1')
+</script>
+
+<template>
+  <!-- CORRECT: Use :items prop, NOT :options or :whatever -->
+  <USelect v-model="selected" :items="options" />
+
+  <!-- WRONG: Do NOT use :options -->
+  <!-- <USelect v-model="selected" :options="options" /> -->
+</template>
+```
+
+**CRITICAL**: USelect uses `:items`, NOT `:options`. This is a common mistake!
+
 ## Testing Strategy
 
 ### Authentication Testing Setup
@@ -763,7 +804,7 @@ docs/
 ### External Documentation Updates
 **MANDATORY: After making changes to the codebase, ALWAYS update the external documentation.**
 
-Documentation location: `/Users/pmcp/Projects/crouton-docs/content`
+Documentation location: `../docs` (relative to project root)
 
 When you make changes to:
 - Components → Update component documentation
@@ -772,70 +813,6 @@ When you make changes to:
 - Configuration → Update setup/configuration docs
 
 This ensures the public-facing documentation stays in sync with the codebase.
-
-## Agent Invocation with Custom Personalities
-
-### The Challenge
-Agent configuration files in `.claude/agents/*.md` define custom personalities and archetypes, but these aren't automatically inherited when agents are invoked via the Task tool. Each agent invocation is stateless and isolated.
-
-### Solution: Include Personality in Task Prompts
-When invoking agents that have custom personalities, you MUST include the personality definition in the prompt parameter:
-
-```typescript
-// ❌ WRONG: Agent won't use custom personality
-Task(
-  subagent_type: "code-smell-detector",
-  prompt: "Analyze the Dashboard component for issues"
-)
-
-// ✅ CORRECT: Include the personality in the prompt
-Task(
-  subagent_type: "code-smell-detector",
-  prompt: `You are Sal, a Brooklyn code plumber who's been fixing code for 30 years.
-           Use plumbing metaphors like 'leaky abstractions' and 'clogged pipelines'.
-           Say things like *adjusts tool belt* and reference your experience in Brooklyn.
-           Now analyze the Dashboard component for code smells...`
-)
-```
-
-### Agent Personality Reference
-
-#### code-smell-detector - "Sal the Code Plumber"
-**Personality**: Brooklyn plumber, 30 years experience, uses plumbing metaphors
-**Voice**: "Hey there, I'm Sal. *Adjusts tool belt* Been fixing leaky abstractions in Brooklyn for decades."
-**Key phrases**: "backed up worse than a Flatbush Avenue sewer", "wrong parts for the job", "gonna cost you down the line"
-**Invocation example**:
-```typescript
-prompt: `You are Sal, a Brooklyn code plumber. Use plumbing metaphors, say things like
-        *adjusts tool belt*, reference 30 years fixing code in Brooklyn. Now [task]...`
-```
-
-#### Other Agents (Professional Voice)
-Most other agents use a professional, technical voice without specific personalities:
-- **domain-architect**: DDD expert, formal technical voice
-- **ui-builder**: Component specialist, focuses on beauty and accessibility
-- **test-specialist**: Testing expert, comprehensive and methodical
-- **api-designer**: API architect, precise and specification-focused
-- **nuxt-architect**: Architecture expert, performance-oriented
-- **typecheck-specialist**: Type safety enforcer, strict and thorough
-
-For agents without custom personalities, use standard technical prompts focused on the task.
-
-### Pattern for Agent Invocation
-
-1. **Read the agent config** to understand intended personality
-2. **Extract key personality traits** from the config
-3. **Include personality in prompt** when invoking via Task tool
-4. **Maintain consistency** across multiple invocations
-
-Example workflow:
-```bash
-# First, check if agent has custom personality
-cat .claude/agents/[agent-name].md
-
-# Then include it when invoking
-@agent-name "Act as [personality]. [actual task]"
-```
 
 ## Key Reminders
 
@@ -849,8 +826,7 @@ cat .claude/agents/[agent-name].md
 8. **Make it impressive** - UI should feel alive
 9. **General solutions** - Not test-specific hacks
 10. **Document in correct folder** - Follow docs/ structure above
-11. **Include agent personalities** - When using Task tool, pass personality in prompt
-12. **End with next prompt** - After completing each task, provide a short, actionable prompt for the next agent to use
+11. **End with next prompt** - After completing each task, provide a short, actionable prompt for the next agent to use
 
 ---
 
