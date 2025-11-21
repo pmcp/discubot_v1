@@ -604,6 +604,7 @@ function cancel() {
                   <UInput
                     v-model="flowState.name"
                     placeholder="e.g., Product Team Flow"
+                    class="w-full"
                   />
                 </UFormField>
 
@@ -612,6 +613,7 @@ function cancel() {
                     v-model="flowState.description"
                     placeholder="Describe what this flow handles..."
                     rows="3"
+                    class="w-full"
                   />
                 </UFormField>
               </div>
@@ -639,6 +641,7 @@ function cancel() {
                     v-model="flowState.anthropicApiKey"
                     type="password"
                     placeholder="sk-ant-..."
+                    class="w-full"
                   />
                 </UFormField>
 
@@ -648,6 +651,7 @@ function cancel() {
                     :items="promptPresets"
                     value-attribute="value"
                     label-attribute="label"
+                    class="w-full"
                   />
                 </UFormField>
 
@@ -660,6 +664,7 @@ function cancel() {
                     v-model="flowState.aiSummaryPrompt"
                     placeholder="Enter custom prompt..."
                     rows="3"
+                    class="w-full"
                   />
                 </UFormField>
 
@@ -672,6 +677,7 @@ function cancel() {
                     v-model="flowState.aiTaskPrompt"
                     placeholder="Enter custom prompt..."
                     rows="3"
+                    class="w-full"
                   />
                 </UFormField>
 
@@ -722,6 +728,7 @@ function cancel() {
                     <UInput
                       v-model="newDomain"
                       placeholder="Add custom domain..."
+                      class="flex-1"
                       @keyup.enter="addDomain"
                     />
                     <UButton
@@ -981,6 +988,7 @@ function cancel() {
               <UInput
                 v-model="inputFormState.name"
                 placeholder="e.g., Product Team Slack"
+                class="w-full"
               />
             </UFormField>
 
@@ -1013,6 +1021,7 @@ function cancel() {
                 <UInput
                   v-model="inputFormState.emailSlug"
                   placeholder="e.g., figma-design"
+                  class="w-full"
                 />
               </UFormField>
               <UFormField label="Email Address" name="emailAddress">
@@ -1021,6 +1030,7 @@ function cancel() {
                   type="email"
                   placeholder="Generated automatically"
                   disabled
+                  class="w-full"
                 />
               </UFormField>
             </div>
@@ -1063,6 +1073,7 @@ function cancel() {
               <UInput
                 v-model="outputFormState.name"
                 placeholder="e.g., Design Tasks DB"
+                class="w-full"
               />
             </UFormField>
 
@@ -1076,6 +1087,7 @@ function cancel() {
                 :items="flowState.availableDomains || []"
                 multiple
                 placeholder="All domains (no filter)"
+                class="w-full"
               />
             </UFormField>
 
@@ -1095,6 +1107,7 @@ function cancel() {
                 v-model="outputFormState.notionToken"
                 type="password"
                 placeholder="secret_..."
+                class="w-full"
               />
             </UFormField>
 
@@ -1102,6 +1115,7 @@ function cancel() {
               <UInput
                 v-model="outputFormState.databaseId"
                 placeholder="abc123def456..."
+                class="w-full"
               />
             </UFormField>
 
