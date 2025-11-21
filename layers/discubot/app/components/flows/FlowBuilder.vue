@@ -32,7 +32,7 @@ interface Props {
 
 const props = defineProps<Props>()
 const emit = defineEmits<{
-  success: [flowId: string]
+  saved: [flowId: string]
   cancel: []
 }>()
 
@@ -563,7 +563,7 @@ async function saveFlow() {
       color: 'success'
     })
 
-    emit('success', flowId)
+    emit('saved', flowId)
     if (props.onSuccess) {
       props.onSuccess(flowId)
     }
