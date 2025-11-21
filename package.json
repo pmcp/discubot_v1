@@ -39,6 +39,7 @@
     "cheerio": "^1.1.2",
     "drizzle-orm": "0.44.1",
     "drizzle-zod": "^0.8.3",
+    "human-id": "^4.1.2",
     "isomorphic-dompurify": "^2.32.0",
     "nanoid": "5.1.5",
     "nuxt": "^4.2.1",

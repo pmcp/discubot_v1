@@ -62,6 +62,9 @@ importers:
       drizzle-zod:
         specifier: ^0.8.3
         version: 0.8.3(drizzle-orm@0.44.1(@cloudflare/workers-types@4.20251111.0)(@opentelemetry/api@1.9.0)(gel@2.0.2))(zod@3.25.76)
+      human-id:
+        specifier: ^4.1.2
+        version: 4.1.2
       isomorphic-dompurify:
         specifier: ^2.32.0
         version: 2.32.0
@@ -4262,6 +4265,10 @@ packages:
 
   httpxy@0.1.7:
     resolution: {integrity: sha512-pXNx8gnANKAndgga5ahefxc++tJvNL87CXoRwxn1cJE2ZkWEojF3tNfQIEhZX/vfpt+wzeAzpUI4qkediX1MLQ==}
+
+  human-id@4.1.2:
+    resolution: {integrity: sha512-v/J+4Z/1eIJovEBdlV5TYj1IR+ZiohcYGRY+qN/oC9dAfKzVT023N/Bgw37hrKCoVRBvk3bqyzpr2PP5YeTMSg==}
+    hasBin: true
 
   human-signals@5.0.0:
     resolution: {integrity: sha512-AXcZb6vzzrFAUE61HnN4mpLqd/cSIwNQjtNWR0euPm6y0iqx3G4gOXaIDdtdDwZmhwe82LA6+zinmW4UBWVePQ==}
@@ -11048,6 +11055,8 @@ snapshots:
       - supports-color
 
   httpxy@0.1.7: {}
+
+  human-id@4.1.2: {}
 
   human-signals@5.0.0: {}
 

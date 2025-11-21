@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { z } from 'zod'
+import { humanId } from 'human-id'
 import type { FormSubmitEvent, StepperItem } from '@nuxt/ui'
 import type { Flow, FlowInput, FlowOutput, NotionOutputConfig } from '~/layers/discubot/types'
-import PromptPreviewModal from '../shared/PromptPreviewModal.vue'
 
 /**
  * FlowBuilder - Multi-step wizard for creating/editing flows
@@ -116,17 +116,12 @@ watch(selectedPreset, (preset) => {
   }
 })
 
-// Prompt preview modal
+// Prompt preview
 const { buildPreview } = usePromptPreview()
-const showPromptPreview = ref(false)
 const promptPreview = computed(() => buildPreview(
   flowState.aiSummaryPrompt,
   flowState.aiTaskPrompt
 ))
-
-const openPromptPreview = () => {
-  showPromptPreview.value = true
-}
 
 // Domain management
 const newDomain = ref('')
@@ -161,8 +156,6 @@ interface InputFormData {
 }
 
 const inputsList = ref<Partial<FlowInput>[]>(props.inputs || [])
-const showInputForm = ref(false)
-const editingInputIndex = ref<number | null>(null)
 
 const inputFormState = reactive<Partial<InputFormData>>({
   sourceType: 'slack',
@@ -173,13 +166,25 @@ const inputFormState = reactive<Partial<InputFormData>>({
   sourceMetadata: {}
 })
 
-const inputSchema = z.object({
+// Computed email address for Figma inputs
+const computedEmailAddress = computed(() => {
+  if (inputFormState.sourceType === 'figma' && inputFormState.emailAddress) {
+    return inputFormState.emailAddress
+  }
+  return ''
+})
+
+const inputSchema = computed(() => z.object({
   sourceType: z.enum(['slack', 'figma', 'email']),
   name: z.string().min(3, 'Name must be at least 3 characters'),
-  emailSlug: z.string().optional(),
-  emailAddress: z.string().email().optional(),
+  emailSlug: inputFormState.sourceType === 'figma'
+    ? z.string().min(1, 'Email slug is required')
+    : z.string().optional(),
+  emailAddress: inputFormState.sourceType === 'figma'
+    ? z.string().email('Invalid email')
+    : z.string().email().optional(),
   apiToken: z.string().optional()
-})
+}))
 
 // OAuth handling for Slack
 const { openOAuthPopup, waitingForOAuth } = useFlowOAuth({
@@ -203,32 +208,27 @@ const { openOAuthPopup, waitingForOAuth } = useFlowOAuth({
   }
 })
 
-function openInputForm(sourceType: 'slack' | 'figma' | 'email') {
+function resetInputForm(sourceType: 'slack' | 'figma' | 'email') {
   inputFormState.sourceType = sourceType
   inputFormState.name = ''
-  inputFormState.emailSlug = ''
-  inputFormState.emailAddress = ''
   inputFormState.apiToken = ''
   inputFormState.sourceMetadata = {}
-  editingInputIndex.value = null
-  showInputForm.value = true
-}
 
-function editInput(index: number) {
-  const input = inputsList.value[index]
-  if (input) {
-    inputFormState.sourceType = input.sourceType as any
-    inputFormState.name = input.name || ''
-    inputFormState.emailSlug = input.emailSlug || ''
-    inputFormState.emailAddress = input.emailAddress || ''
-    inputFormState.apiToken = input.apiToken || ''
-    inputFormState.sourceMetadata = input.sourceMetadata || {}
-    editingInputIndex.value = index
-    showInputForm.value = true
+  // Generate unique email address for Figma inputs
+  if (sourceType === 'figma') {
+    const uniqueId = humanId({
+      separator: '-',
+      capitalize: false
+    })
+    inputFormState.emailSlug = uniqueId
+    inputFormState.emailAddress = `${uniqueId}@messages.friendlyinter.net`
+  } else {
+    inputFormState.emailSlug = ''
+    inputFormState.emailAddress = ''
   }
 }
 
-function saveInput(event: FormSubmitEvent<InputFormData>) {
+function saveInput(event: FormSubmitEvent<InputFormData>, close: () => void) {
   const inputData: Partial<FlowInput> = {
     sourceType: event.data.sourceType,
     name: event.data.name,
@@ -239,13 +239,9 @@ function saveInput(event: FormSubmitEvent<InputFormData>) {
     active: true
   }
 
-  if (editingInputIndex.value !== null) {
-    inputsList.value[editingInputIndex.value] = inputData
-  } else {
-    inputsList.value.push(inputData)
-  }
+  inputsList.value.push(inputData)
 
-  showInputForm.value = false
+  close()
   toast.add({
     title: 'Input saved',
     description: `${event.data.name} has been added`,
@@ -278,8 +274,6 @@ interface OutputFormData {
 }
 
 const outputsList = ref<Partial<FlowOutput>[]>(props.outputs || [])
-const showOutputForm = ref(false)
-const editingOutputIndex = ref<number | null>(null)
 
 const outputFormState = reactive<Partial<OutputFormData>>({
   outputType: 'notion',
@@ -350,7 +344,7 @@ async function fetchAndMapNotionSchema() {
   }
 }
 
-function openOutputForm(outputType: 'notion' | 'github' | 'linear') {
+function resetOutputForm(outputType: 'notion' | 'github' | 'linear') {
   outputFormState.outputType = outputType
   outputFormState.name = ''
   outputFormState.domainFilter = []
@@ -358,32 +352,9 @@ function openOutputForm(outputType: 'notion' | 'github' | 'linear') {
   outputFormState.notionToken = ''
   outputFormState.databaseId = ''
   outputFormState.fieldMapping = {}
-  editingOutputIndex.value = null
-  showOutputForm.value = true
 }
 
-function editOutput(index: number) {
-  const output = outputsList.value[index]
-  if (output) {
-    outputFormState.outputType = output.outputType as any
-    outputFormState.name = output.name || ''
-    outputFormState.domainFilter = output.domainFilter || []
-    outputFormState.isDefault = output.isDefault || false
-
-    // Extract Notion-specific config
-    const config = output.outputConfig as NotionOutputConfig
-    if (config) {
-      outputFormState.notionToken = config.notionToken || ''
-      outputFormState.databaseId = config.databaseId || ''
-      outputFormState.fieldMapping = config.fieldMapping || {}
-    }
-
-    editingOutputIndex.value = index
-    showOutputForm.value = true
-  }
-}
-
-function saveOutput(event: FormSubmitEvent<OutputFormData>) {
+function saveOutput(event: FormSubmitEvent<OutputFormData>, close: () => void) {
   // Build output config based on type
   let outputConfig: Record<string, any> = {}
 
@@ -406,18 +377,14 @@ function saveOutput(event: FormSubmitEvent<OutputFormData>) {
 
   // If setting as default, unset other defaults
   if (outputData.isDefault) {
-    outputsList.value.forEach(output => {
+    outputsList.value.forEach((output: Partial<FlowOutput>) => {
       output.isDefault = false
     })
   }
 
-  if (editingOutputIndex.value !== null) {
-    outputsList.value[editingOutputIndex.value] = outputData
-  } else {
-    outputsList.value.push(outputData)
-  }
+  outputsList.value.push(outputData)
 
-  showOutputForm.value = false
+  close()
   toast.add({
     title: 'Output saved',
     description: `${event.data.name} has been added`,
@@ -437,7 +404,7 @@ function deleteOutput(index: number) {
 
 // Validation: At least one default output required
 const hasDefaultOutput = computed(() => {
-  return outputsList.value.some(output => output.isDefault)
+  return outputsList.value.some((output: Partial<FlowOutput>) => output.isDefault)
 })
 
 // ============================================================================
@@ -521,8 +488,8 @@ async function saveFlow() {
       onboardingComplete: true
     }
 
-    const flowResponse = await $fetch(`/api/teams/${props.teamId}/discubot-flows`, {
-      method: props.flow?.id ? 'PATCH' : 'POST',
+    const flowResponse = await $fetch<{ id: string }>(`/api/teams/${props.teamId}/discubot-flows`, {
+      method: (props.flow?.id ? 'PATCH' : 'POST') as 'POST' | 'PATCH',
       body: flowData
     })
 
@@ -651,9 +618,9 @@ function cancel() {
                 </UFormField>
 
                 <UFormField label="Prompt Preset" name="preset">
-                  <USelectMenu
+                  <USelect
                     v-model="selectedPreset"
-                    :items="promptPresets"
+                    :items="promptPresets.map(p => ({ value: p.value, label: p.label }))"
                     value-attribute="value"
                     label-attribute="label"
                     class="w-full"
@@ -687,15 +654,93 @@ function cancel() {
                 </UFormField>
 
                 <div>
-                  <UButton
-                    type="button"
-                    color="neutral"
-                    variant="outline"
-                    size="sm"
-                    @click="openPromptPreview"
-                  >
-                    Preview Prompts
-                  </UButton>
+                  <UModal>
+                    <UButton
+                      type="button"
+                      color="neutral"
+                      variant="outline"
+                      size="sm"
+                    >
+                      Preview Prompts
+                    </UButton>
+
+                    <template #content="{ close }">
+                      <div class="p-6 max-h-[85vh] overflow-y-auto">
+                        <!-- Header -->
+                        <div class="flex items-center justify-between mb-6">
+                          <h3 class="text-lg font-semibold">Prompt Preview</h3>
+                          <UButton
+                            color="neutral"
+                            variant="ghost"
+                            icon="i-lucide-x"
+                            @click="close"
+                            size="sm"
+                          />
+                        </div>
+
+                        <!-- Info Banner -->
+                        <div class="mb-6 p-4 bg-primary/10 rounded-lg border border-primary/20">
+                          <p class="text-sm text-primary-600 dark:text-primary-400">
+                            This is what will be sent to Claude when processing discussions. Custom prompts are highlighted.
+                          </p>
+                        </div>
+
+                        <!-- Summary Prompt Section -->
+                        <div class="mb-6">
+                          <div class="flex items-center justify-between mb-3">
+                            <h4 class="text-sm font-semibold flex items-center gap-2">
+                              <UIcon name="i-lucide-sparkles" class="w-4 h-4 text-primary" />
+                              Summary Prompt
+                            </h4>
+                            <div class="flex gap-3 text-xs text-muted-foreground">
+                              <span>{{ promptPreview.summaryCharCount }} characters</span>
+                              <span>~{{ promptPreview.summaryTokenEstimate }} tokens</span>
+                            </div>
+                          </div>
+                          <div class="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800">
+                            <pre class="text-xs font-mono whitespace-pre-wrap leading-relaxed">{{ promptPreview.summaryPrompt }}</pre>
+                          </div>
+                        </div>
+
+                        <USeparator class="my-6" />
+
+                        <!-- Task Detection Prompt Section -->
+                        <div class="mb-6">
+                          <div class="flex items-center justify-between mb-3">
+                            <h4 class="text-sm font-semibold flex items-center gap-2">
+                              <UIcon name="i-lucide-list-checks" class="w-4 h-4 text-primary" />
+                              Task Detection Prompt
+                            </h4>
+                            <div class="flex gap-3 text-xs text-muted-foreground">
+                              <span>{{ promptPreview.taskCharCount }} characters</span>
+                              <span>~{{ promptPreview.taskTokenEstimate }} tokens</span>
+                            </div>
+                          </div>
+                          <div class="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800">
+                            <pre class="text-xs font-mono whitespace-pre-wrap leading-relaxed">{{ promptPreview.taskPrompt }}</pre>
+                          </div>
+                        </div>
+
+                        <USeparator class="my-6" />
+
+                        <!-- Total Stats -->
+                        <div class="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                          <span class="text-sm font-medium">Total</span>
+                          <div class="flex gap-4 text-sm">
+                            <span>{{ promptPreview.summaryCharCount + promptPreview.taskCharCount }} characters</span>
+                            <span>~{{ promptPreview.summaryTokenEstimate + promptPreview.taskTokenEstimate }} tokens</span>
+                          </div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="flex justify-end gap-2 mt-6">
+                          <UButton color="neutral" variant="ghost" @click="close">
+                            Close
+                          </UButton>
+                        </div>
+                      </div>
+                    </template>
+                  </UModal>
                 </div>
               </div>
             </UCard>
@@ -778,25 +823,164 @@ function cancel() {
               <div class="flex items-center justify-between">
                 <h3 class="text-lg font-semibold">Input Sources</h3>
                 <div class="flex gap-2">
-                  <UButton
-                    type="button"
-                    color="primary"
-                    size="sm"
-                    @click="openInputForm('slack')"
-                  >
-                    <UIcon name="i-simple-icons-slack" />
-                    Add Slack
-                  </UButton>
-                  <UButton
-                    type="button"
-                    color="primary"
-                    size="sm"
-                    variant="outline"
-                    @click="openInputForm('figma')"
-                  >
-                    <UIcon name="i-simple-icons-figma" />
-                    Add Figma
-                  </UButton>
+                  <!-- Add Slack Modal -->
+                  <UModal>
+                    <UButton
+                      type="button"
+                      color="primary"
+                      size="sm"
+                      @click="resetInputForm('slack')"
+                    >
+                      <UIcon name="i-simple-icons-slack" />
+                      Add Slack
+                    </UButton>
+
+                    <template #content="{ close }">
+                      <div class="p-6">
+                        <h3 class="text-lg font-semibold mb-4">
+                          Add Input - Slack
+                        </h3>
+
+                        <UForm
+                          :state="inputFormState"
+                          :schema="inputSchema"
+                          class="space-y-4"
+                          @submit="(event) => saveInput(event, close)"
+                        >
+                          <UFormField label="Name" name="name" required>
+                            <UInput
+                              v-model="inputFormState.name"
+                              placeholder="e.g., Product Team Slack"
+                              class="w-full"
+                            />
+                          </UFormField>
+
+                          <UAlert
+                            color="info"
+                            variant="soft"
+                            icon="i-lucide-info"
+                            title="OAuth Connection"
+                            description="Click below to connect your Slack workspace via OAuth"
+                          />
+                          <UButton
+                            type="button"
+                            color="primary"
+                            block
+                            :loading="waitingForOAuth"
+                            @click="openOAuthPopup"
+                          >
+                            <UIcon name="i-simple-icons-slack" />
+                            Connect Slack Workspace
+                          </UButton>
+                          <div v-if="inputFormState.sourceMetadata?.slackTeamId" class="text-sm text-muted">
+                            Connected: {{ inputFormState.sourceMetadata.slackWorkspaceName || inputFormState.sourceMetadata.slackTeamId }}
+                          </div>
+
+                          <div class="flex justify-end gap-2 mt-6">
+                            <UButton
+                              type="button"
+                              color="neutral"
+                              variant="ghost"
+                              @click="close"
+                            >
+                              Cancel
+                            </UButton>
+                            <UButton
+                              type="submit"
+                              color="primary"
+                            >
+                              Add Input
+                            </UButton>
+                          </div>
+                        </UForm>
+                      </div>
+                    </template>
+                  </UModal>
+
+                  <!-- Add Figma Modal -->
+                  <UModal>
+                    <UButton
+                      type="button"
+                      color="primary"
+                      size="sm"
+                      variant="outline"
+                      @click="resetInputForm('figma')"
+                    >
+                      <UIcon name="i-simple-icons-figma" />
+                      Add Figma
+                    </UButton>
+
+                    <template #content="{ close }">
+                      <div class="p-6">
+                        <h3 class="text-lg font-semibold mb-4">
+                          Add Input - Figma
+                        </h3>
+
+                        <UForm
+                          :state="inputFormState"
+                          :schema="inputSchema"
+                          class="space-y-4"
+                          @submit="(event) => saveInput(event, close)"
+                        >
+                          <UFormField label="Name" name="name" required>
+                            <UInput
+                              v-model="inputFormState.name"
+                              placeholder="e.g., Design Team Figma"
+                              class="w-full"
+                            />
+                          </UFormField>
+
+                          <UFormField
+                            label="Email Address"
+                            name="emailAddress"
+                            help="Unique email address for this Figma input"
+                          >
+                            <div class="flex gap-2">
+                              <UInput
+                                :model-value="computedEmailAddress"
+                                type="email"
+                                placeholder="Email address"
+                                readonly
+                                class="flex-1"
+                              />
+                              <UButton
+                                type="button"
+                                color="neutral"
+                                variant="outline"
+                                icon="i-lucide-refresh-cw"
+                                @click="resetInputForm('figma')"
+                              />
+                            </div>
+                          </UFormField>
+
+                          <UAlert
+                            v-if="computedEmailAddress"
+                            color="info"
+                            variant="soft"
+                            icon="i-lucide-info"
+                            :description="`Use this email address in your Figma webhook settings: ${computedEmailAddress}`"
+                          />
+
+                          <div class="flex justify-end gap-2 mt-6">
+                            <UButton
+                              type="button"
+                              color="neutral"
+                              variant="ghost"
+                              @click="close"
+                            >
+                              Cancel
+                            </UButton>
+                            <UButton
+                              type="submit"
+                              color="primary"
+                            >
+                              Add Input
+                            </UButton>
+                          </div>
+                        </UForm>
+                      </div>
+                    </template>
+                  </UModal>
                 </div>
               </div>
             </template>
@@ -828,14 +1012,6 @@ function cancel() {
                     </div>
                   </div>
                   <div class="flex gap-2">
-                    <UButton
-                      type="button"
-                      color="neutral"
-                      variant="ghost"
-                      size="sm"
-                      icon="i-lucide-pencil"
-                      @click="editInput(index)"
-                    />
                     <UButton
                       type="button"
                       color="error"
@@ -877,15 +1053,124 @@ function cancel() {
             <template #header>
               <div class="flex items-center justify-between">
                 <h3 class="text-lg font-semibold">Output Destinations</h3>
-                <UButton
-                  type="button"
-                  color="primary"
-                  size="sm"
-                  @click="openOutputForm('notion')"
-                >
-                  <UIcon name="i-simple-icons-notion" />
-                  Add Notion
-                </UButton>
+                <!-- Add Notion Modal -->
+                <UModal>
+                  <UButton
+                    type="button"
+                    color="primary"
+                    size="sm"
+                    @click="resetOutputForm('notion')"
+                  >
+                    <UIcon name="i-simple-icons-notion" />
+                    Add Notion
+                  </UButton>
+
+                  <template #content="{ close }">
+                    <div class="p-6 max-h-[80vh] overflow-y-auto">
+                      <h3 class="text-lg font-semibold mb-4">
+                        Add Output - Notion
+                      </h3>
+
+                      <UForm
+                        :state="outputFormState"
+                        :schema="outputSchema"
+                        class="space-y-4"
+                        @submit="(event) => saveOutput(event, close)"
+                      >
+                        <UFormField label="Name" name="name" required>
+                          <UInput
+                            v-model="outputFormState.name"
+                            placeholder="e.g., Design Tasks DB"
+                            class="w-full"
+                          />
+                        </UFormField>
+
+                        <UFormField
+                          label="Domain Filter"
+                          name="domainFilter"
+                          help="Select which domains should route to this output"
+                        >
+                          <USelectMenu
+                            v-model="outputFormState.domainFilter"
+                            :items="flowState.availableDomains || []"
+                            multiple
+                            placeholder="All domains (no filter)"
+                            class="w-full"
+                          />
+                        </UFormField>
+
+                        <UFormField name="isDefault">
+                          <UCheckbox
+                            v-model="outputFormState.isDefault"
+                            label="Set as default output"
+                            help="Default output receives tasks with no matched domain"
+                          />
+                        </UFormField>
+
+                        <USeparator />
+
+                        <!-- Notion Configuration -->
+                        <UFormField label="Notion Token" name="notionToken" required>
+                          <UInput
+                            v-model="outputFormState.notionToken"
+                            type="password"
+                            placeholder="secret_..."
+                            class="w-full"
+                          />
+                        </UFormField>
+
+                        <UFormField label="Database ID" name="databaseId" required>
+                          <UInput
+                            v-model="outputFormState.databaseId"
+                            placeholder="abc123def456..."
+                            class="w-full"
+                          />
+                        </UFormField>
+
+                        <div>
+                          <UButton
+                            type="button"
+                            color="primary"
+                            variant="outline"
+                            size="sm"
+                            :loading="fetchingSchema"
+                            @click="fetchAndMapNotionSchema"
+                          >
+                            Fetch Schema & Auto-Map Fields
+                          </UButton>
+                        </div>
+
+                        <!-- Field Mapping (if schema fetched) -->
+                        <div v-if="notionSchema" class="space-y-3">
+                          <h4 class="font-medium">Field Mapping</h4>
+                          <UAlert
+                            color="info"
+                            variant="soft"
+                            icon="i-lucide-info"
+                            description="Fields have been auto-mapped based on Notion property names"
+                          />
+                        </div>
+
+                        <div class="flex justify-end gap-2 mt-6">
+                          <UButton
+                            type="button"
+                            color="neutral"
+                            variant="ghost"
+                            @click="close"
+                          >
+                            Cancel
+                          </UButton>
+                          <UButton
+                            type="submit"
+                            color="primary"
+                          >
+                            Add Output
+                          </UButton>
+                        </div>
+                      </UForm>
+                    </div>
+                  </template>
+                </UModal>
               </div>
             </template>
 
@@ -945,14 +1230,6 @@ function cancel() {
                   <div class="flex gap-2">
                     <UButton
                       type="button"
-                      color="neutral"
-                      variant="ghost"
-                      size="sm"
-                      icon="i-lucide-pencil"
-                      @click="editOutput(index)"
-                    />
-                    <UButton
-                      type="button"
                       color="error"
                       variant="ghost"
                       size="sm"
@@ -990,211 +1267,7 @@ function cancel() {
       </template>
     </UStepper>
 
-    <!-- Input Form Modal -->
-    <UModal v-model="showInputForm">
-      <template #content="{ close }">
-        <div class="p-6">
-          <h3 class="text-lg font-semibold mb-4">
-            {{ editingInputIndex !== null ? 'Edit' : 'Add' }} Input - {{ inputFormState.sourceType }}
-          </h3>
 
-          <UForm
-            :state="inputFormState"
-            :schema="inputSchema"
-            class="space-y-4"
-            @submit="saveInput"
-          >
-            <UFormField label="Name" name="name" required>
-              <UInput
-                v-model="inputFormState.name"
-                placeholder="e.g., Product Team Slack"
-                class="w-full"
-              />
-            </UFormField>
-
-            <!-- Slack-specific -->
-            <div v-if="inputFormState.sourceType === 'slack'" class="space-y-4">
-              <UAlert
-                color="info"
-                variant="soft"
-                icon="i-lucide-info"
-                title="OAuth Connection"
-                description="Click below to connect your Slack workspace via OAuth"
-              />
-              <UButton
-                type="button"
-                color="primary"
-                block
-                :loading="waitingForOAuth"
-                @click="openOAuthPopup"
-              >
-                <UIcon name="i-simple-icons-slack" />
-                Connect Slack Workspace
-              </UButton>
-              <div v-if="inputFormState.sourceMetadata?.slackTeamId" class="text-sm text-muted">
-                Connected: {{ inputFormState.sourceMetadata.slackWorkspaceName || inputFormState.sourceMetadata.slackTeamId }}
-              </div>
-            </div>
-
-            <!-- Figma/Email-specific -->
-            <div v-else class="space-y-4">
-              <UFormField label="Email Slug" name="emailSlug" required>
-                <UInput
-                  v-model="inputFormState.emailSlug"
-                  placeholder="e.g., figma-design"
-                  class="w-full"
-                />
-              </UFormField>
-              <UFormField label="Email Address" name="emailAddress">
-                <UInput
-                  v-model="inputFormState.emailAddress"
-                  type="email"
-                  placeholder="Generated automatically"
-                  disabled
-                  class="w-full"
-                />
-              </UFormField>
-            </div>
-
-            <div class="flex justify-end gap-2 mt-6">
-              <UButton
-                type="button"
-                color="neutral"
-                variant="ghost"
-                @click="close"
-              >
-                Cancel
-              </UButton>
-              <UButton
-                type="submit"
-                color="primary"
-              >
-                {{ editingInputIndex !== null ? 'Update' : 'Add' }} Input
-              </UButton>
-            </div>
-          </UForm>
-        </div>
-      </template>
-    </UModal>
-
-    <!-- Output Form Modal -->
-    <UModal v-model="showOutputForm">
-      <template #content="{ close }">
-        <div class="p-6 max-h-[80vh] overflow-y-auto">
-          <h3 class="text-lg font-semibold mb-4">
-            {{ editingOutputIndex !== null ? 'Edit' : 'Add' }} Output - Notion
-          </h3>
-
-          <UForm
-            :state="outputFormState"
-            :schema="outputSchema"
-            class="space-y-4"
-            @submit="saveOutput"
-          >
-            <UFormField label="Name" name="name" required>
-              <UInput
-                v-model="outputFormState.name"
-                placeholder="e.g., Design Tasks DB"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField
-              label="Domain Filter"
-              name="domainFilter"
-              help="Select which domains should route to this output"
-            >
-              <USelectMenu
-                v-model="outputFormState.domainFilter"
-                :items="flowState.availableDomains || []"
-                multiple
-                placeholder="All domains (no filter)"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField name="isDefault">
-              <UCheckbox
-                v-model="outputFormState.isDefault"
-                label="Set as default output"
-                help="Default output receives tasks with no matched domain"
-              />
-            </UFormField>
-
-            <USeparator />
-
-            <!-- Notion Configuration -->
-            <UFormField label="Notion Token" name="notionToken" required>
-              <UInput
-                v-model="outputFormState.notionToken"
-                type="password"
-                placeholder="secret_..."
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField label="Database ID" name="databaseId" required>
-              <UInput
-                v-model="outputFormState.databaseId"
-                placeholder="abc123def456..."
-                class="w-full"
-              />
-            </UFormField>
-
-            <div>
-              <UButton
-                type="button"
-                color="primary"
-                variant="outline"
-                size="sm"
-                :loading="fetchingSchema"
-                @click="fetchAndMapNotionSchema"
-              >
-                Fetch Schema & Auto-Map Fields
-              </UButton>
-            </div>
-
-            <!-- Field Mapping (if schema fetched) -->
-            <div v-if="notionSchema" class="space-y-3">
-              <h4 class="font-medium">Field Mapping</h4>
-              <UAlert
-                color="info"
-                variant="soft"
-                icon="i-lucide-info"
-                description="Fields have been auto-mapped based on Notion property names"
-              />
-              <!-- Field mapping UI could be expanded here -->
-            </div>
-
-            <div class="flex justify-end gap-2 mt-6">
-              <UButton
-                type="button"
-                color="neutral"
-                variant="ghost"
-                @click="close"
-              >
-                Cancel
-              </UButton>
-              <UButton
-                type="submit"
-                color="primary"
-              >
-                {{ editingOutputIndex !== null ? 'Update' : 'Add' }} Output
-              </UButton>
-            </div>
-          </UForm>
-        </div>
-      </template>
-    </UModal>
-
-    <!-- Prompt Preview Modal -->
-    <PromptPreviewModal
-      v-if="showPromptPreview"
-      v-model="showPromptPreview"
-      :preview="promptPreview"
-      :custom-summary-prompt="flowState.aiSummaryPrompt"
-      :custom-task-prompt="flowState.aiTaskPrompt"
-    />
   </div>
 </template>
 
