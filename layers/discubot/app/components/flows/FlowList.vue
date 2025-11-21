@@ -198,18 +198,18 @@ const cancelDelete = () => {
   flowToDelete.value = null
 }
 
-// Actions dropdown items
+// Actions dropdown items (Nuxt UI v4 format)
 const getActions = (row: any) => [
   [
     {
       label: 'Edit',
       icon: 'i-heroicons-pencil-square',
-      click: () => handleEditFlow(row.id)
+      onSelect: () => handleEditFlow(row.id)
     },
     {
       label: 'Delete',
       icon: 'i-heroicons-trash',
-      click: () => handleDeleteFlow(row.flow),
+      onSelect: () => handleDeleteFlow(row.flow),
       disabled: isDeleting.value
     }
   ]
