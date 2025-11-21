@@ -1,5 +1,11 @@
 <script setup lang="ts">
+import { h, resolveComponent } from 'vue'
 import type { Flow, FlowInput, FlowOutput } from '~/layers/discubot/types'
+
+// Resolve UI components for use in render functions
+const UBadge = resolveComponent('UBadge')
+const UButton = resolveComponent('UButton')
+const UDropdownMenu = resolveComponent('UDropdownMenu')
 
 interface Props {
   teamId: string
@@ -64,14 +70,59 @@ const getOutputCount = (flowId: string) => {
   return outputs.value.filter(output => output.flowId === flowId && output.active).length
 }
 
-// Table columns
+// Table columns (Nuxt UI v4 format with cell renderers)
 const columns = [
-  { key: 'name', label: 'Name' },
-  { key: 'description', label: 'Description' },
-  { key: 'inputs', label: 'Inputs' },
-  { key: 'outputs', label: 'Outputs' },
-  { key: 'status', label: 'Status' },
-  { key: 'actions', label: 'Actions' }
+  {
+    accessorKey: 'name',
+    header: 'Name',
+    cell: ({ row }: any) => h('div', { class: 'font-medium' }, row.original.name)
+  },
+  {
+    accessorKey: 'description',
+    header: 'Description',
+    cell: ({ row }: any) => h('div', { class: 'text-sm text-muted-foreground max-w-md truncate' }, row.original.description || '—')
+  },
+  {
+    accessorKey: 'inputCount',
+    header: 'Inputs',
+    cell: ({ row }: any) => h(UBadge, {
+      color: row.original.inputCount > 0 ? 'primary' : 'neutral',
+      variant: 'subtle'
+    }, () => `${row.original.inputCount} ${row.original.inputCount === 1 ? 'input' : 'inputs'}`)
+  },
+  {
+    accessorKey: 'outputCount',
+    header: 'Outputs',
+    cell: ({ row }: any) => h(UBadge, {
+      color: row.original.outputCount > 0 ? 'primary' : 'neutral',
+      variant: 'subtle'
+    }, () => `${row.original.outputCount} ${row.original.outputCount === 1 ? 'output' : 'outputs'}`)
+  },
+  {
+    id: 'status',
+    header: 'Status',
+    cell: ({ row }: any) => h('div', { class: 'flex items-center gap-2' }, [
+      h(UBadge, {
+        color: row.original.active ? 'success' : 'neutral',
+        variant: 'subtle'
+      }, () => row.original.active ? 'Active' : 'Inactive'),
+      !row.original.onboardingComplete ? h(UBadge, {
+        color: 'warning',
+        variant: 'subtle'
+      }, () => 'Setup Incomplete') : null
+    ])
+  },
+  {
+    id: 'actions',
+    header: 'Actions',
+    cell: ({ row }: any) => h(UDropdownMenu, {
+      items: getActions(row.original)
+    }, () => h(UButton, {
+      color: 'neutral',
+      variant: 'ghost',
+      icon: 'i-heroicons-ellipsis-horizontal'
+    }))
+  }
 ]
 
 // Transform flows into table rows with counts
@@ -214,73 +265,9 @@ const getActions = (row: any) => [
     <UTable
       v-else
       :columns="columns"
-      :rows="rows"
+      :data="rows"
       :loading="isLoading"
-    >
-      <!-- Name column -->
-      <template #name-data="{ row }">
-        <div class="font-medium">{{ row.name }}</div>
-      </template>
-
-      <!-- Description column -->
-      <template #description-data="{ row }">
-        <div class="text-sm text-muted-foreground max-w-md truncate">
-          {{ row.description }}
-        </div>
-      </template>
-
-      <!-- Inputs count column with badge -->
-      <template #inputs-data="{ row }">
-        <UBadge
-          :color="row.inputCount > 0 ? 'primary' : 'gray'"
-          variant="subtle"
-        >
-          {{ row.inputCount }} {{ row.inputCount === 1 ? 'input' : 'inputs' }}
-        </UBadge>
-      </template>
-
-      <!-- Outputs count column with badge -->
-      <template #outputs-data="{ row }">
-        <UBadge
-          :color="row.outputCount > 0 ? 'primary' : 'gray'"
-          variant="subtle"
-        >
-          {{ row.outputCount }} {{ row.outputCount === 1 ? 'output' : 'outputs' }}
-        </UBadge>
-      </template>
-
-      <!-- Status column -->
-      <template #status-data="{ row }">
-        <div class="flex items-center gap-2">
-          <UBadge
-            :color="row.active ? 'success' : 'gray'"
-            variant="subtle"
-          >
-            {{ row.active ? 'Active' : 'Inactive' }}
-          </UBadge>
-          <UBadge
-            v-if="!row.onboardingComplete"
-            color="warning"
-            variant="subtle"
-          >
-            Setup Incomplete
-          </UBadge>
-        </div>
-      </template>
-
-      <!-- Actions column -->
-      <template #actions-data="{ row }">
-        <UDropdownMenu
-          :items="getActions(row)"
-        >
-          <UButton
-            color="gray"
-            variant="ghost"
-            icon="i-heroicons-ellipsis-horizontal"
-          />
-        </UDropdownMenu>
-      </template>
-    </UTable>
+    />
 
     <!-- Delete confirmation modal -->
     <UModal v-model="showDeleteModal">
