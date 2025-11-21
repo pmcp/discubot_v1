@@ -124,7 +124,7 @@ const promptPreview = computed(() => buildPreview(
   flowState.aiTaskPrompt
 ))
 
-function openPromptPreview() {
+const openPromptPreview = () => {
   showPromptPreview.value = true
 }
 
@@ -779,6 +779,7 @@ function cancel() {
                 <h3 class="text-lg font-semibold">Input Sources</h3>
                 <div class="flex gap-2">
                   <UButton
+                    type="button"
                     color="primary"
                     size="sm"
                     @click="openInputForm('slack')"
@@ -787,6 +788,7 @@ function cancel() {
                     Add Slack
                   </UButton>
                   <UButton
+                    type="button"
                     color="primary"
                     size="sm"
                     variant="outline"
@@ -827,6 +829,7 @@ function cancel() {
                   </div>
                   <div class="flex gap-2">
                     <UButton
+                      type="button"
                       color="neutral"
                       variant="ghost"
                       size="sm"
@@ -834,6 +837,7 @@ function cancel() {
                       @click="editInput(index)"
                     />
                     <UButton
+                      type="button"
                       color="error"
                       variant="ghost"
                       size="sm"
@@ -849,6 +853,7 @@ function cancel() {
           <!-- Navigation -->
           <div class="flex justify-between">
             <UButton
+              type="button"
               color="neutral"
               variant="outline"
               leading-icon="i-lucide-arrow-left"
@@ -857,6 +862,7 @@ function cancel() {
               Back
             </UButton>
             <UButton
+              type="button"
               trailing-icon="i-lucide-arrow-right"
               @click="nextStep"
             >
@@ -872,6 +878,7 @@ function cancel() {
               <div class="flex items-center justify-between">
                 <h3 class="text-lg font-semibold">Output Destinations</h3>
                 <UButton
+                  type="button"
                   color="primary"
                   size="sm"
                   @click="openOutputForm('notion')"
@@ -937,6 +944,7 @@ function cancel() {
                   </div>
                   <div class="flex gap-2">
                     <UButton
+                      type="button"
                       color="neutral"
                       variant="ghost"
                       size="sm"
@@ -944,6 +952,7 @@ function cancel() {
                       @click="editOutput(index)"
                     />
                     <UButton
+                      type="button"
                       color="error"
                       variant="ghost"
                       size="sm"
@@ -959,6 +968,7 @@ function cancel() {
           <!-- Navigation -->
           <div class="flex justify-between">
             <UButton
+              type="button"
               color="neutral"
               variant="outline"
               leading-icon="i-lucide-arrow-left"
@@ -967,6 +977,7 @@ function cancel() {
               Back
             </UButton>
             <UButton
+              type="button"
               color="primary"
               :loading="loading"
               :disabled="!hasDefaultOutput || outputsList.length === 0"
@@ -1011,6 +1022,7 @@ function cancel() {
                 description="Click below to connect your Slack workspace via OAuth"
               />
               <UButton
+                type="button"
                 color="primary"
                 block
                 :loading="waitingForOAuth"
@@ -1046,6 +1058,7 @@ function cancel() {
 
             <div class="flex justify-end gap-2 mt-6">
               <UButton
+                type="button"
                 color="neutral"
                 variant="ghost"
                 @click="close"
@@ -1130,6 +1143,7 @@ function cancel() {
 
             <div>
               <UButton
+                type="button"
                 color="primary"
                 variant="outline"
                 size="sm"
@@ -1154,6 +1168,7 @@ function cancel() {
 
             <div class="flex justify-end gap-2 mt-6">
               <UButton
+                type="button"
                 color="neutral"
                 variant="ghost"
                 @click="close"
