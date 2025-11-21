@@ -270,8 +270,8 @@ const getActions = (row: any) => [
     />
 
     <!-- Delete confirmation modal -->
-    <UModal v-model="showDeleteModal">
-      <template #content="{ close }">
+    <UModal v-model:open="showDeleteModal">
+      <template #content>
         <div class="p-6">
           <h3 class="text-lg font-semibold mb-4">Delete Flow</h3>
           <p class="text-sm text-muted-foreground mb-6">
@@ -281,7 +281,7 @@ const getActions = (row: any) => [
           </p>
           <div class="flex justify-end gap-2">
             <UButton
-              color="gray"
+              color="neutral"
               variant="ghost"
               @click="cancelDelete"
               :disabled="isDeleting"
