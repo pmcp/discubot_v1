@@ -36,6 +36,7 @@
 
 <script setup lang="ts">
 import type { Flow, FlowInput, FlowOutput } from '~/layers/discubot/types'
+import FlowBuilder from '#layers/discubot/app/components/flows/FlowBuilder.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -66,14 +67,20 @@ async function loadFlowData() {
     loading.value = true
     error.value = null
 
-    // Fetch flow, inputs, and outputs in parallel
-    const [flowResponse, inputsResponse, outputsResponse] = await Promise.all([
-      $fetch<Flow>(`/api/teams/${currentTeam.value?.id}/discubot-flows/${flowId.value}`),
+    // Fetch all flows, inputs, and outputs in parallel (no individual GET endpoints)
+    const [flowsResponse, inputsResponse, outputsResponse] = await Promise.all([
+      $fetch<Flow[]>(`/api/teams/${currentTeam.value?.id}/discubot-flows`),
       $fetch<FlowInput[]>(`/api/teams/${currentTeam.value?.id}/discubot-flowinputs`),
       $fetch<FlowOutput[]>(`/api/teams/${currentTeam.value?.id}/discubot-flowoutputs`)
     ])
 
-    flow.value = flowResponse
+    // Find the specific flow by ID
+    const foundFlow = flowsResponse.find(f => f.id === flowId.value)
+    if (!foundFlow) {
+      throw new Error('Flow not found')
+    }
+
+    flow.value = foundFlow
     // Filter inputs and outputs for this specific flow
     inputs.value = inputsResponse.filter(input => input.flowId === flowId.value)
     outputs.value = outputsResponse.filter(output => output.flowId === flowId.value)
