@@ -36,10 +36,12 @@ export interface FetchSchemaOptions {
   notionToken: string
 }
 
+// Create singleton refs outside the composable function
+const fetchingSchema = ref(false)
+const schemaFetchError = ref<string | null>(null)
+const fetchedSchema = ref<NotionSchema | null>(null)
+
 export function useNotionSchema() {
-  const fetchingSchema = ref(false)
-  const schemaFetchError = ref<string | null>(null)
-  const fetchedSchema = ref<NotionSchema | null>(null)
 
   /**
    * Fetch Notion database schema

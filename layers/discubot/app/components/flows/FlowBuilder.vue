@@ -282,7 +282,12 @@ const outputFormState = reactive<Partial<OutputFormData>>({
   isDefault: false,
   notionToken: '',
   databaseId: '',
-  fieldMapping: {}
+  fieldMapping: {
+    priority: { notionProperty: '', propertyType: '', valueMap: {} },
+    type: { notionProperty: '', propertyType: '', valueMap: {} },
+    assignee: { notionProperty: '', propertyType: '', valueMap: {} },
+    domain: { notionProperty: '', propertyType: '', valueMap: {} }
+  }
 })
 
 const outputSchema = z.object({
@@ -317,28 +322,58 @@ async function fetchAndMapNotionSchema() {
     return
   }
 
-  await fetchNotionSchema({
-    databaseId: outputFormState.databaseId,
-    notionToken: outputFormState.notionToken
-  })
+  try {
+    console.log('[FlowBuilder] Fetching schema...')
 
-  if (notionSchema.value && !schemaError.value) {
-    // Auto-generate field mapping
-    const mapping = generateAutoMapping(notionSchema.value, {
-      aiFields: ['priority', 'type', 'assignee', 'domain'],
-      similarityThreshold: 0.5
+    await fetchNotionSchema({
+      databaseId: outputFormState.databaseId,
+      notionToken: outputFormState.notionToken
     })
-    outputFormState.fieldMapping = mapping
 
-    toast.add({
-      title: 'Schema fetched',
-      description: 'Field mapping auto-generated from Notion database',
-      color: 'success'
-    })
-  } else if (schemaError.value) {
+    console.log('[FlowBuilder] Schema fetched:', notionSchema.value)
+    console.log('[FlowBuilder] Schema error:', schemaError.value)
+
+    if (notionSchema.value && !schemaError.value) {
+      // Auto-generate field mapping
+      const mapping = generateAutoMapping(notionSchema.value, {
+        aiFields: ['priority', 'type', 'assignee', 'domain'],
+        similarityThreshold: 0.3  // Lower threshold to catch more matches
+      })
+
+      console.log('[FlowBuilder] Generated mapping:', mapping)
+
+      // Ensure all fields have a structure even if not auto-mapped
+      outputFormState.fieldMapping = {
+        priority: mapping.priority || { notionProperty: '', propertyType: '', valueMap: {} },
+        type: mapping.type || { notionProperty: '', propertyType: '', valueMap: {} },
+        assignee: mapping.assignee || { notionProperty: '', propertyType: '', valueMap: {} },
+        domain: mapping.domain || { notionProperty: '', propertyType: '', valueMap: {} }
+      }
+
+      toast.add({
+        title: 'Schema fetched',
+        description: 'Field mapping auto-generated from Notion database',
+        color: 'success'
+      })
+    } else if (schemaError.value) {
+      toast.add({
+        title: 'Schema fetch failed',
+        description: schemaError.value,
+        color: 'error'
+      })
+    } else {
+      console.error('[FlowBuilder] Schema is null but no error')
+      toast.add({
+        title: 'Schema fetch failed',
+        description: 'No schema returned',
+        color: 'error'
+      })
+    }
+  } catch (error) {
+    console.error('[FlowBuilder] Error fetching schema:', error)
     toast.add({
       title: 'Schema fetch failed',
-      description: schemaError.value,
+      description: error.message || 'Unknown error',
       color: 'error'
     })
   }
@@ -351,7 +386,12 @@ function resetOutputForm(outputType: 'notion' | 'github' | 'linear') {
   outputFormState.isDefault = outputsList.value.length === 0 // First output is default
   outputFormState.notionToken = ''
   outputFormState.databaseId = ''
-  outputFormState.fieldMapping = {}
+  outputFormState.fieldMapping = {
+    priority: { notionProperty: '', propertyType: '', valueMap: {} },
+    type: { notionProperty: '', propertyType: '', valueMap: {} },
+    assignee: { notionProperty: '', propertyType: '', valueMap: {} },
+    domain: { notionProperty: '', propertyType: '', valueMap: {} }
+  }
 }
 
 function saveOutput(event: FormSubmitEvent<OutputFormData>, close: () => void) {
@@ -1140,8 +1180,13 @@ function cancel() {
                           </UButton>
                         </div>
 
+                        <!-- Debug -->
+                        <div v-if="notionSchema" class="text-xs text-green-500 p-2 bg-gray-900 rounded">
+                          Schema loaded with {{ Object.keys(notionSchema.properties || {}).length }} properties
+                        </div>
+
                         <!-- Field Mapping (if schema fetched) -->
-                        <div v-if="notionSchema" class="space-y-3">
+                        <div v-if="notionSchema && notionSchema.properties" class="space-y-4">
                           <h4 class="font-medium">Field Mapping</h4>
                           <UAlert
                             color="info"
@@ -1149,6 +1194,36 @@ function cancel() {
                             icon="i-lucide-info"
                             description="Fields have been auto-mapped based on Notion property names"
                           />
+
+                          <!-- Priority Field -->
+                          <UFormField label="Priority Field" name="priorityField" hint="Auto-mapped from your Notion database">
+                            <USelectMenu
+                              v-model="outputFormState.fieldMapping.priority.notionProperty"
+                              :items="Object.keys(notionSchema.properties || {})"
+                              placeholder="Select Notion property for priority..."
+                              class=w-full
+                            />
+                          </UFormField>
+
+                          <!-- Type Field -->
+                          <UFormField label="Type Field" name="typeField" hint="Auto-mapped from your Notion database">
+                            <USelectMenu
+                              v-model="outputFormState.fieldMapping.type.notionProperty"
+                              :items="Object.keys(notionSchema.properties || {})"
+                              placeholder="Select Notion property for type..."
+                              class="w-full"
+                            />
+                          </UFormField>
+
+                          <!-- Assignee Field -->
+                          <UFormField label="Assignee Field" name="assigneeField" hint="Auto-mapped from your Notion database">
+                            <USelectMenu
+                              v-model="outputFormState.fieldMapping.assignee.notionProperty"
+                              :items="Object.keys(notionSchema.properties || {})"
+                              placeholder="Select Notion property for assignee..."
+                              class="w-full"
+                            />
+                          </UFormField>
                         </div>
 
                         <div class="flex justify-end gap-2 mt-6">
