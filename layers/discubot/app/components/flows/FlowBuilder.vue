@@ -2,6 +2,7 @@
 import { z } from 'zod'
 import type { FormSubmitEvent, StepperItem } from '@nuxt/ui'
 import type { Flow, FlowInput, FlowOutput, NotionOutputConfig } from '~/layers/discubot/types'
+import PromptPreviewModal from '../shared/PromptPreviewModal.vue'
 
 /**
  * FlowBuilder - Multi-step wizard for creating/editing flows
@@ -10,6 +11,8 @@ import type { Flow, FlowInput, FlowOutput, NotionOutputConfig } from '~/layers/d
  * - Step 1: Flow settings (name, AI config, domains)
  * - Step 2: Input management (Slack, Figma, Email sources)
  * - Step 3: Output management (Notion, GitHub, Linear destinations with domain routing)
+ *
+ * Note: All buttons inside forms must have explicit type="button" to prevent form submission
  */
 
 interface Props {
@@ -463,16 +466,18 @@ const stepperItems: StepperItem[] = [
 ]
 
 function nextStep() {
+  console.log(currentStep.value)
   if (currentStep.value < stepperItems.length - 1) {
     stepper.value?.next()
-    currentStep.value++
+    console.log(currentStep.value)
+    // currentStep is updated automatically via v-model
   }
 }
 
 function prevStep() {
   if (currentStep.value > 0) {
     stepper.value?.prev()
-    currentStep.value--
+    // currentStep is updated automatically via v-model
   }
 }
 
@@ -612,7 +617,7 @@ function cancel() {
                   <UTextarea
                     v-model="flowState.description"
                     placeholder="Describe what this flow handles..."
-                    rows="3"
+                    :rows="3"
                     class="w-full"
                   />
                 </UFormField>
@@ -663,7 +668,7 @@ function cancel() {
                   <UTextarea
                     v-model="flowState.aiSummaryPrompt"
                     placeholder="Enter custom prompt..."
-                    rows="3"
+                    :rows="3"
                     class="w-full"
                   />
                 </UFormField>
@@ -676,13 +681,14 @@ function cancel() {
                   <UTextarea
                     v-model="flowState.aiTaskPrompt"
                     placeholder="Enter custom prompt..."
-                    rows="3"
+                    :rows="3"
                     class="w-full"
                   />
                 </UFormField>
 
                 <div>
                   <UButton
+                    type="button"
                     color="neutral"
                     variant="outline"
                     size="sm"
@@ -716,6 +722,7 @@ function cancel() {
                     >
                       {{ domain }}
                       <button
+                        type="button"
                         class="ml-1"
                         @click="removeDomain(domain)"
                       >
@@ -732,6 +739,7 @@ function cancel() {
                       @keyup.enter="addDomain"
                     />
                     <UButton
+                      type="button"
                       color="primary"
                       variant="outline"
                       @click="addDomain"
@@ -746,6 +754,7 @@ function cancel() {
             <!-- Navigation -->
             <div class="flex justify-end gap-2">
               <UButton
+                type="button"
                 color="neutral"
                 variant="ghost"
                 @click="cancel"
@@ -1168,6 +1177,8 @@ function cancel() {
       v-if="showPromptPreview"
       v-model="showPromptPreview"
       :preview="promptPreview"
+      :custom-summary-prompt="flowState.aiSummaryPrompt"
+      :custom-task-prompt="flowState.aiTaskPrompt"
     />
   </div>
 </template>
