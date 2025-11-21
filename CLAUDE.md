@@ -132,17 +132,46 @@ Generated collections and ran migrations"
 
 ### Using TodoWrite During Tasks
 
-**ALWAYS use TodoWrite** to track the 5-step flow:
+**ALWAYS use TodoWrite** to track the 5-step flow with BOTH content and activeForm:
 
 ```typescript
-TodoWrite([
-  { content: "Mark Task X.Y in progress in PROGRESS_TRACKER.md", status: "in_progress" },
-  { content: "Complete Task X.Y work", status: "pending" },
-  { content: "Run npx nuxt typecheck", status: "pending" },
-  { content: "Update PROGRESS_TRACKER.md with completion", status: "pending" },
-  { content: "Commit: feat: [description] (Task X.Y)", status: "pending" }
-])
+TodoWrite({
+  todos: [
+    {
+      content: "Mark Task X.Y in progress in PROGRESS_TRACKER.md",
+      activeForm: "Marking Task X.Y in progress",
+      status: "in_progress"
+    },
+    {
+      content: "Complete Task X.Y work",
+      activeForm: "Completing Task X.Y work",
+      status: "pending"
+    },
+    {
+      content: "Run npx nuxt typecheck",
+      activeForm: "Running typecheck",
+      status: "pending"
+    },
+    {
+      content: "Update PROGRESS_TRACKER.md with completion",
+      activeForm: "Updating progress tracker",
+      status: "pending"
+    },
+    {
+      content: "Commit changes with conventional format",
+      activeForm: "Committing changes",
+      status: "pending"
+    }
+  ]
+})
 ```
+
+**Critical Rules:**
+- **content**: Imperative form (e.g., "Fix bug", "Run tests")
+- **activeForm**: Present continuous (e.g., "Fixing bug", "Running tests")
+- **EXACTLY ONE task** must be `in_progress` at any time (not more, not less)
+- Mark tasks completed **immediately** after finishing (don't batch)
+- **ONLY mark completed** when fully done (no errors, no blockers)
 
 Mark each step complete as you go.
 
@@ -393,203 +422,74 @@ Each layer is isolated with its own:
 - ❌ `UToggle` → ✅ `USwitch`
 - ❌ `UNotification` → ✅ `UToast`
 
-### ❌ NEVER DO THIS (Old v2/v3 Patterns)
-```vue
-<!-- WRONG: v3 Modal with UCard inside -->
-<UModal v-model="showModal">
-  <UCard>
-    <template #header>
-      <h3>Title</h3>
-    </template>
-    Content here
-    <template #footer>
-      <UButton>Save</UButton>
-    </template>
-  </UCard>
-</UModal>
+### ⚠️ ALWAYS Check MCP Docs First
 
-<!-- WRONG: Old component names -->
-<UDropdown /> <!-- Should be UDropdownMenu -->
-<UDivider />  <!-- Should be USeparator -->
-<UToggle />   <!-- Should be USwitch -->
+**MANDATORY**: Before using ANY Nuxt UI component:
+```bash
+# Use the Nuxt UI MCP server to get correct v4 patterns
+mcp__nuxt-ui__get_component("UModal")
+mcp__nuxt-ui__get_component("USlideover")
+# etc.
 ```
 
-### ✅ ALWAYS DO THIS (Correct v4 Patterns)
+### Vue Component Structure (MANDATORY)
 
-#### Vue Component Structure (MANDATORY)
 ```vue
-<!-- ALWAYS use Composition API with script setup -->
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+// ALWAYS use Composition API with <script setup lang="ts">
 
-// Props with TypeScript
 interface Props {
-  modelValue?: boolean
-  title?: string
+  teamId: string
+  flow?: Partial<Flow>
 }
 
 const props = defineProps<Props>()
+
 const emit = defineEmits<{
-  'update:modelValue': [value: boolean]
-  'save': [data: any]
+  success: [flowId: string]
+  cancel: []
 }>()
 
-// Reactive state
 const isOpen = ref(false)
-const formData = ref({})
+const loading = ref(false)
 
 // Composables
-const { user } = useAuth()
-const { data, pending } = await useFetch('/api/data')
+const toast = useToast()
+const { data } = await useFetch('/api/endpoint')
 
 // Methods
-const handleSave = () => {
-  emit('save', formData.value)
+const handleSave = async () => {
+  try {
+    // Logic
+    toast.add({ title: 'Success', color: 'success' })
+  } catch (error: any) {
+    toast.add({ title: 'Error', description: error.message, color: 'error' })
+  }
 }
 </script>
 
 <template>
-  <!-- Template here -->
+  <!-- Template -->
 </template>
 ```
 
-#### Modal (Most Common Mistake!)
-```vue
-<script setup lang="ts">
-const isOpen = ref(false)
-const handleSave = () => {
-  // Save logic
-  isOpen.value = false
-}
-</script>
+### For Detailed Nuxt UI v4 Patterns
 
-<template>
-  <!-- CORRECT: v4 Modal without UCard -->
-  <UModal v-model="isOpen">
-    <template #content="{ close }">
-      <div class="p-6">
-        <h3 class="text-lg font-semibold mb-4">Modal Title</h3>
-        <div class="space-y-4">
-          <!-- Your content here -->
-        </div>
-        <div class="flex justify-end gap-2 mt-6">
-          <UButton color="gray" variant="ghost" @click="close">
-            Cancel
-          </UButton>
-          <UButton color="primary" @click="handleSave">
-            Save
-          </UButton>
-        </div>
-      </div>
-    </template>
-  </UModal>
-</template>
-```
+**See**: `.claude/agents/nuxt-ui-component.md`
 
-#### Slideover
-```vue
-<script setup lang="ts">
-const isOpen = ref(false)
-</script>
+This skill covers:
+- ✅ Correct v4 patterns for all overlays (Modal, Slideover, Drawer)
+- ✅ Form components (UForm, USelect, USwitch)
+- ✅ Common v3→v4 mistakes and how to avoid them
+- ✅ Automatic typecheck workflow
+- ✅ VueUse integration
 
-<template>
-  <!-- CORRECT: v4 Slideover -->
-  <USlideover v-model="isOpen">
-    <template #content="{ close }">
-      <div class="p-6">
-        <h3 class="text-lg font-semibold mb-4">Slideover Title</h3>
-        <!-- Content -->
-        <UButton @click="close">Close</UButton>
-      </div>
-    </template>
-  </USlideover>
-</template>
-```
-
-#### Drawer
-```vue
-<script setup lang="ts">
-const isOpen = ref(false)
-</script>
-
-<template>
-  <!-- CORRECT: v4 Drawer -->
-  <UDrawer v-model="isOpen">
-    <template #content="{ close }">
-      <div class="p-6">
-        <!-- Content -->
-      </div>
-    </template>
-  </UDrawer>
-</template>
-```
-
-#### Forms
-```vue
-<script setup lang="ts">
-import { z } from 'zod'
-
-const schema = z.object({
-  email: z.string().email('Invalid email')
-})
-
-const state = ref({
-  email: ''
-})
-
-const onSubmit = (data: any) => {
-  console.log('Form submitted:', data)
-}
-</script>
-
-<template>
-  <!-- CORRECT: Nuxt UI 4 -->
-  <UForm :state="state" :schema="schema" @submit="onSubmit">
-    <UFormField label="Email" name="email">
-      <UInput v-model="state.email" />
-    </UFormField>
-  </UForm>
-</template>
-```
-
-#### Correct Component Names
-```vue
-<script setup lang="ts">
-const items = ref([])
-const enabled = ref(false)
-</script>
-
-<template>
-  <!-- CORRECT v4 names -->
-  <UDropdownMenu :items="items" />
-  <USeparator />
-  <USwitch v-model="enabled" />
-  <UToast :ui="{ position: 'top-right' }" />
-</template>
-```
-
-#### USelect (IMPORTANT!)
-```vue
-<script setup lang="ts">
-// Define your options
-const options = ref([
-  { value: '1', label: 'Option 1' },
-  { value: '2', label: 'Option 2' },
-  { value: '3', label: 'Option 3' }
-])
-const selected = ref('1')
-</script>
-
-<template>
-  <!-- CORRECT: Use :items prop, NOT :options or :whatever -->
-  <USelect v-model="selected" :items="options" />
-
-  <!-- WRONG: Do NOT use :options -->
-  <!-- <USelect v-model="selected" :options="options" /> -->
-</template>
-```
-
-**CRITICAL**: USelect uses `:items`, NOT `:options`. This is a common mistake!
+**Key differences to remember:**
+- Overlays use `v-model:open` (not `v-model`)
+- Form inputs use `v-model`
+- USelect uses `:items` (not `:options`)
+- Trigger button goes INSIDE UModal/USlideover/UDrawer
+- Check MCP docs before writing any component
 
 ## Testing Strategy
 
