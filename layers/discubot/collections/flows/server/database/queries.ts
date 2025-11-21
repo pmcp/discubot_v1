@@ -44,6 +44,56 @@ export async function getAllDiscubotFlows(teamId: string) {
   return flows
 }
 
+export async function getDiscubotFlowById(teamId: string, flowId: string) {
+  const db = useDB()
+
+  const ownerUsers = alias(users, 'ownerUsers')
+  const createdByUsers = alias(users, 'createdByUsers')
+  const updatedByUsers = alias(users, 'updatedByUsers')
+
+  const [flow] = await db
+    .select({
+      ...tables.discubotFlows,
+      ownerUser: {
+        id: ownerUsers.id,
+        name: ownerUsers.name,
+        email: ownerUsers.email,
+        avatarUrl: ownerUsers.avatarUrl
+      },
+      createdByUser: {
+        id: createdByUsers.id,
+        name: createdByUsers.name,
+        email: createdByUsers.email,
+        avatarUrl: createdByUsers.avatarUrl
+      },
+      updatedByUser: {
+        id: updatedByUsers.id,
+        name: updatedByUsers.name,
+        email: updatedByUsers.email,
+        avatarUrl: updatedByUsers.avatarUrl
+      }
+    })
+    .from(tables.discubotFlows)
+    .leftJoin(ownerUsers, eq(tables.discubotFlows.owner, ownerUsers.id))
+    .leftJoin(createdByUsers, eq(tables.discubotFlows.createdBy, createdByUsers.id))
+    .leftJoin(updatedByUsers, eq(tables.discubotFlows.updatedBy, updatedByUsers.id))
+    .where(
+      and(
+        eq(tables.discubotFlows.teamId, teamId),
+        eq(tables.discubotFlows.id, flowId)
+      )
+    )
+
+  if (!flow) {
+    throw createError({
+      statusCode: 404,
+      statusMessage: 'Flow not found'
+    })
+  }
+
+  return flow
+}
+
 export async function getDiscubotFlowsByIds(teamId: string, flowIds: string[]) {
   const db = useDB()
 
