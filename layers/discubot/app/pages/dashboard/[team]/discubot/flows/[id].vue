@@ -90,10 +90,12 @@ async function loadFlowData() {
   }
 }
 
-// Load flow data on mount
-onMounted(() => {
-  loadFlowData()
-})
+// Wait for currentTeam to be loaded before fetching flow data
+watch(() => currentTeam.value?.id, (teamId) => {
+  if (teamId) {
+    loadFlowData()
+  }
+}, { immediate: true })
 
 function handleFlowSaved() {
   // Navigate back to flows list after successful save
