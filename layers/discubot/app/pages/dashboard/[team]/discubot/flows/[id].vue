@@ -24,14 +24,19 @@
 
     <!-- Flow Builder -->
     <FlowBuilder
-      v-else
-      :flow-id="flowId"
+      v-else-if="flow && currentTeam?.id"
+      :team-id="currentTeam.id"
+      :flow="flow"
+      :inputs="inputs"
+      :outputs="outputs"
       @saved="handleFlowSaved"
     />
   </AppContainer>
 </template>
 
 <script setup lang="ts">
+import type { Flow, FlowInput, FlowOutput } from '~/layers/discubot/types'
+
 const route = useRoute()
 const router = useRouter()
 const { currentTeam } = useTeam()
@@ -40,7 +45,9 @@ const toast = useToast()
 const flowId = computed(() => route.params.id as string)
 const loading = ref(true)
 const error = ref<string | null>(null)
-const flowName = ref<string>('Flow')
+const flow = ref<Partial<Flow> | null>(null)
+const inputs = ref<FlowInput[]>([])
+const outputs = ref<FlowOutput[]>([])
 
 definePageMeta({
   middleware: 'auth'
@@ -50,19 +57,26 @@ definePageMeta({
 const pageTitle = computed(() => {
   if (loading.value) return 'Loading...'
   if (error.value) return 'Error'
-  return `Edit ${flowName.value}`
+  return `Edit ${flow.value?.name || 'Flow'}`
 })
 
-// Load flow to get name for title
-async function loadFlow() {
+// Load flow, inputs, and outputs
+async function loadFlowData() {
   try {
     loading.value = true
     error.value = null
 
-    const response = await $fetch<{ data: { name?: string } }>(`/api/teams/${currentTeam.value?.id}/discubot-flows/${flowId.value}`)
-    if (response?.data) {
-      flowName.value = response.data.name || 'Flow'
-    }
+    // Fetch flow, inputs, and outputs in parallel
+    const [flowResponse, inputsResponse, outputsResponse] = await Promise.all([
+      $fetch<Flow>(`/api/teams/${currentTeam.value?.id}/discubot-flows/${flowId.value}`),
+      $fetch<FlowInput[]>(`/api/teams/${currentTeam.value?.id}/discubot-flowinputs`),
+      $fetch<FlowOutput[]>(`/api/teams/${currentTeam.value?.id}/discubot-flowoutputs`)
+    ])
+
+    flow.value = flowResponse
+    // Filter inputs and outputs for this specific flow
+    inputs.value = inputsResponse.filter(input => input.flowId === flowId.value)
+    outputs.value = outputsResponse.filter(output => output.flowId === flowId.value)
   } catch (e: any) {
     console.error('Failed to load flow:', e)
     error.value = e.message || 'Failed to load flow'
@@ -76,9 +90,9 @@ async function loadFlow() {
   }
 }
 
-// Load flow on mount
+// Load flow data on mount
 onMounted(() => {
-  loadFlow()
+  loadFlowData()
 })
 
 function handleFlowSaved() {
