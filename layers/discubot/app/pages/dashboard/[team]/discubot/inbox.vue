@@ -449,12 +449,37 @@ function getMessageTypeLabel(messageType: string) {
 }
 
 function formatRelativeTime(date: string) {
+  // SSR-safe: Simple fallback for server, VueUse for client
+  if (!process.client) {
+    // Simple relative time for SSR
+    const now = Date.now()
+    const then = new Date(date).getTime()
+    const diff = now - then
+    const seconds = Math.floor(diff / 1000)
+    const minutes = Math.floor(seconds / 60)
+    const hours = Math.floor(minutes / 60)
+    const days = Math.floor(hours / 24)
+
+    if (days > 0) return `${days}d ago`
+    if (hours > 0) return `${hours}h ago`
+    if (minutes > 0) return `${minutes}m ago`
+    return 'just now'
+  }
+
+  // Client-side: Use VueUse for reactive updates
   const { value } = useTimeAgo(date)
   return value
 }
 
 function formatFullDate(date: string) {
-  return new Date(date).toLocaleString()
+  // SSR-safe date formatting
+  const d = new Date(date)
+  if (!process.client) {
+    // Simple ISO format for SSR
+    return d.toISOString().replace('T', ' ').split('.')[0]
+  }
+  // Client-side: Use locale formatting
+  return d.toLocaleString()
 }
 
 function getEmptyStateMessage() {
