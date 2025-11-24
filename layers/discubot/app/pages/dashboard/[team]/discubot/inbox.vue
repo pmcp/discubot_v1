@@ -292,13 +292,32 @@
 import DOMPurify from 'isomorphic-dompurify'
 import * as cheerio from 'cheerio'
 
+// SSR Error Debugging - catch and log any window errors
+if (!process.client) {
+  console.log('[SSR DEBUG] inbox.vue - Starting SSR render')
+}
+
 // Team context
 const { currentTeam } = useTeam()
 const toast = useToast()
 
 // Data fetching
-const { items: messages, pending, refresh } = await useCollectionQuery('discubotInboxMessages')
-const { mutate } = useCroutonMutate()
+try {
+  if (!process.client) {
+    console.log('[SSR DEBUG] inbox.vue - About to call useCollectionQuery')
+  }
+  var { items: messages, pending, refresh } = await useCollectionQuery('discubotInboxMessages')
+  var { mutate } = useCroutonMutate()
+  if (!process.client) {
+    console.log('[SSR DEBUG] inbox.vue - useCollectionQuery succeeded')
+  }
+} catch (error: any) {
+  if (!process.client) {
+    console.error('[SSR ERROR] inbox.vue - Error during data fetch:', error.message)
+    console.error('[SSR ERROR] Stack:', error.stack)
+  }
+  throw error
+}
 
 // Filter state
 const selectedFilter = ref<string>('all')
@@ -347,38 +366,67 @@ const filteredMessages = computed(() => {
 // Sanitized HTML content for modal
 const sanitizedHtmlContent = computed(() => {
   if (!selectedMessage.value?.htmlBody) return ''
-  return DOMPurify.sanitize(selectedMessage.value.htmlBody, {
-    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'div', 'span', 'table', 'tr', 'td', 'th'],
-    ALLOWED_ATTR: ['href', 'target', 'rel', 'class']
-  })
+
+  try {
+    if (!process.client) {
+      console.log('[SSR DEBUG] sanitizedHtmlContent - Running on server, skipping DOMPurify')
+      // Return unsanitized on server, will be sanitized on client
+      return selectedMessage.value.htmlBody
+    }
+
+    return DOMPurify.sanitize(selectedMessage.value.htmlBody, {
+      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'div', 'span', 'table', 'tr', 'td', 'th'],
+      ALLOWED_ATTR: ['href', 'target', 'rel', 'class']
+    })
+  } catch (error: any) {
+    if (!process.client) {
+      console.error('[SSR ERROR] sanitizedHtmlContent:', error.message)
+    }
+    return ''
+  }
 })
 
 // Extract links from HTML (SSR-safe using cheerio)
 const extractedLinks = computed(() => {
   if (!selectedMessage.value?.htmlBody) return []
 
-  const $ = cheerio.load(selectedMessage.value.htmlBody)
-  const links: Array<{ url: string; text: string }> = []
-
-  $('a[href]').each((_, element) => {
-    const href = $(element).attr('href')
-    const text = $(element).text().trim()
-
-    if (href && href.startsWith('http')) {
-      const textLower = text.toLowerCase()
-      // Filter for important links
-      if (
-        href.includes('figma.com') ||
-        textLower.includes('verify') ||
-        textLower.includes('reset') ||
-        textLower.includes('confirm')
-      ) {
-        links.push({ url: href, text })
-      }
+  try {
+    if (!process.client) {
+      console.log('[SSR DEBUG] extractedLinks - Running on server')
     }
-  })
 
-  return links.slice(0, 5) // Limit to 5 most relevant links
+    const $ = cheerio.load(selectedMessage.value.htmlBody)
+    const links: Array<{ url: string; text: string }> = []
+
+    $('a[href]').each((_, element) => {
+      const href = $(element).attr('href')
+      const text = $(element).text().trim()
+
+      if (href && href.startsWith('http')) {
+        const textLower = text.toLowerCase()
+        // Filter for important links
+        if (
+          href.includes('figma.com') ||
+          textLower.includes('verify') ||
+          textLower.includes('reset') ||
+          textLower.includes('confirm')
+        ) {
+          links.push({ url: href, text })
+        }
+      }
+    })
+
+    if (!process.client) {
+      console.log('[SSR DEBUG] extractedLinks - Found', links.length, 'links')
+    }
+
+    return links.slice(0, 5) // Limit to 5 most relevant links
+  } catch (error: any) {
+    if (!process.client) {
+      console.error('[SSR ERROR] extractedLinks:', error.message, error.stack)
+    }
+    return []
+  }
 })
 
 // Helper functions
