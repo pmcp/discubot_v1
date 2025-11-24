@@ -66,6 +66,12 @@ export function useFlowOAuth(config: OAuthConfig) {
    * Open OAuth popup window
    */
   function openOAuthPopup(event?: Event) {
+    // Ensure we're on the client
+    if (!process.client) {
+      console.warn('[OAuth Popup] Cannot open popup during SSR')
+      return
+    }
+
     // Prevent any default behavior
     if (event) {
       event.preventDefault()

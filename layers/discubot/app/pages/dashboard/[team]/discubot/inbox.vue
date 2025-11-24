@@ -513,7 +513,7 @@ async function markAsRead(message: any) {
 }
 
 function openInNewTab(message: any) {
-  if (extractedLinks.value.length > 0) {
+  if (process.client && extractedLinks.value.length > 0) {
     // Open the first link (usually the most important one)
     const firstLink = extractedLinks.value[0]
     if (firstLink) {
