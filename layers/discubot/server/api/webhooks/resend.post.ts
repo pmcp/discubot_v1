@@ -56,6 +56,7 @@ import { classifyFigmaEmail, shouldForwardEmail } from '#layers/discubot/server/
 import { forwardEmailToConfigOwner } from '#layers/discubot/server/utils/emailForwarding'
 import { createDiscubotInboxMessage } from '#layers/discubot/collections/inboxMessages/server/database/queries'
 import { findDiscubotConfigByEmail } from '#layers/discubot/collections/configs/server/database/queries'
+import { findFlowInputByEmailAddress } from '#layers/discubot/collections/flowinputs/server/database/queries'
 import { SYSTEM_USER_ID } from '#layers/discubot/server/utils/constants'
 
 /**
@@ -109,19 +110,40 @@ function validateResendWebhook(payload: ResendWebhookPayload): void {
 }
 
 /**
- * Find config by recipient email address
- * Searches globally across all teams by email address or email slug
+ * Find config or Flow by recipient email address
+ * Searches FlowInputs first (new system), then falls back to legacy configs
  */
-async function findConfigByRecipient(recipientEmail: string): Promise<{ config: any; teamId: string } | null> {
+async function findConfigByRecipient(recipientEmail: string): Promise<{ config?: any; flowInput?: any; flow?: any; teamId: string; isFlow: boolean } | null> {
   try {
-    logger.debug('[Resend Webhook] Looking for config by email', {
+    logger.debug('[Resend Webhook] Looking for Flow or config by email', {
       recipientEmail,
     })
 
+    // 1. Try FlowInputs first (new system)
+    const flowInput = await findFlowInputByEmailAddress(recipientEmail)
+
+    if (flowInput && flowInput.flowIdData) {
+      logger.debug('[Resend Webhook] Found matching FlowInput', {
+        flowInputId: flowInput.id,
+        flowId: flowInput.flowId,
+        flowName: flowInput.flowIdData.name,
+        teamId: flowInput.teamId,
+        emailAddress: flowInput.emailAddress,
+        emailSlug: flowInput.emailSlug,
+      })
+      return {
+        flowInput,
+        flow: flowInput.flowIdData,
+        teamId: flowInput.teamId,
+        isFlow: true,
+      }
+    }
+
+    // 2. Fall back to legacy configs (backward compatibility)
     const config = await findDiscubotConfigByEmail(recipientEmail)
 
     if (config) {
-      logger.debug('[Resend Webhook] Found matching config', {
+      logger.debug('[Resend Webhook] Found matching legacy config', {
         configId: config.id,
         teamId: config.teamId,
         emailAddress: config.emailAddress,
@@ -130,13 +152,14 @@ async function findConfigByRecipient(recipientEmail: string): Promise<{ config: 
       return {
         config,
         teamId: config.teamId,
+        isFlow: false,
       }
     }
 
-    logger.debug('[Resend Webhook] No matching config found')
+    logger.debug('[Resend Webhook] No matching Flow or config found')
     return null
   } catch (error) {
-    logger.error('[Resend Webhook] Error finding config:', error)
+    logger.error('[Resend Webhook] Error finding Flow/config:', error)
     return null
   }
 }
@@ -336,8 +359,22 @@ export default defineEventHandler(async (event) => {
         }
       }
 
-      const { config, teamId } = result
-      const configId = config.id
+      const { teamId, isFlow } = result
+      // For inbox messages, we use legacy config ID (Flows don't support inbox yet)
+      const configId = isFlow ? result.flowInput?.id : result.config?.id
+
+      if (!configId) {
+        logger.warn('[Resend Webhook] Config/FlowInput found but no ID available', {
+          recipient,
+          isFlow,
+        })
+        return {
+          success: true,
+          stored: false,
+          reason: 'Invalid config/flow data',
+          messageType: classification.messageType,
+        }
+      }
 
       // Store in inbox
       try {

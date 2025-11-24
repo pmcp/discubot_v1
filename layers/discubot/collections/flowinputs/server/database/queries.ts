@@ -164,3 +164,31 @@ export async function deleteDiscubotFlowInput(
 
   return { success: true }
 }
+
+/**
+ * Find FlowInput by email address
+ * Used by webhooks to route incoming emails to the correct Flow
+ *
+ * @param emailAddress - Full email address (e.g., "four-cases-fold@messages.friendlyinter.net")
+ * @returns FlowInput with joined Flow data, or null if not found
+ */
+export async function findFlowInputByEmailAddress(emailAddress: string) {
+  const db = useDB()
+
+  const [result] = await db
+    .select({
+      ...tables.discubotFlowinputs,
+      flowIdData: flowsSchema.discubotFlows,
+    })
+    .from(tables.discubotFlowinputs)
+    .leftJoin(flowsSchema.discubotFlows, eq(tables.discubotFlowinputs.flowId, flowsSchema.discubotFlows.id))
+    .where(
+      and(
+        eq(tables.discubotFlowinputs.emailAddress, emailAddress),
+        eq(tables.discubotFlowinputs.active, true)
+      )
+    )
+    .limit(1)
+
+  return result || null
+}
