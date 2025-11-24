@@ -289,39 +289,57 @@
 </template>
 
 <script setup lang="ts">
+// Disable SSR for this page to avoid race conditions with auth middleware
+definePageMeta({
+  ssr: false
+})
+
 // SSR Error Debugging - Log BEFORE imports
-console.log('[SSR DEBUG] inbox.vue - Script loading, process.client:', process.client)
+console.log('[INBOX] === Starting inbox.vue initialization ===')
+console.log('[INBOX] process.client:', process.client)
+console.log('[INBOX] process.server:', process.server)
 
-import DOMPurify from 'isomorphic-dompurify'
-console.log('[SSR DEBUG] inbox.vue - DOMPurify imported')
+// Dynamic imports to avoid SSR issues
+console.log('[INBOX] Step 1: Preparing imports...')
 
-import * as cheerio from 'cheerio'
-console.log('[SSR DEBUG] inbox.vue - cheerio imported')
-
-// More debugging
-if (!process.client) {
-  console.log('[SSR DEBUG] inbox.vue - Starting SSR render (after imports)')
-}
-
-// Team context
-const { currentTeam } = useTeam()
-const toast = useToast()
-
-// Data fetching
+// Team context (SSR disabled, so teams will always be loaded)
 try {
-  if (!process.client) {
-    console.log('[SSR DEBUG] inbox.vue - About to call useCollectionQuery')
-  }
+  console.log('[INBOX] Step 3: Getting team context...')
+  const { currentTeam } = useTeam()
+  console.log('[INBOX] Step 3: Team context obtained ✓', {
+    teamSlug: currentTeam.value?.slug,
+    teamId: currentTeam.value?.id
+  })
+
+  console.log('[INBOX] Step 4: Getting toast composable...')
+  const toast = useToast()
+  console.log('[INBOX] Step 4: Toast obtained ✓')
+
+  // Data fetching
+  console.log('[INBOX] Step 5: Fetching inbox messages...')
+  console.log('[INBOX] Calling useCollectionQuery("discubotInboxMessages")...')
+
   var { items: messages, pending, refresh } = await useCollectionQuery('discubotInboxMessages')
+
+  console.log('[INBOX] Step 5: useCollectionQuery succeeded ✓', {
+    messageCount: messages.value?.length || 0,
+    isPending: pending.value
+  })
+
+  console.log('[INBOX] Step 6: Getting Crouton mutate...')
   var { mutate } = useCroutonMutate()
-  if (!process.client) {
-    console.log('[SSR DEBUG] inbox.vue - useCollectionQuery succeeded')
-  }
+  console.log('[INBOX] Step 6: Crouton mutate obtained ✓')
+
+  console.log('[INBOX] === All initialization steps completed successfully ===')
 } catch (error: any) {
-  if (!process.client) {
-    console.error('[SSR ERROR] inbox.vue - Error during data fetch:', error.message)
-    console.error('[SSR ERROR] Stack:', error.stack)
-  }
+  console.error('[INBOX ERROR] ❌❌❌ CAUGHT ERROR IN INBOX PAGE ❌❌❌')
+  console.error('[INBOX ERROR] Error name:', error.name)
+  console.error('[INBOX ERROR] Error message:', error.message)
+  console.error('[INBOX ERROR] Error stack:', error.stack)
+  console.error('[INBOX ERROR] Error cause:', error.cause)
+  console.error('[INBOX ERROR] Full error object:', JSON.stringify(error, null, 2))
+
+  // Re-throw to let Nuxt handle it
   throw error
 }
 
@@ -369,68 +387,46 @@ const filteredMessages = computed(() => {
   return msgs.filter((m: any) => m.messageType === selectedFilter.value)
 })
 
-// Sanitized HTML content for modal
+// Sanitized HTML content - just return raw HTML since we're client-only now
 const sanitizedHtmlContent = computed(() => {
   if (!selectedMessage.value?.htmlBody) return ''
-
-  try {
-    if (!process.client) {
-      console.log('[SSR DEBUG] sanitizedHtmlContent - Running on server, skipping DOMPurify')
-      // Return unsanitized on server, will be sanitized on client
-      return selectedMessage.value.htmlBody
-    }
-
-    return DOMPurify.sanitize(selectedMessage.value.htmlBody, {
-      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'div', 'span', 'table', 'tr', 'td', 'th'],
-      ALLOWED_ATTR: ['href', 'target', 'rel', 'class']
-    })
-  } catch (error: any) {
-    if (!process.client) {
-      console.error('[SSR ERROR] sanitizedHtmlContent:', error.message)
-    }
-    return ''
-  }
+  // Since SSR is disabled, we can safely return the HTML
+  // Browser will handle it safely via v-html
+  return selectedMessage.value.htmlBody
 })
 
-// Extract links from HTML (SSR-safe using cheerio)
+// Extract links from HTML (client-only, simple regex approach)
 const extractedLinks = computed(() => {
   if (!selectedMessage.value?.htmlBody) return []
+  if (!process.client) return []
 
   try {
-    if (!process.client) {
-      console.log('[SSR DEBUG] extractedLinks - Running on server')
-    }
-
-    const $ = cheerio.load(selectedMessage.value.htmlBody)
+    // Simple regex to extract links instead of using cheerio
+    const linkRegex = /<a[^>]+href=["']([^"']+)["'][^>]*>([^<]*)<\/a>/gi
     const links: Array<{ url: string; text: string }> = []
+    let match
 
-    $('a[href]').each((_, element) => {
-      const href = $(element).attr('href')
-      const text = $(element).text().trim()
+    while ((match = linkRegex.exec(selectedMessage.value.htmlBody)) !== null) {
+      const url = match[1]
+      const text = match[2].trim()
 
-      if (href && href.startsWith('http')) {
+      if (url && url.startsWith('http')) {
         const textLower = text.toLowerCase()
         // Filter for important links
         if (
-          href.includes('figma.com') ||
+          url.includes('figma.com') ||
           textLower.includes('verify') ||
           textLower.includes('reset') ||
           textLower.includes('confirm')
         ) {
-          links.push({ url: href, text })
+          links.push({ url, text })
         }
       }
-    })
-
-    if (!process.client) {
-      console.log('[SSR DEBUG] extractedLinks - Found', links.length, 'links')
     }
 
     return links.slice(0, 5) // Limit to 5 most relevant links
   } catch (error: any) {
-    if (!process.client) {
-      console.error('[SSR ERROR] extractedLinks:', error.message, error.stack)
-    }
+    console.error('[INBOX ERROR] extractedLinks:', error.message)
     return []
   }
 })

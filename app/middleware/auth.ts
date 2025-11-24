@@ -2,12 +2,28 @@ import type { Team } from '@@/types/database'
 import { getInvite } from '~~/server/database/queries/teams'
 
 export default defineNuxtRouteMiddleware(async (to, _from) => {
+  console.log('[AUTH_MIDDLEWARE] === START ===', {
+    path: to.fullPath,
+    isSSR: !process.client
+  })
+
   const paramSlug
     = (Array.isArray(to.params.team) ? to.params.team[0] : to.params.team) || ''
+
+  console.log('[AUTH_MIDDLEWARE] paramSlug:', paramSlug)
+
   const toast = useToast()
   const { loggedIn } = useUserSession()
+
+  console.log('[AUTH_MIDDLEWARE] loggedIn:', loggedIn.value)
+
   const teams = useState<Team[]>('teams', () => [])
   const teamSlug = useState<string>('teamSlug')
+
+  console.log('[AUTH_MIDDLEWARE] Current teams state:', {
+    length: teams.value.length,
+    teamSlugs: teams.value.map(t => t.slug)
+  })
 
   function handleTeamRedirect() {
     const { getLastUsedTeam, setLastUsedTeam } = useTeamPreferences()
@@ -57,17 +73,32 @@ export default defineNuxtRouteMiddleware(async (to, _from) => {
 
   // If teams aren't loaded yet, fetch them
   if (!teams.value.length) {
-    teams.value = await useTeam().getMemberships()
+    console.log('[AUTH_MIDDLEWARE] Teams not loaded, fetching...')
+    try {
+      teams.value = await useTeam().getMemberships()
+      console.log('[AUTH_MIDDLEWARE] Teams fetched successfully:', {
+        count: teams.value.length,
+        slugs: teams.value.map(t => t.slug)
+      })
+    } catch (error: any) {
+      console.error('[AUTH_MIDDLEWARE] ❌ Failed to fetch teams:', {
+        message: error.message,
+        stack: error.stack
+      })
+      throw error
+    }
 
     // If there are teams and we're coming from registration via invite, skip onboarding
     const fromInvite = useCookie('from-invite')
     if (fromInvite.value === 'true' && teams.value.length) {
       fromInvite.value = null
+      console.log('[AUTH_MIDDLEWARE] From invite, redirecting...')
       // User has teams from accepting invite, redirect to the team page
       return handleTeamRedirect()
     }
 
     if ((paramSlug || teamSlug.value) && !teams.value.length) {
+      console.log('[AUTH_MIDDLEWARE] No teams found, redirecting to handleTeamRedirect')
       return await handleTeamRedirect()
     }
   }
@@ -83,8 +114,12 @@ export default defineNuxtRouteMiddleware(async (to, _from) => {
 
   // Validate that the team in the slug belongs to the user
   if (paramSlug && !teams.value.find((team) => team.slug === paramSlug)) {
+    console.log('[AUTH_MIDDLEWARE] Team slug not found in user teams, redirecting')
     return await handleTeamRedirect()
   } else if (paramSlug) {
+    console.log('[AUTH_MIDDLEWARE] Setting teamSlug:', paramSlug)
     teamSlug.value = paramSlug
   }
+
+  console.log('[AUTH_MIDDLEWARE] === END (continuing to page) ===')
 })
