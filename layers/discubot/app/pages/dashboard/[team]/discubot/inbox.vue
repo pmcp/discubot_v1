@@ -289,12 +289,18 @@
 </template>
 
 <script setup lang="ts">
-import DOMPurify from 'isomorphic-dompurify'
-import * as cheerio from 'cheerio'
+// SSR Error Debugging - Log BEFORE imports
+console.log('[SSR DEBUG] inbox.vue - Script loading, process.client:', process.client)
 
-// SSR Error Debugging - catch and log any window errors
+import DOMPurify from 'isomorphic-dompurify'
+console.log('[SSR DEBUG] inbox.vue - DOMPurify imported')
+
+import * as cheerio from 'cheerio'
+console.log('[SSR DEBUG] inbox.vue - cheerio imported')
+
+// More debugging
 if (!process.client) {
-  console.log('[SSR DEBUG] inbox.vue - Starting SSR render')
+  console.log('[SSR DEBUG] inbox.vue - Starting SSR render (after imports)')
 }
 
 // Team context
