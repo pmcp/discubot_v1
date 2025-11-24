@@ -290,6 +290,7 @@
 
 <script setup lang="ts">
 import DOMPurify from 'isomorphic-dompurify'
+import * as cheerio from 'cheerio'
 
 // Team context
 const { currentTeam } = useTeam()
@@ -352,26 +353,32 @@ const sanitizedHtmlContent = computed(() => {
   })
 })
 
-// Extract links from HTML
+// Extract links from HTML (SSR-safe using cheerio)
 const extractedLinks = computed(() => {
   if (!selectedMessage.value?.htmlBody) return []
 
-  const tempDiv = document.createElement('div')
-  tempDiv.innerHTML = selectedMessage.value.htmlBody
-  const links = Array.from(tempDiv.querySelectorAll('a'))
+  const $ = cheerio.load(selectedMessage.value.htmlBody)
+  const links: Array<{ url: string; text: string }> = []
 
-  return links
-    .filter(link => link.href && (
-      link.href.includes('figma.com') ||
-      link.textContent?.toLowerCase().includes('verify') ||
-      link.textContent?.toLowerCase().includes('reset') ||
-      link.textContent?.toLowerCase().includes('confirm')
-    ))
-    .map(link => ({
-      url: link.href,
-      text: link.textContent?.trim() || ''
-    }))
-    .slice(0, 5) // Limit to 5 most relevant links
+  $('a[href]').each((_, element) => {
+    const href = $(element).attr('href')
+    const text = $(element).text().trim()
+
+    if (href && href.startsWith('http')) {
+      const textLower = text.toLowerCase()
+      // Filter for important links
+      if (
+        href.includes('figma.com') ||
+        textLower.includes('verify') ||
+        textLower.includes('reset') ||
+        textLower.includes('confirm')
+      ) {
+        links.push({ url: href, text })
+      }
+    }
+  })
+
+  return links.slice(0, 5) // Limit to 5 most relevant links
 })
 
 // Helper functions
