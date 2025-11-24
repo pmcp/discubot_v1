@@ -98,12 +98,19 @@ export async function getDiscubotDiscussionsByIds(teamId: string, discussionIds:
   return discussions
 }
 
-export async function createDiscubotDiscussion(data: NewDiscubotDiscussion) {
+export async function createDiscubotDiscussion(data: NewDiscubotDiscussion & { createdBy?: string; updatedBy?: string }) {
   const db = useDB()
+
+  // Ensure audit fields are set (defaulting to owner if not provided)
+  const insertData = {
+    ...data,
+    createdBy: data.createdBy || data.owner,
+    updatedBy: data.updatedBy || data.owner,
+  }
 
   const [discussion] = await db
     .insert(tables.discubotDiscussions)
-    .values(data)
+    .values(insertData)
     .returning()
 
   return discussion
