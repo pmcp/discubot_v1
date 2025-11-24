@@ -449,26 +449,20 @@ function getMessageTypeLabel(messageType: string) {
 }
 
 function formatRelativeTime(date: string) {
-  // SSR-safe: Simple fallback for server, VueUse for client
-  if (!process.client) {
-    // Simple relative time for SSR
-    const now = Date.now()
-    const then = new Date(date).getTime()
-    const diff = now - then
-    const seconds = Math.floor(diff / 1000)
-    const minutes = Math.floor(seconds / 60)
-    const hours = Math.floor(minutes / 60)
-    const days = Math.floor(hours / 24)
+  // SSR-safe: Always use simple date math
+  // (VueUse composables can't be called in render functions)
+  const now = Date.now()
+  const then = new Date(date).getTime()
+  const diff = now - then
+  const seconds = Math.floor(diff / 1000)
+  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(minutes / 60)
+  const days = Math.floor(hours / 24)
 
-    if (days > 0) return `${days}d ago`
-    if (hours > 0) return `${hours}h ago`
-    if (minutes > 0) return `${minutes}m ago`
-    return 'just now'
-  }
-
-  // Client-side: Use VueUse for reactive updates
-  const { value } = useTimeAgo(date)
-  return value
+  if (days > 0) return `${days}d ago`
+  if (hours > 0) return `${hours}h ago`
+  if (minutes > 0) return `${minutes}m ago`
+  return 'just now'
 }
 
 function formatFullDate(date: string) {
