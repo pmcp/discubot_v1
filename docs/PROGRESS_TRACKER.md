@@ -646,6 +646,22 @@
 
 ---
 
+### Issue 004: Orphaned Flow Inputs/Outputs Causing Processing Failures
+**Date**: 2025-11-26
+**Problem**: When a flow is deleted, associated inputs and outputs remained as orphans, causing webhook processing to fail with "Flow not found or inactive for input" errors
+**Root Cause**: No cascade deletion in `deleteDiscubotFlow()` and no foreign key constraints in D1/SQLite schema
+**Solution**: Implemented two fixes:
+1. **Cascade Deletion**: Updated `deleteDiscubotFlow()` to delete associated inputs/outputs before deleting the flow
+2. **Defensive Processing**: Updated `loadFlow()` to skip orphaned inputs and find valid inputs with existing flows
+**Status**: ✅ Resolved (2025-11-26)
+**Time Lost**: None (discovered in briefing)
+**Fix Files**:
+- `layers/discubot/collections/flows/server/database/queries.ts` - cascade deletion
+- `layers/discubot/server/services/processor.ts` - defensive input validation
+**Reference**: See `/docs/briefings/orphan-cleanup-brief.md` for full analysis
+
+---
+
 ## Key Learnings
 
 1. **nuxt-crouton Composables**: Always use generated queries from Crouton collections. Never create duplicate database operations.
@@ -659,6 +675,8 @@
 5. **Cloudflare Workers Constraints**: No global timers, no reflect-metadata, async plugins problematic. Design for stateless from start.
 
 6. **NuxtHub KV API**: Use `.del()` not `.delete()` to remove keys. Methods are: `.get()`, `.set()`, `.del()`, `.list()`. Always test KV operations in production environment.
+
+7. **Cascade Deletion in D1/SQLite**: D1 doesn't enforce foreign key constraints automatically. Implement application-level cascade deletion when deleting parent records (e.g., delete inputs/outputs before deleting flow). Also implement defensive processing to skip orphaned children gracefully.
 
 ---
 

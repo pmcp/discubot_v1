@@ -189,6 +189,31 @@ export async function deleteDiscubotFlow(
 ) {
   const db = useDB()
 
+  // Import related tables for cascade deletion
+  const { discubotFlowinputs } = await import(
+    '#layers/discubot/collections/flowinputs/server/database/schema'
+  )
+  const { discubotFlowoutputs } = await import(
+    '#layers/discubot/collections/flowoutputs/server/database/schema'
+  )
+
+  // CASCADE: Delete associated inputs first
+  const deletedInputs = await db
+    .delete(discubotFlowinputs)
+    .where(eq(discubotFlowinputs.flowId, recordId))
+    .returning()
+
+  // CASCADE: Delete associated outputs
+  const deletedOutputs = await db
+    .delete(discubotFlowoutputs)
+    .where(eq(discubotFlowoutputs.flowId, recordId))
+    .returning()
+
+  // Log cascade deletions for debugging
+  if (deletedInputs.length > 0 || deletedOutputs.length > 0) {
+    console.log(`[CASCADE DELETE] Flow ${recordId}: Deleted ${deletedInputs.length} inputs, ${deletedOutputs.length} outputs`)
+  }
+
   // Team-based access: any team member can delete flows in their team
   const [deleted] = await db
     .delete(tables.discubotFlows)
@@ -207,5 +232,9 @@ export async function deleteDiscubotFlow(
     })
   }
 
-  return { success: true }
+  return {
+    success: true,
+    deletedInputs: deletedInputs.length,
+    deletedOutputs: deletedOutputs.length,
+  }
 }

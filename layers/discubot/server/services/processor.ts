@@ -158,46 +158,52 @@ async function loadFlow(
     ))
     .all()
 
-  // Find matching input
+  // Find matching input AND verify flow exists (defensive against orphans)
   let matchedInput: any
+  let flow: any
 
-  if (sourceType === 'slack') {
-    // Match by slackTeamId in sourceMetadata
-    matchedInput = inputs.find(input => {
+  // Filter inputs by source identifier
+  const candidateInputs = inputs.filter(input => {
+    if (sourceType === 'slack') {
       return input.sourceMetadata?.slackTeamId === identifier
-    })
-  } else if (sourceType === 'figma') {
-    // Match by emailSlug
-    const emailSlug = metadata?.emailSlug
-    matchedInput = inputs.find(input => {
-      return input.emailSlug === emailSlug
+    } else if (sourceType === 'figma') {
+      return input.emailSlug === metadata?.emailSlug
+    }
+    return false
+  })
+
+  // Try each candidate input and verify its flow exists
+  for (const input of candidateInputs) {
+    const [existingFlow] = await db
+      .select()
+      .from(discubotFlows)
+      .where(and(
+        eq(discubotFlows.id, input.flowId),
+        eq(discubotFlows.active, true),
+      ))
+      .limit(1)
+
+    if (existingFlow) {
+      // Found valid input with existing flow
+      matchedInput = input
+      flow = existingFlow
+      break
+    }
+
+    // Orphaned input detected - log warning and continue searching
+    logger.warn('Skipping orphaned input (flow no longer exists)', {
+      inputId: input.id,
+      flowId: input.flowId,
+      sourceType,
+      identifier,
     })
   }
 
-  if (!matchedInput) {
+  if (!matchedInput || !flow) {
     throw new ProcessingError(
       `No active flow input found for ${sourceType} identifier: ${identifier}`,
       'flow_loading',
-      { identifier, sourceType, emailSlug: metadata?.emailSlug, availableInputs: inputs.length },
-      false,
-    )
-  }
-
-  // Load the flow
-  const [flow] = await db
-    .select()
-    .from(discubotFlows)
-    .where(and(
-      eq(discubotFlows.id, matchedInput.flowId),
-      eq(discubotFlows.active, true),
-    ))
-    .limit(1)
-
-  if (!flow) {
-    throw new ProcessingError(
-      `Flow not found or inactive for input ${matchedInput.id}`,
-      'flow_loading',
-      { flowId: matchedInput.flowId, inputId: matchedInput.id },
+      { identifier, sourceType, emailSlug: metadata?.emailSlug, availableInputs: inputs.length, candidateInputs: candidateInputs.length },
       false,
     )
   }
