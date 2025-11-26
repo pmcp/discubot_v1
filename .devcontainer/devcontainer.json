@@ -1,5 +1,9 @@
 {
+    "name": "Discubot Dev",
+    "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
     "features": {
         "ghcr.io/wandb/catnip/feature:1": {}
-    }
+    },
+    "forwardPorts": [3000, 6369],
+    "postCreateCommand": "pnpm install",
 }
