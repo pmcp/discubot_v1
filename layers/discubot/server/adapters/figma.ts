@@ -13,15 +13,14 @@
  */
 
 import type {
-  DiscussionSourceAdapter,
   ParsedDiscussion,
   DiscussionThread,
   DiscussionStatus,
   SourceConfig,
   ValidationResult,
   ThreadMessage,
-} from '~/layers/discubot/types'
-import { AdapterError } from './base'
+} from '#layers/discubot/types'
+import { AdapterError, type DiscussionSourceAdapter } from './base'
 import {
   parseFigmaEmail,
   extractFileKeyFromUrl,
@@ -71,6 +70,14 @@ interface FigmaErrorResponse {
   status: number
   err?: string
   message?: string
+}
+
+/**
+ * Figma @mention extracted from comment text
+ */
+export interface FigmaMention {
+  userId: string      // Figma user ID (stable identifier)
+  displayName: string // Username as displayed
 }
 
 /**
@@ -537,7 +544,7 @@ export class FigmaAdapter implements DiscussionSourceAdapter {
 
     // Extract the local part before @
     const match = recipient.match(/^([^@]+)@/)
-    if (!match) {
+    if (!match || !match[1]) {
       return 'default'
     }
 
@@ -590,11 +597,6 @@ export class FigmaAdapter implements DiscussionSourceAdapter {
       authorHandle: comment.user.id,
       content: comment.message,
       timestamp: new Date(comment.created_at),
-      metadata: {
-        figmaUserId: comment.user.id,
-        figmaUserHandle: comment.user.handle,
-        figmaUserAvatar: comment.user.img_url,
-      },
     }
   }
 
@@ -625,6 +627,44 @@ export class FigmaAdapter implements DiscussionSourceAdapter {
       retryable,
     })
   }
+}
+
+/**
+ * Extract @mentions from Figma comment text
+ *
+ * Figma formats mentions as: @[userId:displayName]
+ * Example: "Hey @[123456:john.smith] can you review this?"
+ *
+ * @param message - The comment text to parse
+ * @returns Array of extracted mentions with userId and displayName
+ */
+export function extractMentionsFromComment(message: string): FigmaMention[] {
+  if (!message || message.trim() === '') {
+    return []
+  }
+
+  const mentions: FigmaMention[] = []
+
+  // Regex to match Figma @mention format: @[userId:displayName]
+  // userId: one or more non-colon, non-bracket characters
+  // displayName: one or more non-bracket characters (can include colons, spaces, special chars)
+  const mentionRegex = /@\[([^\]:]+):([^\]]+)\]/g
+
+  let match: RegExpExecArray | null
+  while ((match = mentionRegex.exec(message)) !== null) {
+    const userId = match[1]
+    const displayName = match[2]
+
+    // Only add if both userId and displayName are non-empty
+    if (userId && displayName) {
+      mentions.push({
+        userId: userId.trim(),
+        displayName: displayName.trim(),
+      })
+    }
+  }
+
+  return mentions
 }
 
 /**

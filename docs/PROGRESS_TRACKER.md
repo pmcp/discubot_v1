@@ -2,8 +2,8 @@
 
 **Project Start Date**: 2025-11-11
 **Expected Completion**: 2025-12-16 (5 weeks)
-**Current Phase**: Phase 16 - OAuth UX Improvements 🎯
-**Overall Progress**: 100% (85/85 tasks complete)
+**Current Phase**: Phase 17 - User Mapping Flow-Aware UX 🎯
+**Overall Progress**: 85/95 tasks complete (10 new tasks added)
 
 > **📋 Historical Archive**: For completed phases (1-7, 9-11, 13), see [PROGRESS_MADE.md](./PROGRESS_MADE.md)
 
@@ -13,10 +13,10 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 85 / 85 |
-| Remaining Tasks | 0 |
+| Tasks Completed | 89 / 95 |
+| Remaining Tasks | 6 |
 | Hours Logged | 157.5 / 175-178 |
-| Current Phase | Phase 16 - OAuth UX Improvements 🎯 |
+| Current Phase | Phase 17 - User Mapping Flow-Aware UX 🎯 |
 | Days Elapsed | 7 / 21 |
 | Blockers | 0 |
 | Tests Passing | 366+ / 440+ (83%+ - 42 expected API key failures) |
@@ -371,6 +371,69 @@
   - Files: `/layers/discubot/collections/configs/app/components/Form.vue`, `/app/pages/oauth/success.vue`
 
 **Checkpoint**: ✅ OAuth popup flow working, form data preserved, infinite loop fixed, smooth UX for config creation
+
+---
+
+### Phase 17: User Mapping Flow-Aware UX 🎯
+**Status**: In Progress
+**Progress**: 4/10 tasks (40%)
+**Time**: 2.5h / 11-13h estimated
+**Target**: Week 3
+**Briefing**: `/docs/briefings/user-mapping-flow-brief.md`
+
+**Goal**: Create a flow-aware user mapping UX with discovery features for Slack and Figma. Entry point from FlowBuilder, auto-fetch Slack users, bootstrap discovery for Figma.
+
+#### Phase 1: Backend (~3h)
+
+- [x] Task 17.1: Enable Slack `users:read` scope (15min) ✅
+  - File: `/layers/discubot/server/api/oauth/slack/install.get.ts`
+  - Added `users:read` and `users:read.email` to SLACK_SCOPES array
+  - Note: Existing integrations need re-auth
+
+- [x] Task 17.2: Create `/api/slack/users.get.ts` endpoint (45min) ✅
+  - Created `/layers/discubot/server/api/slack/users.get.ts`
+  - Calls Slack `users.list` API with cursor-based pagination
+  - Filters bots, app users, and deleted users
+  - Returns `{ users: [{ id, name, email, avatar, realName }] }`
+
+- [x] Task 17.3: Add Figma @mention parser to adapter (1h) ✅
+  - File: `/layers/discubot/server/adapters/figma.ts`
+  - Added `FigmaMention` interface and `extractMentionsFromComment()` function
+  - Parses `@[userId:displayName]` format from Figma comments
+
+- [x] Task 17.4: Add bootstrap comment detection to processor (30min) ✅
+  - File: `/layers/discubot/server/services/processor.ts`
+  - Added `isBootstrapComment()` function with detection for "user sync", "bootstrap", "@discubot"
+  - Bootstrap comments skip Notion task creation and post reply with discovered user count
+
+- [ ] Task 17.5: Store discovered users as pending mappings (30min)
+  - Create user mappings with `notionUserId: null` (pending)
+  - Use mappingType: `'discovered'`
+  - confidence: 0 until mapped
+
+#### Phase 2: Composables (~1h)
+
+- [ ] Task 17.6: Create `useSlackUsers.ts` composable (20min)
+- [ ] Task 17.7: Create `useNotionUsers.ts` wrapper composable (20min)
+- [ ] Task 17.8: Create `useAutoMatch.ts` composable (20min)
+
+#### Phase 3: Components (~5h)
+
+- [ ] Task 17.9: Create UI components (5h)
+  - `NotionUserPicker.vue` - Reusable dropdown for selecting Notion users
+  - `UserMappingTable.vue` - Display existing mappings
+  - `UserMappingDrawer.vue` - Container routing to correct discovery UI
+  - `SlackUserDiscovery.vue` - Side-by-side Slack ↔ Notion matching
+  - `FigmaUserDiscovery.vue` - Bootstrap instructions + manual entry
+
+#### Phase 4: Integration (~1.5h)
+
+- [ ] Task 17.10: FlowBuilder integration (1.5h)
+  - Add "Manage Users" button to input cards
+  - Wire up context extraction (sourceType, sourceWorkspaceId, apiToken)
+  - Add toast notifications
+
+**Checkpoint**: User can click "Manage Users" on any flow input, Slack users auto-fetched, Figma bootstrap flow works, mappings saved with correct sourceWorkspaceId
 
 ---
 

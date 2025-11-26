@@ -35,6 +35,8 @@ import { randomBytes } from 'node:crypto'
  * - mpim:history: Read group direct messages
  * - mpim:read: View group direct message info
  * - mpim:write: Send group direct messages
+ * - users:read: List workspace members for user mapping
+ * - users:read.email: Get member emails for auto-matching with Notion users
  */
 const SLACK_SCOPES = [
   'channels:history',
@@ -48,6 +50,8 @@ const SLACK_SCOPES = [
   'mpim:history',
   'mpim:read',
   'mpim:write',
+  'users:read',
+  'users:read.email',
 ].join(',')
 
 export default defineEventHandler(async (event) => {
