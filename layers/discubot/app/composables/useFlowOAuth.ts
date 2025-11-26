@@ -32,6 +32,11 @@ export interface OAuthConfig {
   teamId: string
 
   /**
+   * Flow ID to add the input to (optional - if not provided, will use first flow or create new)
+   */
+  flowId?: string
+
+  /**
    * Callback when OAuth succeeds
    */
   onSuccess?: (credentials: OAuthCredentials) => void
@@ -49,7 +54,7 @@ export interface OAuthConfig {
 }
 
 export function useFlowOAuth(config: OAuthConfig) {
-  const { teamId, onSuccess, onError, provider = 'slack' } = config
+  const { teamId, flowId, onSuccess, onError, provider = 'slack' } = config
 
   const waitingForOAuth = ref(false)
   const toast = useToast()
@@ -59,7 +64,12 @@ export function useFlowOAuth(config: OAuthConfig) {
    */
   const oauthInstallUrl = computed(() => {
     if (!teamId) return '#'
-    return `/api/oauth/${provider}/install?teamId=${teamId}`
+    const url = new URL(`/api/oauth/${provider}/install`, window.location.origin)
+    url.searchParams.set('teamId', teamId)
+    if (flowId) {
+      url.searchParams.set('flowId', flowId)
+    }
+    return url.pathname + url.search
   })
 
   /**

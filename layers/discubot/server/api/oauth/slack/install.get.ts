@@ -65,18 +65,19 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Get team ID from query params or session (for multi-tenant setup)
-    // For MVP, we can use a default team or require it in query params
+    // Get team ID and flow ID from query params
     const query = getQuery(event)
-    const teamId = (query.team_id as string) || 'default'
+    const teamId = (query.teamId as string) || (query.team_id as string) || 'default'
+    const flowId = query.flowId as string | undefined
 
     // Generate secure random state token (32 bytes = 256 bits)
     const state = randomBytes(32).toString('hex')
 
-    // Store state token with team ID in NuxtHub KV
+    // Store state token with team ID and flow ID in NuxtHub KV
     // TTL of 300 seconds (5 minutes) for automatic cleanup
     await hubKV().set(`oauth:state:${state}`, {
       teamId,
+      flowId, // Optional: if provided, input will be added to this specific flow
       createdAt: Date.now(),
     }, {
       ttl: 300, // 5 minutes
@@ -97,6 +98,7 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('[OAuth] Initiating Slack OAuth flow', {
       teamId,
+      flowId: flowId || 'auto-detect',
       state: state.substring(0, 8) + '...',
       redirectUri,
     })

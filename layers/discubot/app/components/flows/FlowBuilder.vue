@@ -166,6 +166,10 @@ const inputFormState = reactive<Partial<InputFormData>>({
   sourceMetadata: {}
 })
 
+// Modal state control
+const isSlackModalOpen = ref(false)
+const isFigmaModalOpen = ref(false)
+
 // Computed email address for Figma inputs
 const computedEmailAddress = computed(() => {
   if (inputFormState.sourceType === 'figma' && inputFormState.emailAddress) {
@@ -189,15 +193,51 @@ const inputSchema = computed(() => z.object({
 // OAuth handling for Slack
 const { openOAuthPopup, waitingForOAuth } = useFlowOAuth({
   teamId: props.teamId,
+  flowId: props.flow?.id, // Pass flowId so OAuth adds input to this specific flow
   provider: 'slack',
-  onSuccess: (credentials) => {
+  onSuccess: async (credentials) => {
     inputFormState.apiToken = credentials.apiToken
     inputFormState.sourceMetadata = credentials.sourceMetadata
-    toast.add({
-      title: 'OAuth successful',
-      description: 'Slack workspace connected',
-      color: 'success'
-    })
+
+    // If editing an existing flow, the OAuth callback already created the input in the database
+    // We need to refetch the inputs and close the modal
+    if (props.flow?.id) {
+      console.log('[FlowBuilder] Editing existing flow, refetching inputs...')
+      try {
+        const response = await $fetch<FlowInput[]>(`/api/teams/${props.teamId}/discubot-flowinputs`)
+        // Filter inputs for this flow
+        const flowInputs = response.filter(input => input.flowId === props.flow.id)
+
+        // Update local state
+        inputsList.value = flowInputs
+
+        console.log('[FlowBuilder] Refetched inputs:', flowInputs.length, 'inputs for flow', props.flow.id)
+
+        // Close the modal
+        isSlackModalOpen.value = false
+
+        // Show success message
+        toast.add({
+          title: 'Slack Connected!',
+          description: `${credentials.sourceMetadata.slackWorkspaceName || 'Workspace'} has been added to your flow.`,
+          color: 'success'
+        })
+      } catch (error: any) {
+        console.error('[FlowBuilder] Failed to refetch inputs:', error)
+        toast.add({
+          title: 'Connection Error',
+          description: 'Slack was connected but failed to refresh the list. Please reload the page.',
+          color: 'warning'
+        })
+      }
+    } else {
+      // Creating new flow - just update form state and show message
+      toast.add({
+        title: 'OAuth successful',
+        description: 'Slack workspace connected. Click "Add Input" to continue.',
+        color: 'success'
+      })
+    }
   },
   onError: (error) => {
     toast.add({
@@ -864,12 +904,12 @@ function cancel() {
                 <h3 class="text-lg font-semibold">Input Sources</h3>
                 <div class="flex gap-2">
                   <!-- Add Slack Modal -->
-                  <UModal>
+                  <UModal v-model:open="isSlackModalOpen">
                     <UButton
                       type="button"
                       color="primary"
                       size="sm"
-                      @click="resetInputForm('slack')"
+                      @click="resetInputForm('slack'); isSlackModalOpen = true"
                     >
                       <UIcon name="i-simple-icons-slack" />
                       Add Slack
@@ -938,13 +978,13 @@ function cancel() {
                   </UModal>
 
                   <!-- Add Figma Modal -->
-                  <UModal>
+                  <UModal v-model:open="isFigmaModalOpen">
                     <UButton
                       type="button"
                       color="primary"
                       size="sm"
                       variant="outline"
-                      @click="resetInputForm('figma')"
+                      @click="resetInputForm('figma'); isFigmaModalOpen = true"
                     >
                       <UIcon name="i-simple-icons-figma" />
                       Add Figma

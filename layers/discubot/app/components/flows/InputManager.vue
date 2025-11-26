@@ -118,8 +118,9 @@ const inputSchema = computed(() => {
 
 const { openOAuthPopup, waitingForOAuth } = useFlowOAuth({
   teamId: props.teamId,
+  flowId: props.flowId, // Pass flowId so OAuth adds input to this specific flow
   provider: 'slack',
-  onSuccess: (credentials) => {
+  onSuccess: async (credentials) => {
     console.log('[InputManager] OAuth success:', credentials)
 
     // Update form state with OAuth credentials
@@ -134,6 +135,33 @@ const { openOAuthPopup, waitingForOAuth } = useFlowOAuth({
       description: 'OAuth credentials received successfully.',
       color: 'success',
     })
+
+    // If in edit mode, the OAuth callback already created the input in the database
+    // We need to refetch the inputs to show it in the UI
+    if (props.editMode) {
+      console.log('[InputManager] Edit mode detected, refetching inputs...')
+      try {
+        const response = await $fetch<FlowInput[]>(`/api/teams/${props.teamId}/discubot-flowinputs`)
+        // Filter inputs for this flow
+        const flowInputs = response.filter(input => input.flowId === props.flowId)
+
+        // Update local state
+        inputs.value = flowInputs
+
+        // Emit changes to parent
+        emit('update:modelValue', inputs.value)
+        emit('change', inputs.value)
+
+        console.log('[InputManager] Refetched inputs:', flowInputs.length, 'inputs for flow', props.flowId)
+      } catch (error: any) {
+        console.error('[InputManager] Failed to refetch inputs:', error)
+        toast.add({
+          title: 'Refresh Failed',
+          description: 'Failed to refresh inputs list. Please reload the page.',
+          color: 'warning',
+        })
+      }
+    }
   },
   onError: (error) => {
     console.error('[InputManager] OAuth error:', error)

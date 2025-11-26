@@ -79,7 +79,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Verify state token (CSRF protection) using NuxtHub KV
-    const stateData = await hubKV().get<{ teamId: string; createdAt: number }>(`oauth:state:${state}`)
+    const stateData = await hubKV().get<{ teamId: string; flowId?: string; createdAt: number }>(`oauth:state:${state}`)
 
     if (!stateData) {
       logger.error('[OAuth] Invalid or expired state token')
@@ -89,8 +89,8 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Extract team ID from state
-    const { teamId } = stateData
+    // Extract team ID and optional flow ID from state
+    const { teamId, flowId: requestedFlowId } = stateData
 
     // Delete state token (single use) from KV
     await hubKV().del(`oauth:state:${state}`)
@@ -167,7 +167,7 @@ export default defineEventHandler(async (event) => {
     const accessToken = tokenData.access_token
 
     // Import database and queries
-    const { getAllDiscubotFlows, createDiscubotFlow } = await import(
+    const { getAllDiscubotFlows, createDiscubotFlow, getDiscubotFlowById } = await import(
       '#layers/discubot/collections/flows/server/database/queries'
     )
     const { getAllDiscubotFlowInputs, createDiscubotFlowInput } = await import(
@@ -175,37 +175,72 @@ export default defineEventHandler(async (event) => {
     )
     const { SYSTEM_USER_ID } = await import('#layers/discubot/server/utils/constants')
 
-    // Check if team already has a flow (reuse if exists)
-    const existingFlows = await getAllDiscubotFlows(teamId)
+    // Determine which flow to add the input to
     let flowId: string
     let isNewFlow = false
 
-    if (existingFlows && existingFlows.length > 0) {
-      // Reuse first existing flow
-      flowId = existingFlows[0].id
-      logger.debug('[OAuth] Using existing flow', { flowId, flowName: existingFlows[0].name })
-    }
-    else {
-      // Create new flow with default settings
-      const newFlow = await createDiscubotFlow({
-        name: `${slackTeamName} Flow`,
-        description: 'Created via Slack OAuth',
-        availableDomains: ['design', 'frontend', 'backend', 'product'],
-        aiEnabled: true,
-        aiSummaryPrompt: null, // Use default from processor
-        aiTaskPrompt: null, // Use default from processor
-        anthropicApiKey: null, // Will use global key
-        onboardingComplete: false, // User needs to add Notion output
-        active: true,
-        teamId,
-        owner: SYSTEM_USER_ID,
-        createdBy: SYSTEM_USER_ID,
-        updatedBy: SYSTEM_USER_ID,
-      })
-
-      flowId = newFlow.id
-      isNewFlow = true
-      logger.info('[OAuth] Created new flow', { flowId, flowName: newFlow.name })
+    if (requestedFlowId) {
+      // If specific flowId was provided, use that one
+      const requestedFlow = await getDiscubotFlowById(requestedFlowId, teamId)
+      if (requestedFlow) {
+        flowId = requestedFlowId
+        logger.debug('[OAuth] Using requested flow', { flowId, flowName: requestedFlow.name })
+      } else {
+        // Requested flow doesn't exist, fall back to first flow or create new
+        logger.warn('[OAuth] Requested flow not found, falling back', { requestedFlowId })
+        const existingFlows = await getAllDiscubotFlows(teamId)
+        if (existingFlows && existingFlows.length > 0) {
+          flowId = existingFlows[0].id
+          logger.debug('[OAuth] Using first existing flow', { flowId, flowName: existingFlows[0].name })
+        } else {
+          // Create new flow
+          const newFlow = await createDiscubotFlow({
+            name: `${slackTeamName} Flow`,
+            description: 'Created via Slack OAuth',
+            availableDomains: ['design', 'frontend', 'backend', 'product'],
+            aiEnabled: true,
+            aiSummaryPrompt: null,
+            aiTaskPrompt: null,
+            anthropicApiKey: null,
+            onboardingComplete: false,
+            active: true,
+            teamId,
+            owner: SYSTEM_USER_ID,
+            createdBy: SYSTEM_USER_ID,
+            updatedBy: SYSTEM_USER_ID,
+          })
+          flowId = newFlow.id
+          isNewFlow = true
+          logger.info('[OAuth] Created new flow', { flowId, flowName: newFlow.name })
+        }
+      }
+    } else {
+      // No specific flow requested - use first existing or create new (backward compatible)
+      const existingFlows = await getAllDiscubotFlows(teamId)
+      if (existingFlows && existingFlows.length > 0) {
+        flowId = existingFlows[0].id
+        logger.debug('[OAuth] Using first existing flow', { flowId, flowName: existingFlows[0].name })
+      } else {
+        // Create new flow with default settings
+        const newFlow = await createDiscubotFlow({
+          name: `${slackTeamName} Flow`,
+          description: 'Created via Slack OAuth',
+          availableDomains: ['design', 'frontend', 'backend', 'product'],
+          aiEnabled: true,
+          aiSummaryPrompt: null,
+          aiTaskPrompt: null,
+          anthropicApiKey: null,
+          onboardingComplete: false,
+          active: true,
+          teamId,
+          owner: SYSTEM_USER_ID,
+          createdBy: SYSTEM_USER_ID,
+          updatedBy: SYSTEM_USER_ID,
+        })
+        flowId = newFlow.id
+        isNewFlow = true
+        logger.info('[OAuth] Created new flow', { flowId, flowName: newFlow.name })
+      }
     }
 
     // Check if this Slack workspace is already connected (by slackTeamId)
