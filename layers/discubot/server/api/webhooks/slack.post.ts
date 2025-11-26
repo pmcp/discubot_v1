@@ -108,7 +108,12 @@ export default defineEventHandler(async (event) => {
     // This allows the webhook to return immediately while processing continues
     const cfCtx = event.context.cloudflare?.context
 
-    if (cfCtx) {
+    // In dev mode, NuxtHub provides a mock cfCtx that doesn't properly handle errors.
+    // Force synchronous processing in dev to see errors properly.
+    // Use import.meta.dev for reliable dev detection (works regardless of BASE_URL)
+    const isDevMode = import.meta.dev
+
+    if (cfCtx && !isDevMode) {
       // Production: Process in background using waitUntil
       logger.debug('[Slack Webhook] Using background processing (waitUntil)')
 
@@ -135,8 +140,8 @@ export default defineEventHandler(async (event) => {
         timestamp: new Date().toISOString(),
       }
     } else {
-      // Development: Process synchronously (no cloudflare context in local dev)
-      logger.debug('[Slack Webhook] Using synchronous processing (local dev)')
+      // Development: Process synchronously to see errors properly
+      logger.info('[Slack Webhook] Using synchronous processing', { isDevMode, hasCloudflareCtx: !!cfCtx })
 
       let result: ProcessingResult
 

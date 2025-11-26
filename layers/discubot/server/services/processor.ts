@@ -590,7 +590,9 @@ async function saveTaskRecords(
             sourceType: parsed.sourceType,
             sourceThreadId: parsed.sourceThreadId,
           },
-        })
+          createdBy: SYSTEM_USER_ID,
+          updatedBy: SYSTEM_USER_ID,
+        } as any)
 
         if (task?.id) {
           taskIds.push(task.id)
@@ -845,21 +847,40 @@ export async function processDiscussion(
 
     validateParsedDiscussion(parsed)
 
-    // Add initial "eyes" reaction to show bot is processing
-    try {
-      const { getAdapter } = await import('../adapters')
-      const adapter = getAdapter(parsed.sourceType)
+    // ============================================================================
+    // STAGE 1.5: Deduplication Check
+    // ============================================================================
+    // Check if we're already processing this sourceThreadId to prevent duplicates
+    // from Slack retries
+    const db = useDB()
+    const { discubotDiscussions } = await import(
+      '#layers/discubot/collections/discussions/server/database/schema'
+    )
+    const [existingDiscussion] = await db
+      .select({ id: discubotDiscussions.id, status: discubotDiscussions.status })
+      .from(discubotDiscussions)
+      .where(eq(discubotDiscussions.sourceThreadId, parsed.sourceThreadId))
+      .limit(1)
 
-      // Get a minimal config for the initial reaction (we'll load full config next)
-      // For now, we need to load config first to get the API token
-      const tempConfig = options.config || await loadSourceConfig(parsed.teamId, parsed.sourceType, parsed.metadata)
-
-      await adapter.updateStatus(parsed.sourceThreadId, 'pending', tempConfig)
-
-      logger.debug('Initial status reaction added')
-    } catch (error) {
-      // Don't fail if initial reaction fails
-      logger.warn('Failed to add initial status reaction', { error })
+    if (existingDiscussion) {
+      logger.info('Discussion already exists for this thread, skipping duplicate', {
+        sourceThreadId: parsed.sourceThreadId,
+        existingDiscussionId: existingDiscussion.id,
+        existingStatus: existingDiscussion.status,
+      })
+      // Return a mock result to indicate this was already processed
+      return {
+        discussionId: existingDiscussion.id,
+        aiAnalysis: {
+          summary: { summary: 'Already processed', keyPoints: [] },
+          taskDetection: { isMultiTask: false, tasks: [] },
+          processingTime: 0,
+          cached: true,
+        },
+        notionTasks: [],
+        processingTime: 0,
+        isMultiTask: false,
+      }
     }
 
     // ============================================================================
@@ -909,6 +930,32 @@ export async function processDiscussion(
         sourceIdentifier: parsed.teamId,
         actualTeamId: flowData.flow.teamId,
       })
+    }
+
+    // ============================================================================
+    // STAGE 2.25: Add Initial Status Reaction (after config is loaded)
+    // ============================================================================
+    // Now that we have the config/flow, add the "eyes" reaction to show bot is processing
+    const initialReactionConfig = flowData
+      ? {
+          id: flowData.matchedInput.id,
+          teamId: flowData.flow.teamId,
+          sourceType: flowData.matchedInput.sourceType,
+          apiToken: flowData.matchedInput.apiToken || '',
+          sourceMetadata: flowData.matchedInput.sourceMetadata,
+        } as SourceConfig
+      : config
+
+    if (initialReactionConfig) {
+      try {
+        const { getAdapter } = await import('../adapters')
+        const adapter = getAdapter(parsed.sourceType)
+        await adapter.updateStatus(parsed.sourceThreadId, 'pending', initialReactionConfig)
+        logger.debug('Initial status reaction added')
+      } catch (error) {
+        // Don't fail if initial reaction fails
+        logger.warn('Failed to add initial status reaction', { error })
+      }
     }
 
     // ============================================================================
@@ -1075,7 +1122,9 @@ export async function processDiscussion(
 
     // Update discussion metadata with correct values from thread
     // This fixes the issue where initial save had placeholder email addresses
+    logger.info('Stage 3.5: Updating discussion metadata...')
     await updateDiscussionMetadata(discussionId, thread)
+    logger.info('Discussion metadata updated successfully')
 
     // Update sourceUrl and sourceThreadId with comment ID for Figma
     if (parsed.sourceType === 'figma' && thread.id && parsed.metadata?.fileKey) {
@@ -1118,6 +1167,7 @@ export async function processDiscussion(
     // ============================================================================
     // STAGE 4: AI Analysis
     // ============================================================================
+    logger.info('Stage 4: Starting AI Analysis...')
     await updateJobStatus(jobId, actualTeamId, {
       stage: 'ai_analysis',
     })
@@ -1376,23 +1426,24 @@ export async function processDiscussion(
     await updateDiscussionStatus(discussionId, 'completed')
 
     // Send notification back to source
+    // Use threadBuildConfig which works with both flows and legacy configs
     try {
       const { getAdapter } = await import('../adapters')
       const adapter = getAdapter(parsed.sourceType)
 
       // Remove the initial "eyes" reaction
       if ('removeReaction' in adapter && typeof adapter.removeReaction === 'function') {
-        await adapter.removeReaction(parsed.sourceThreadId, 'eyes', config)
+        await adapter.removeReaction(parsed.sourceThreadId, 'eyes', threadBuildConfig)
       }
 
       // Build confirmation message with Notion task URLs
       const confirmationMessage = buildConfirmationMessage(notionTasks)
 
       // Post reply to the thread
-      await adapter.postReply(parsed.sourceThreadId, confirmationMessage, config)
+      await adapter.postReply(parsed.sourceThreadId, confirmationMessage, threadBuildConfig)
 
       // Update status with completed emoji/reaction
-      await adapter.updateStatus(parsed.sourceThreadId, 'completed', config)
+      await adapter.updateStatus(parsed.sourceThreadId, 'completed', threadBuildConfig)
 
       logger.info('Notification sent to source', {
         sourceType: parsed.sourceType,
