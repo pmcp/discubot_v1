@@ -205,7 +205,7 @@
     </div>
 
     <!-- Email View Modal -->
-    <UModal v-model="isModalOpen">
+    <UModal v-model:open="isModalOpen">
       <template #content="{ close }">
         <div v-if="selectedMessage" class="p-6">
           <!-- Modal Header -->
