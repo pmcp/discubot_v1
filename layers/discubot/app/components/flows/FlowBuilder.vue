@@ -172,6 +172,9 @@ const inputFormState = reactive<Partial<InputFormData>>({
 // Modal state control
 const isSlackModalOpen = ref(false)
 const isFigmaModalOpen = ref(false)
+const isEditInputModalOpen = ref(false)
+const editingInputIndex = ref<number | null>(null)
+const editingInput = ref<Partial<FlowInput> | null>(null)
 
 // Computed email address for Figma inputs
 const computedEmailAddress = computed(() => {
@@ -190,7 +193,9 @@ const inputSchema = computed(() => z.object({
   emailAddress: inputFormState.sourceType === 'figma'
     ? z.string().email('Invalid email')
     : z.string().email().optional(),
-  apiToken: z.string().optional()
+  apiToken: inputFormState.sourceType === 'figma'
+    ? z.string().min(1, 'Figma API token is required')
+    : z.string().optional()
 }))
 
 // OAuth handling for Slack - pass reactive ref so it updates after step 1 save
@@ -272,25 +277,55 @@ function resetInputForm(sourceType: 'slack' | 'figma' | 'email') {
   }
 }
 
-function saveInput(event: FormSubmitEvent<InputFormData>, close: () => void) {
+async function saveInput(event: FormSubmitEvent<InputFormData>, close: () => void) {
   const inputData: Partial<FlowInput> = {
     sourceType: event.data.sourceType,
     name: event.data.name,
-    emailSlug: event.data.emailSlug,
-    emailAddress: event.data.emailAddress,
+    emailSlug: event.data.emailSlug || inputFormState.emailSlug,
+    emailAddress: event.data.emailAddress || inputFormState.emailAddress,
     apiToken: event.data.apiToken,
     sourceMetadata: inputFormState.sourceMetadata,
     active: true
   }
 
-  inputsList.value.push(inputData)
+  // Save immediately to database if we have a flowId
+  if (savedFlowId.value) {
+    try {
+      const savedInput = await $fetch<FlowInput>(`/api/teams/${props.teamId}/discubot-flowinputs`, {
+        method: 'POST',
+        body: {
+          ...inputData,
+          flowId: savedFlowId.value
+        }
+      })
+      console.log('[FlowBuilder] Input saved to database:', savedInput)
 
-  close()
-  toast.add({
-    title: 'Input saved',
-    description: `${event.data.name} has been added`,
-    color: 'success'
-  })
+      // Add the saved input (with ID) to the list
+      inputsList.value.push(savedInput)
+
+      close()
+      toast.add({
+        title: 'Input saved',
+        description: `${event.data.name} has been added to your flow`,
+        color: 'success'
+      })
+    } catch (error: any) {
+      console.error('[FlowBuilder] Failed to save input:', error)
+      toast.add({
+        title: 'Save failed',
+        description: error.message || 'Failed to save input',
+        color: 'error'
+      })
+    }
+  } else {
+    // No flowId yet - this shouldn't happen since flow is saved in step 1
+    console.warn('[FlowBuilder] No flowId available - cannot save input')
+    toast.add({
+      title: 'Error',
+      description: 'Flow must be created first. Please go back to step 1.',
+      color: 'error'
+    })
+  }
 }
 
 function deleteInput(index: number) {
@@ -300,6 +335,56 @@ function deleteInput(index: number) {
     title: 'Input removed',
     description: `${input.name} has been removed`,
     color: 'neutral'
+  })
+}
+
+function openEditInput(index: number) {
+  const input = inputsList.value[index]
+  editingInputIndex.value = index
+  editingInput.value = { ...input }
+  isEditInputModalOpen.value = true
+}
+
+async function saveEditInput() {
+  if (editingInputIndex.value === null || !editingInput.value) return
+
+  const input = editingInput.value
+
+  // If input has an ID, update in database
+  if (input.id && savedFlowId.value) {
+    try {
+      await $fetch(`/api/teams/${props.teamId}/discubot-flowinputs/${input.id}`, {
+        method: 'PATCH',
+        body: {
+          name: input.name,
+          apiToken: input.apiToken,
+          emailAddress: input.emailAddress,
+          emailSlug: input.emailSlug
+        }
+      })
+      console.log('[FlowBuilder] Input updated in database')
+    } catch (error: any) {
+      console.error('[FlowBuilder] Failed to update input:', error)
+      toast.add({
+        title: 'Update failed',
+        description: error.message || 'Failed to update input',
+        color: 'error'
+      })
+      return
+    }
+  }
+
+  // Update local state
+  inputsList.value[editingInputIndex.value] = { ...input }
+
+  isEditInputModalOpen.value = false
+  editingInputIndex.value = null
+  editingInput.value = null
+
+  toast.add({
+    title: 'Input updated',
+    description: `${input.name} has been updated`,
+    color: 'success'
   })
 }
 
@@ -621,15 +706,23 @@ async function saveFlow() {
     })
 
     // Save only NEW inputs (those without an id - OAuth-added inputs already have ids)
+    console.log('[FlowBuilder] Saving inputs:', inputsList.value.length, 'inputs total')
     for (const input of inputsList.value) {
+      console.log('[FlowBuilder] Input:', input.name, 'hasId:', !!input.id, 'sourceType:', input.sourceType)
       if (!input.id) {
-        await $fetch(`/api/teams/${props.teamId}/discubot-flowinputs`, {
-          method: 'POST',
-          body: {
-            ...input,
-            flowId
-          }
-        })
+        try {
+          const savedInput = await $fetch(`/api/teams/${props.teamId}/discubot-flowinputs`, {
+            method: 'POST',
+            body: {
+              ...input,
+              flowId
+            }
+          })
+          console.log('[FlowBuilder] Input saved successfully:', savedInput)
+        } catch (inputError: any) {
+          console.error('[FlowBuilder] Failed to save input:', input.name, inputError)
+          throw inputError // Re-throw to trigger the outer catch
+        }
       }
     }
 
@@ -1083,6 +1176,29 @@ function cancel() {
                             </div>
                           </UFormField>
 
+                          <UFormField
+                            label="Figma API Token"
+                            name="apiToken"
+                            help="Personal access token from Figma settings"
+                            required
+                          >
+                            <UInput
+                              v-model="inputFormState.apiToken"
+                              type="password"
+                              placeholder="figd_..."
+                              class="w-full"
+                            />
+                            <template #hint>
+                              <a
+                                href="https://www.figma.com/developers/api#access-tokens"
+                                target="_blank"
+                                class="text-primary hover:underline"
+                              >
+                                Get your token from Figma
+                              </a>
+                            </template>
+                          </UFormField>
+
                           <UAlert
                             v-if="computedEmailAddress"
                             color="info"
@@ -1139,9 +1255,20 @@ function cancel() {
                       <p class="text-sm text-muted">
                         {{ input.sourceType }} · {{ input.active ? 'Active' : 'Inactive' }}
                       </p>
+                      <p v-if="input.emailAddress" class="text-xs text-muted-foreground font-mono mt-1">
+                        {{ input.emailAddress }}
+                      </p>
                     </div>
                   </div>
                   <div class="flex gap-2">
+                    <UButton
+                      type="button"
+                      color="neutral"
+                      variant="ghost"
+                      size="sm"
+                      icon="i-lucide-pencil"
+                      @click="openEditInput(index)"
+                    />
                     <UButton
                       type="button"
                       color="error"
@@ -1154,6 +1281,71 @@ function cancel() {
                 </div>
               </UCard>
             </div>
+
+            <!-- Edit Input Modal -->
+            <UModal v-model:open="isEditInputModalOpen">
+              <template #content="{ close }">
+                <div class="p-6">
+                  <h3 class="text-lg font-semibold mb-4">
+                    Edit Input
+                  </h3>
+
+                  <div v-if="editingInput" class="space-y-4">
+                    <UFormField label="Name" required>
+                      <UInput
+                        v-model="editingInput.name"
+                        placeholder="Input name"
+                        class="w-full"
+                      />
+                    </UFormField>
+
+                    <UFormField
+                      v-if="editingInput.sourceType === 'figma'"
+                      label="Email Address"
+                    >
+                      <UInput
+                        v-model="editingInput.emailAddress"
+                        type="email"
+                        readonly
+                        class="w-full font-mono text-sm"
+                      />
+                    </UFormField>
+
+                    <UFormField
+                      v-if="editingInput.sourceType === 'figma'"
+                      label="Figma API Token"
+                      help="Personal access token from Figma settings"
+                      required
+                    >
+                      <UInput
+                        v-model="editingInput.apiToken"
+                        type="password"
+                        placeholder="figd_..."
+                        class="w-full"
+                      />
+                    </UFormField>
+
+                    <div class="flex justify-end gap-2 mt-6">
+                      <UButton
+                        type="button"
+                        color="neutral"
+                        variant="ghost"
+                        @click="close(); editingInput = null; editingInputIndex = null"
+                      >
+                        Cancel
+                      </UButton>
+                      <UButton
+                        type="button"
+                        color="primary"
+                        @click="saveEditInput"
+                      >
+                        Save Changes
+                      </UButton>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </UModal>
           </UCard>
 
           <!-- Navigation -->
