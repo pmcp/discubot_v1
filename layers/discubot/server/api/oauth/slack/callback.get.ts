@@ -79,7 +79,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Verify state token (CSRF protection) using NuxtHub KV
-    const stateData = await hubKV().get<{ teamId: string; flowId?: string; createdAt: number }>(`oauth:state:${state}`)
+    const stateData = await hubKV().get<{ teamId: string; flowId?: string; openerOrigin?: string; createdAt: number }>(`oauth:state:${state}`)
 
     if (!stateData) {
       logger.error('[OAuth] Invalid or expired state token')
@@ -89,8 +89,8 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Extract team ID and optional flow ID from state
-    const { teamId, flowId: requestedFlowId } = stateData
+    // Extract team ID, optional flow ID, and opener origin from state
+    const { teamId, flowId: requestedFlowId, openerOrigin } = stateData
 
     // Delete state token (single use) from KV
     await hubKV().del(`oauth:state:${state}`)
@@ -180,12 +180,12 @@ export default defineEventHandler(async (event) => {
     let isNewFlow = false
 
     if (requestedFlowId) {
-      // If specific flowId was provided, use that one
-      const requestedFlow = await getDiscubotFlowById(requestedFlowId, teamId)
-      if (requestedFlow) {
+      // If specific flowId was provided, try to use that one
+      try {
+        const requestedFlow = await getDiscubotFlowById(requestedFlowId, teamId)
         flowId = requestedFlowId
         logger.debug('[OAuth] Using requested flow', { flowId, flowName: requestedFlow.name })
-      } else {
+      } catch {
         // Requested flow doesn't exist, fall back to first flow or create new
         logger.warn('[OAuth] Requested flow not found, falling back', { requestedFlowId })
         const existingFlows = await getAllDiscubotFlows(teamId)
@@ -264,6 +264,9 @@ export default defineEventHandler(async (event) => {
       successUrl.searchParams.set('status', 'already-connected')
       successUrl.searchParams.set('flow_id', flowId)
       successUrl.searchParams.set('team_name', slackTeamName)
+      if (openerOrigin) {
+        successUrl.searchParams.set('opener_origin', openerOrigin)
+      }
 
       return sendRedirect(event, successUrl.toString(), 302)
     }
@@ -306,6 +309,9 @@ export default defineEventHandler(async (event) => {
     successUrl.searchParams.set('input_id', newInput.id)
     successUrl.searchParams.set('team_name', slackTeamName)
     successUrl.searchParams.set('is_new_flow', isNewFlow.toString())
+    if (openerOrigin) {
+      successUrl.searchParams.set('opener_origin', openerOrigin)
+    }
 
     return sendRedirect(event, successUrl.toString(), 302)
   }

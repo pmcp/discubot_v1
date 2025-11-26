@@ -20,6 +20,8 @@
  * ```
  */
 
+import type { Ref } from 'vue'
+
 export interface OAuthCredentials {
   apiToken: string
   sourceMetadata: Record<string, any>
@@ -33,8 +35,9 @@ export interface OAuthConfig {
 
   /**
    * Flow ID to add the input to (optional - if not provided, will use first flow or create new)
+   * Can be a ref for reactive updates
    */
-  flowId?: string
+  flowId?: string | Ref<string | undefined>
 
   /**
    * Callback when OAuth succeeds
@@ -54,7 +57,13 @@ export interface OAuthConfig {
 }
 
 export function useFlowOAuth(config: OAuthConfig) {
-  const { teamId, flowId, onSuccess, onError, provider = 'slack' } = config
+  const { teamId, flowId: flowIdInput, onSuccess, onError, provider = 'slack' } = config
+
+  // Support both static and reactive flowId
+  const flowId = computed(() => {
+    if (flowIdInput === undefined) return undefined
+    return isRef(flowIdInput) ? flowIdInput.value : flowIdInput
+  })
 
   const waitingForOAuth = ref(false)
   const toast = useToast()
@@ -66,9 +75,11 @@ export function useFlowOAuth(config: OAuthConfig) {
     if (!teamId) return '#'
     const url = new URL(`/api/oauth/${provider}/install`, window.location.origin)
     url.searchParams.set('teamId', teamId)
-    if (flowId) {
-      url.searchParams.set('flowId', flowId)
+    if (flowId.value) {
+      url.searchParams.set('flowId', flowId.value)
     }
+    // Pass opener origin so success page knows where to postMessage
+    url.searchParams.set('openerOrigin', window.location.origin)
     return url.pathname + url.search
   })
 

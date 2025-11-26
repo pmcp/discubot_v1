@@ -12,6 +12,7 @@ const { currentTeam } = useTeam()
 
 const provider = computed(() => route.query.provider as string || 'Unknown')
 const team = computed(() => route.query.team_name as string || route.query.team as string || 'Unknown')
+const openerOrigin = computed(() => route.query.opener_origin as string || '*')
 
 // Extract OAuth credentials from URL query params
 const credentials = computed(() => ({
@@ -47,6 +48,7 @@ onMounted(() => {
   // If in popup, notify parent and close
   if (isPopup.value && window.opener) {
     console.log('[OAuth Success] Notifying parent window and closing popup')
+    console.log('[OAuth Success] Target origin:', openerOrigin.value)
     try {
       window.opener.postMessage(
         {
@@ -55,7 +57,7 @@ onMounted(() => {
           team: team.value,
           credentials: credentials.value
         },
-        window.location.origin
+        openerOrigin.value
       )
     } catch (error) {
       console.error('[OAuth Success] Failed to post message to parent:', error)

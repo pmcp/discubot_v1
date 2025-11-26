@@ -65,19 +65,21 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Get team ID and flow ID from query params
+    // Get team ID, flow ID, and opener origin from query params
     const query = getQuery(event)
     const teamId = (query.teamId as string) || (query.team_id as string) || 'default'
     const flowId = query.flowId as string | undefined
+    const openerOrigin = query.openerOrigin as string | undefined
 
     // Generate secure random state token (32 bytes = 256 bits)
     const state = randomBytes(32).toString('hex')
 
-    // Store state token with team ID and flow ID in NuxtHub KV
+    // Store state token with team ID, flow ID, and opener origin in NuxtHub KV
     // TTL of 300 seconds (5 minutes) for automatic cleanup
     await hubKV().set(`oauth:state:${state}`, {
       teamId,
       flowId, // Optional: if provided, input will be added to this specific flow
+      openerOrigin, // For postMessage back to parent window
       createdAt: Date.now(),
     }, {
       ttl: 300, // 5 minutes
