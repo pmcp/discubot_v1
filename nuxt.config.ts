@@ -14,6 +14,13 @@ export default defineNuxtConfig({
     './layers/discubot'
   ],
   devtools: { enabled: true },
+  vite: {
+    server: {
+      allowedHosts: [
+        'preternaturally-choosier-dodie.ngrok-free.dev',
+      ],
+    },
+  },
   css: ['~/assets/css/main.css'],
   colorMode: {
     preference: 'system',

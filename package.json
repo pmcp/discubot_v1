@@ -5,6 +5,8 @@
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
+    "dev:tunnel": "BASE_URL=https://preternaturally-choosier-dodie.ngrok-free.dev nuxt dev",
+    "tunnel": "export $(grep NGROK_AUTHTOKEN .env.local | xargs) && ngrok start --config .ngrok/config.yml discubot",
     "dev:proxy": "node proxy-server.mjs",
     "generate": "nuxt generate",
     "preview": "npx nuxthub preview",
@@ -13,7 +15,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "eslint . --fix",
-    "db:generate": "drizzle-kit generate",
+    "db:generate": "on",
     "test": "vitest",
     "test:unit": "vitest --project unit",
     "test:nuxt": "vitest --project nuxt",

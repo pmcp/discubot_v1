@@ -1,0 +1,7 @@
+version: 2
+
+tunnels:
+  discubot:
+    proto: http
+    addr: 3000
+    domain: preternaturally-choosier-dodie.ngrok-free.dev

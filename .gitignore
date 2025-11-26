@@ -24,4 +24,7 @@ logs
 .env.*
 !.env.example
 
+# ngrok (authtoken should be in .env.local, not committed)
+.ngrok/authtoken
+
 /server/database/migrations/**
