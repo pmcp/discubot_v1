@@ -28,3 +28,7 @@ logs
 .ngrok/authtoken
 
 /server/database/migrations/**
+
+# Local binaries and symlinks
+ngrok
+nuxt-app@
