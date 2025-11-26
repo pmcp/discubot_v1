@@ -58,9 +58,137 @@ const integrations = [
 
     <!-- Content -->
     <div class="mx-auto max-w-4xl px-6 text-center lg:px-8">
+      <!-- Big Cat Mascot -->
+      <div
+        class="mb-8 flex flex-col items-center justify-center transition-all duration-700"
+        :class="isVisible ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-8 opacity-0 scale-95'"
+      >
+        <div class="relative">
+          <!-- Glow effect behind the cat -->
+          <div class="absolute inset-0 -z-10 animate-pulse-glow rounded-full bg-primary-400/30 blur-2xl" />
+
+          <!-- Cat icon container -->
+          <div class="group relative flex size-32 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 via-purple-500 to-pink-500 p-1 shadow-2xl transition-all duration-500 hover:scale-110 hover:rotate-3 sm:size-40">
+            <div class="flex size-full items-center justify-center rounded-full bg-white dark:bg-gray-900">
+              <!-- Cat face using SVG -->
+              <svg
+                viewBox="0 0 100 100"
+                class="size-20 sm:size-28 transition-transform duration-300 group-hover:scale-110"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <!-- Cat ears -->
+                <path
+                  d="M20 45 L30 15 L45 40 Z"
+                  class="fill-primary-500 dark:fill-primary-400"
+                />
+                <path
+                  d="M80 45 L70 15 L55 40 Z"
+                  class="fill-primary-500 dark:fill-primary-400"
+                />
+                <!-- Inner ears -->
+                <path
+                  d="M25 40 L32 22 L42 38 Z"
+                  class="fill-pink-400"
+                />
+                <path
+                  d="M75 40 L68 22 L58 38 Z"
+                  class="fill-pink-400"
+                />
+                <!-- Cat head -->
+                <ellipse
+                  cx="50"
+                  cy="55"
+                  rx="32"
+                  ry="28"
+                  class="fill-primary-500 dark:fill-primary-400"
+                />
+                <!-- Cat face (lighter) -->
+                <ellipse
+                  cx="50"
+                  cy="58"
+                  rx="26"
+                  ry="22"
+                  class="fill-primary-100 dark:fill-primary-200"
+                />
+                <!-- Eyes -->
+                <ellipse
+                  cx="38"
+                  cy="52"
+                  rx="6"
+                  ry="7"
+                  class="fill-gray-900 dark:fill-gray-800"
+                />
+                <ellipse
+                  cx="62"
+                  cy="52"
+                  rx="6"
+                  ry="7"
+                  class="fill-gray-900 dark:fill-gray-800"
+                />
+                <!-- Eye sparkles -->
+                <circle
+                  cx="40"
+                  cy="50"
+                  r="2"
+                  class="fill-white animate-pulse"
+                />
+                <circle
+                  cx="64"
+                  cy="50"
+                  r="2"
+                  class="fill-white animate-pulse"
+                />
+                <!-- Nose -->
+                <path
+                  d="M50 60 L47 65 L53 65 Z"
+                  class="fill-pink-500"
+                />
+                <!-- Mouth -->
+                <path
+                  d="M50 65 Q50 70 45 72"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  class="text-gray-700 dark:text-gray-600"
+                  fill="none"
+                />
+                <path
+                  d="M50 65 Q50 70 55 72"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  class="text-gray-700 dark:text-gray-600"
+                  fill="none"
+                />
+                <!-- Whiskers left -->
+                <line x1="20" y1="58" x2="35" y2="60" stroke="currentColor" stroke-width="1.5" class="text-gray-600" />
+                <line x1="18" y1="64" x2="34" y2="64" stroke="currentColor" stroke-width="1.5" class="text-gray-600" />
+                <line x1="20" y1="70" x2="35" y2="68" stroke="currentColor" stroke-width="1.5" class="text-gray-600" />
+                <!-- Whiskers right -->
+                <line x1="80" y1="58" x2="65" y2="60" stroke="currentColor" stroke-width="1.5" class="text-gray-600" />
+                <line x1="82" y1="64" x2="66" y2="64" stroke="currentColor" stroke-width="1.5" class="text-gray-600" />
+                <line x1="80" y1="70" x2="65" y2="68" stroke="currentColor" stroke-width="1.5" class="text-gray-600" />
+              </svg>
+            </div>
+          </div>
+
+          <!-- Floating sparkles around the cat -->
+          <div class="absolute -right-2 -top-2 animate-bounce" style="animation-delay: 0ms">
+            <UIcon name="i-lucide-sparkles" class="size-6 text-yellow-400" />
+          </div>
+          <div class="absolute -left-2 top-4 animate-bounce" style="animation-delay: 300ms">
+            <UIcon name="i-lucide-star" class="size-5 text-pink-400" />
+          </div>
+          <div class="absolute -bottom-1 -right-4 animate-bounce" style="animation-delay: 600ms">
+            <UIcon name="i-lucide-zap" class="size-5 text-purple-400" />
+          </div>
+        </div>
+      </div>
+
       <!-- Trust badge -->
       <div
-        class="mb-8 flex items-center justify-center gap-2 transition-all duration-700"
+        class="mb-8 flex items-center justify-center gap-2 transition-all duration-700 delay-75"
         :class="isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'"
       >
         <UBadge color="primary" variant="subtle" size="lg" class="animate-pulse-subtle">
