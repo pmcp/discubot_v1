@@ -1156,7 +1156,7 @@ export async function processDiscussion(
       try {
         const { getAdapter } = await import('../adapters')
         const adapter = getAdapter(parsed.sourceType)
-        await adapter.updateStatus(parsed.sourceThreadId, 'pending', config)
+        await adapter.updateStatus(parsed.sourceThreadId, 'pending', threadBuildConfig)
         logger.debug('Added eyes emoji to Figma comment', { commentId: thread.id })
       } catch (error) {
         logger.warn('Failed to add eyes emoji to Figma comment', { error })
