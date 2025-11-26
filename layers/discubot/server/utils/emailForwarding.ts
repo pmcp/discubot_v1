@@ -1,7 +1,7 @@
 import { findUserById } from '@@/server/database/queries/users'
 import { sendEmail } from '@@/server/services/email'
 import { getDiscubotConfigsByIds } from '#layers/discubot/collections/configs/server/database/queries'
-import { updateDiscubotInboxMessage } from '#layers/discubot/collections/inboxMessages/server/database/queries'
+import { updateDiscubotInboxMessage } from '#layers/discubot/collections/inboxmessages/server/database/queries'
 import { logger } from '../utils/logger'
 
 export interface ForwardEmailParams {

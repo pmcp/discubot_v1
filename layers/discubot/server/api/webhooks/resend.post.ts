@@ -54,7 +54,7 @@ import { fetchResendEmail, transformToMailgunFormat } from '#layers/discubot/ser
 import { rateLimit, RateLimitPresets } from '#layers/discubot/server/utils/rateLimit'
 import { classifyFigmaEmail, shouldForwardEmail } from '#layers/discubot/server/utils/emailClassifier'
 import { forwardEmailToConfigOwner } from '#layers/discubot/server/utils/emailForwarding'
-import { createDiscubotInboxMessage } from '#layers/discubot/collections/inboxMessages/server/database/queries'
+import { createDiscubotInboxMessage } from '#layers/discubot/collections/inboxmessages/server/database/queries'
 import { findDiscubotConfigByEmail } from '#layers/discubot/collections/configs/server/database/queries'
 import { findFlowInputByEmailAddress } from '#layers/discubot/collections/flowinputs/server/database/queries'
 import { SYSTEM_USER_ID } from '#layers/discubot/server/utils/constants'
