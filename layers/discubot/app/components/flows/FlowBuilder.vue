@@ -45,6 +45,9 @@ const currentStep = ref(0)
 const loading = ref(false)
 const toast = useToast()
 
+// Track the flow ID after it's saved (for new flows)
+const savedFlowId = ref<string | undefined>(props.flow?.id)
+
 // Default domains for new flows
 const DEFAULT_DOMAINS = ['design', 'frontend', 'backend', 'product', 'infrastructure', 'docs']
 
@@ -190,28 +193,28 @@ const inputSchema = computed(() => z.object({
   apiToken: z.string().optional()
 }))
 
-// OAuth handling for Slack
+// OAuth handling for Slack - pass reactive ref so it updates after step 1 save
 const { openOAuthPopup, waitingForOAuth } = useFlowOAuth({
   teamId: props.teamId,
-  flowId: props.flow?.id, // Pass flowId so OAuth adds input to this specific flow
+  flowId: savedFlowId, // Reactive ref - will be set after step 1 saves the flow
   provider: 'slack',
   onSuccess: async (credentials) => {
     inputFormState.apiToken = credentials.apiToken
     inputFormState.sourceMetadata = credentials.sourceMetadata
 
-    // If editing an existing flow, the OAuth callback already created the input in the database
-    // We need to refetch the inputs and close the modal
-    if (props.flow?.id) {
-      console.log('[FlowBuilder] Editing existing flow, refetching inputs...')
+    // Flow should always have an ID by the time we reach step 2
+    // The OAuth callback already created the input in the database
+    if (savedFlowId.value) {
+      console.log('[FlowBuilder] Refetching inputs for flow:', savedFlowId.value)
       try {
         const response = await $fetch<FlowInput[]>(`/api/teams/${props.teamId}/discubot-flowinputs`)
         // Filter inputs for this flow
-        const flowInputs = response.filter(input => input.flowId === props.flow.id)
+        const flowInputs = response.filter(input => input.flowId === savedFlowId.value)
 
         // Update local state
         inputsList.value = flowInputs
 
-        console.log('[FlowBuilder] Refetched inputs:', flowInputs.length, 'inputs for flow', props.flow.id)
+        console.log('[FlowBuilder] Refetched inputs:', flowInputs.length, 'inputs for flow', savedFlowId.value)
 
         // Close the modal
         isSlackModalOpen.value = false
@@ -231,10 +234,11 @@ const { openOAuthPopup, waitingForOAuth } = useFlowOAuth({
         })
       }
     } else {
-      // Creating new flow - just update form state and show message
+      // This shouldn't happen now - flow is saved before step 2
+      console.warn('[FlowBuilder] No flowId available - this should not happen')
       toast.add({
         title: 'OAuth successful',
-        description: 'Slack workspace connected. Click "Add Input" to continue.',
+        description: 'Slack workspace connected.',
         color: 'success'
       })
     }
@@ -533,7 +537,43 @@ function prevStep() {
 // ============================================================================
 
 async function onFlowSubmit(event: FormSubmitEvent<FlowSchema>) {
-  // Just proceed to next step, don't save yet
+  // For new flows, save the flow first so we have a flowId for OAuth
+  if (!savedFlowId.value) {
+    loading.value = true
+    try {
+      const flowData: Partial<Flow> = {
+        ...event.data,
+        teamId: props.teamId,
+        active: false, // Not active until fully configured
+        onboardingComplete: false
+      }
+
+      const flowResponse = await $fetch<{ id: string }>(`/api/teams/${props.teamId}/discubot-flows`, {
+        method: 'POST',
+        body: flowData
+      })
+
+      savedFlowId.value = flowResponse.id
+      console.log('[FlowBuilder] Flow saved with ID:', savedFlowId.value)
+
+      toast.add({
+        title: 'Flow created',
+        description: 'Now add your input sources',
+        color: 'success'
+      })
+    } catch (error: any) {
+      console.error('[FlowBuilder] Failed to save flow:', error)
+      toast.add({
+        title: 'Save failed',
+        description: error.message || 'Failed to create flow',
+        color: 'error'
+      })
+      loading.value = false
+      return // Don't proceed to next step
+    }
+    loading.value = false
+  }
+
   nextStep()
 }
 
@@ -560,7 +600,14 @@ async function saveFlow() {
   loading.value = true
 
   try {
-    // Save flow
+    // Use the savedFlowId (set in step 1) or props.flow?.id (editing existing)
+    const flowId = savedFlowId.value || props.flow?.id
+
+    if (!flowId) {
+      throw new Error('Flow ID not found - flow should have been saved in step 1')
+    }
+
+    // Update flow settings and mark as active/complete
     const flowData: Partial<Flow> = {
       ...flowState as FlowSchema,
       teamId: props.teamId,
@@ -568,38 +615,40 @@ async function saveFlow() {
       onboardingComplete: true
     }
 
-    const flowResponse = await $fetch<{ id: string }>(`/api/teams/${props.teamId}/discubot-flows`, {
-      method: (props.flow?.id ? 'PATCH' : 'POST') as 'POST' | 'PATCH',
+    await $fetch(`/api/teams/${props.teamId}/discubot-flows/${flowId}`, {
+      method: 'PATCH',
       body: flowData
     })
 
-    const flowId = flowResponse.id
-
-    // Save inputs
+    // Save only NEW inputs (those without an id - OAuth-added inputs already have ids)
     for (const input of inputsList.value) {
-      await $fetch(`/api/teams/${props.teamId}/discubot-flowinputs`, {
-        method: 'POST',
-        body: {
-          ...input,
-          flowId
-        }
-      })
+      if (!input.id) {
+        await $fetch(`/api/teams/${props.teamId}/discubot-flowinputs`, {
+          method: 'POST',
+          body: {
+            ...input,
+            flowId
+          }
+        })
+      }
     }
 
-    // Save outputs
+    // Save only NEW outputs (those without an id)
     for (const output of outputsList.value) {
-      await $fetch(`/api/teams/${props.teamId}/discubot-flowoutputs`, {
-        method: 'POST',
-        body: {
-          ...output,
-          flowId
-        }
-      })
+      if (!output.id) {
+        await $fetch(`/api/teams/${props.teamId}/discubot-flowoutputs`, {
+          method: 'POST',
+          body: {
+            ...output,
+            flowId
+          }
+        })
+      }
     }
 
     toast.add({
       title: 'Flow saved',
-      description: `${flowState.name} has been created successfully`,
+      description: `${flowState.name} has been saved successfully`,
       color: 'success'
     })
 
@@ -889,8 +938,9 @@ function cancel() {
               <UButton
                 type="submit"
                 trailing-icon="i-lucide-arrow-right"
+                :loading="loading"
               >
-                Next: Add Inputs
+                {{ savedFlowId ? 'Next: Add Inputs' : 'Save & Continue' }}
               </UButton>
             </div>
           </UForm>
