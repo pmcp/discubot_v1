@@ -103,7 +103,7 @@ const columns = [
     header: 'Status',
     cell: ({ row }: any) => h('div', { class: 'flex items-center gap-2' }, [
       h(UBadge, {
-        color: row.original.active ? 'success' : 'neutral',
+         color: row.original.active ? 'primary' : 'neutral',
         variant: 'subtle'
       }, () => row.original.active ? 'Active' : 'Inactive'),
       !row.original.onboardingComplete ? h(UBadge, {
