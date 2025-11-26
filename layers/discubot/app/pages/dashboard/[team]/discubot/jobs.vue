@@ -129,8 +129,7 @@
             </span>
           </div>
         </template>
-        <template #body>
-          <!-- Loading State -->
+        <!-- Loading State -->
           <div v-if="pending" class="space-y-3">
             <div v-for="i in 5" :key="i" class="border rounded-lg p-4 animate-pulse">
               <div class="flex items-start justify-between gap-4">
@@ -179,118 +178,76 @@
           </div>
 
           <!-- Jobs List -->
-          <div v-else class="space-y-3">
+          <div v-else class="divide-y divide-default">
             <div
               v-for="job in filteredJobs"
               :key="job.id"
-              class="border rounded-lg p-3 sm:p-4 hover:border-primary/50 transition-all cursor-pointer active:scale-[0.99] touch-manipulation"
+              class="flex items-center gap-4 py-3 px-1 hover:bg-elevated/50 transition-colors cursor-pointer group"
               @click="openJobDetails(job)"
               role="button"
               tabindex="0"
               @keydown.enter="openJobDetails(job)"
               @keydown.space.prevent="openJobDetails(job)"
-              :aria-label="`View details for job ${job.stage || 'Processing'}`"
             >
-              <div class="flex items-start justify-between gap-3 sm:gap-4">
-                <!-- Job Info -->
-                <div class="flex-1 min-w-0 space-y-2">
-                  <!-- Stage and Status -->
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <h4 class="text-xs sm:text-sm font-semibold truncate">
-                      {{ job.stage || 'Processing' }}
-                    </h4>
-                    <UBadge :color="getStatusColor(job.status)" size="sm">
-                      {{ job.status }}
-                    </UBadge>
-                    <span v-if="job.status === 'processing'" class="text-xs text-muted-foreground hidden sm:inline">
-                      Attempt {{ job.attempts }}/{{ job.maxAttempts }}
-                    </span>
-                  </div>
+              <!-- Status Indicator -->
+              <div
+                class="w-2 h-2 rounded-full flex-shrink-0"
+                :class="{
+                  'bg-green-500': job.status === 'completed',
+                  'bg-red-500': job.status === 'failed',
+                  'bg-amber-500 animate-pulse': job.status === 'processing',
+                  'bg-purple-500': job.status === 'retrying',
+                  'bg-gray-400': job.status === 'pending'
+                }"
+              />
 
-                  <!-- Discussion and Config -->
-                  <div class="flex flex-col gap-1">
-                    <div class="flex items-center gap-2 text-xs text-muted-foreground">
-                      <UIcon name="i-lucide-message-square" class="w-3 h-3" />
-                      <span>Discussion:</span>
-                      <CroutonItemCardMini
-                        v-if="job.discussionId"
-                        :id="job.discussionId"
-                        collection="discubotDiscussions"
-                      />
-                    </div>
-                    <div class="flex items-center gap-2 text-xs text-muted-foreground">
-                      <UIcon name="i-lucide-settings" class="w-3 h-3" />
-                      <span>Config:</span>
-                      <CroutonItemCardMini
-                        v-if="job.sourceConfigId"
-                        :id="job.sourceConfigId"
-                        collection="discubotConfigs"
-                      />
-                    </div>
-                  </div>
-
-                  <!-- Timestamps -->
-                  <div class="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                    <div v-if="job.startedAt" class="flex items-center gap-1">
-                      <UIcon name="i-lucide-play" class="w-3 h-3" />
-                      Started {{ formatRelativeTime(job.startedAt) }}
-                    </div>
-                    <div v-if="job.completedAt" class="flex items-center gap-1">
-                      <UIcon name="i-lucide-check" class="w-3 h-3" />
-                      Completed {{ formatRelativeTime(job.completedAt) }}
-                    </div>
-                    <div v-if="job.processingTime" class="flex items-center gap-1">
-                      <UIcon name="i-lucide-clock" class="w-3 h-3" />
-                      {{ formatDuration(job.processingTime) }}
-                    </div>
-                  </div>
-
-                  <!-- Error Message (if failed) -->
-                  <div v-if="job.status === 'failed' && job.error" class="mt-2">
-                    <div class="flex items-start gap-2 p-2 rounded bg-red-500/10 border border-red-500/20">
-                      <UIcon name="i-lucide-alert-circle" class="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
-                      <div class="flex-1 min-w-0">
-                        <p class="text-xs font-medium text-red-500">Error</p>
-                        <p class="text-xs text-red-600 mt-1 line-clamp-2">
-                          {{ job.error }}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Task IDs (if completed) -->
-                  <div v-if="job.taskIds && job.taskIds.length > 0" class="flex items-center gap-2">
-                    <UIcon name="i-lucide-list-checks" class="w-3 h-3 text-muted-foreground" />
-                    <span class="text-xs text-muted-foreground">
-                      Created {{ job.taskIds.length }} {{ job.taskIds.length === 1 ? 'task' : 'tasks' }}
-                    </span>
-                  </div>
-
-                  <!-- Retry Button (for failed jobs) -->
-                  <div v-if="job.status === 'failed' && job.discussionId" class="mt-3 flex gap-2">
-                    <UButton
-                      color="warning"
-                      variant="outline"
-                      size="xs"
-                      icon="i-lucide-rotate-cw"
-                      :loading="retryingJobId === job.id"
-                      :disabled="retryingJobId !== null"
-                      @click.stop="retryJob(job)"
-                      aria-label="Retry failed job"
-                    >
-                      Retry Job
-                    </UButton>
-                  </div>
+              <!-- Main Content -->
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-medium">{{ formatStage(job.stage) }}</span>
+                  <span v-if="job.status === 'processing'" class="text-xs text-muted-foreground">
+                    ({{ job.attempts }}/{{ job.maxAttempts }})
+                  </span>
                 </div>
 
-                <!-- Action Button -->
-                <div class="flex-shrink-0">
-                  <UIcon name="i-lucide-chevron-right" class="w-5 h-5 text-muted-foreground" />
-                </div>
+                <!-- Error for failed jobs -->
+                <p v-if="job.status === 'failed' && job.error" class="text-xs text-red-500 truncate mt-0.5">
+                  {{ job.error }}
+                </p>
+
+                <!-- Tasks created for completed jobs -->
+                <p v-else-if="job.taskIds?.length" class="text-xs text-muted-foreground mt-0.5">
+                  Created {{ job.taskIds.length }} {{ job.taskIds.length === 1 ? 'task' : 'tasks' }}
+                </p>
+              </div>
+
+              <!-- Time Info -->
+              <div class="flex items-center gap-3 text-xs text-muted-foreground flex-shrink-0">
+                <span v-if="job.processingTime" class="hidden sm:inline">{{ formatDuration(job.processingTime) }}</span>
+                <span>{{ formatRelativeTime(job.completedAt || job.startedAt) }}</span>
+              </div>
+
+              <!-- Retry or Chevron -->
+              <div class="flex-shrink-0">
+                <UButton
+                  v-if="job.status === 'failed' && job.discussionId"
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  icon="i-lucide-rotate-cw"
+                  :loading="retryingJobId === job.id"
+                  :disabled="retryingJobId !== null"
+                  @click.stop="retryJob(job)"
+                  class="opacity-0 group-hover:opacity-100 transition-opacity"
+                />
+                <UIcon
+                  v-else
+                  name="i-lucide-chevron-right"
+                  class="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                />
               </div>
             </div>
           </div>
-        </template>
       </UCard>
     </div>
   </AppContainer>
@@ -349,21 +306,13 @@ const filteredJobs = computed(() => {
 })
 
 // Helper functions
-function getStatusColor(status: string) {
-  switch (status) {
-    case 'completed':
-      return 'success'
-    case 'failed':
-      return 'error'
-    case 'processing':
-      return 'primary'
-    case 'retrying':
-      return 'warning'
-    case 'pending':
-      return 'neutral'
-    default:
-      return 'neutral'
-  }
+function formatStage(stage: string | undefined) {
+  if (!stage) return 'Processing'
+  // Convert snake_case to Title Case
+  return stage
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
 }
 
 function formatRelativeTime(date: string | Date) {
@@ -390,8 +339,7 @@ function formatDuration(ms: number) {
 }
 
 function openJobDetails(job: any) {
-  // Open job details in Crouton modal
-  openCrouton('view', 'discubotJobs', job.id)
+  openCrouton('view', 'discubotJobs', [job.id])
 }
 
 async function retryJob(job: any) {
