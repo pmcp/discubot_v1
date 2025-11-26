@@ -58,6 +58,19 @@ const integrations = [
 
     <!-- Content -->
     <div class="mx-auto max-w-4xl px-6 text-center lg:px-8">
+      <!-- Fun Cat Icon - First thing visitors see! -->
+      <div
+        class="mb-6 flex items-center justify-center transition-all duration-500"
+        :class="isVisible ? 'translate-y-0 opacity-100 scale-100' : '-translate-y-8 opacity-0 scale-75'"
+      >
+        <div class="group relative">
+          <div class="absolute inset-0 animate-ping rounded-full bg-primary-400/30" />
+          <div class="relative flex size-20 items-center justify-center rounded-full bg-gradient-to-br from-primary-400 via-purple-500 to-pink-500 p-4 shadow-2xl transition-all duration-300 group-hover:scale-110 group-hover:rotate-12">
+            <UIcon name="i-lucide-cat" class="size-full text-white drop-shadow-lg" />
+          </div>
+        </div>
+      </div>
+
       <!-- Trust badge -->
       <div
         class="mb-8 flex items-center justify-center gap-2 transition-all duration-700"
