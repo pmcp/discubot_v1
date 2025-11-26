@@ -294,54 +294,13 @@ definePageMeta({
   ssr: false
 })
 
-// SSR Error Debugging - Log BEFORE imports
-console.log('[INBOX] === Starting inbox.vue initialization ===')
-console.log('[INBOX] process.client:', process.client)
-console.log('[INBOX] process.server:', process.server)
+// Team context
+const { currentTeam } = useTeam()
+const toast = useToast()
 
-// Dynamic imports to avoid SSR issues
-console.log('[INBOX] Step 1: Preparing imports...')
-
-// Team context (SSR disabled, so teams will always be loaded)
-try {
-  console.log('[INBOX] Step 3: Getting team context...')
-  const { currentTeam } = useTeam()
-  console.log('[INBOX] Step 3: Team context obtained ✓', {
-    teamSlug: currentTeam.value?.slug,
-    teamId: currentTeam.value?.id
-  })
-
-  console.log('[INBOX] Step 4: Getting toast composable...')
-  const toast = useToast()
-  console.log('[INBOX] Step 4: Toast obtained ✓')
-
-  // Data fetching
-  console.log('[INBOX] Step 5: Fetching inbox messages...')
-  console.log('[INBOX] Calling useCollectionQuery("discubotInboxMessages")...')
-
-  var { items: messages, pending, refresh } = await useCollectionQuery('discubotInboxMessages')
-
-  console.log('[INBOX] Step 5: useCollectionQuery succeeded ✓', {
-    messageCount: messages.value?.length || 0,
-    isPending: pending.value
-  })
-
-  console.log('[INBOX] Step 6: Getting Crouton mutate...')
-  var { mutate } = useCroutonMutate()
-  console.log('[INBOX] Step 6: Crouton mutate obtained ✓')
-
-  console.log('[INBOX] === All initialization steps completed successfully ===')
-} catch (error: any) {
-  console.error('[INBOX ERROR] ❌❌❌ CAUGHT ERROR IN INBOX PAGE ❌❌❌')
-  console.error('[INBOX ERROR] Error name:', error.name)
-  console.error('[INBOX ERROR] Error message:', error.message)
-  console.error('[INBOX ERROR] Error stack:', error.stack)
-  console.error('[INBOX ERROR] Error cause:', error.cause)
-  console.error('[INBOX ERROR] Full error object:', JSON.stringify(error, null, 2))
-
-  // Re-throw to let Nuxt handle it
-  throw error
-}
+// Data fetching
+const { items: messages, pending, refresh } = await useCollectionQuery('discubotInboxMessages')
+const { mutate } = useCroutonMutate()
 
 // Filter state
 const selectedFilter = ref<string>('all')
@@ -543,10 +502,8 @@ function getEmptyStateMessage() {
 
 // Actions
 function openEmailModal(message: any) {
-  console.log('[Inbox] Opening email modal', { messageId: message.id, subject: message.subject })
   selectedMessage.value = message
   isModalOpen.value = true
-  console.log('[Inbox] Modal state', { isOpen: isModalOpen.value })
 }
 
 async function markAsRead(message: any) {

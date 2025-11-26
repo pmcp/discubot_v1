@@ -3,11 +3,7 @@ import type { FetchError } from 'ofetch'
 import type { Team } from '@@/types/database'
 
 export const useTeam = () => {
-  console.log('[USE_TEAM] Composable called, process.client:', process.client)
-
   const { user } = useUserSession()
-  console.log('[USE_TEAM] User session obtained, userId:', user.value?.id)
-
   const toast = useToast()
   const teamSchema = z.object({
     name: z.string().min(1, 'Team name is required'),
@@ -26,36 +22,17 @@ export const useTeam = () => {
     () => router.currentRoute.value.params.team as string,
   )
 
-  console.log('[USE_TEAM] teamSlug computed:', teamSlug.value)
-
   const loading = ref(false)
   const teams = useState<Team[]>('teams', () => [])
 
-  console.log('[USE_TEAM] teams state:', {
-    length: teams.value.length,
-    teams: teams.value.map(t => ({ id: t.id, slug: t.slug }))
-  })
-
   const currentTeam = computed(() => {
-    console.log('[USE_TEAM] currentTeam computed - START', {
-      teamSlugValue: teamSlug.value,
-      teamsLength: teams.value.length,
-      isSSR: !process.client
-    })
-
     if (!teamSlug.value || !teams.value.length) {
-      console.log('[USE_TEAM] No teamSlug or empty teams, returning first team or empty')
       return teams.value[0] || ({} as Team)
     }
 
     const team = teams.value.find((team) => team.slug === teamSlug.value)
-    console.log('[USE_TEAM] Team found:', !!team, team?.slug)
 
     if (!team) {
-      console.error('[USE_TEAM] ❌ TEAM NOT FOUND ERROR ❌', {
-        requestedSlug: teamSlug.value,
-        availableTeams: teams.value.map(t => t.slug)
-      })
       throw createError('Team not found')
     }
     return team
