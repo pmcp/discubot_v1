@@ -152,22 +152,22 @@ export async function createDiscubotFlow(data: NewDiscubotFlow) {
 export async function updateDiscubotFlow(
   recordId: string,
   teamId: string,
-  ownerId: string,
+  userId: string,
   updates: Partial<DiscubotFlow>
 ) {
   const db = useDB()
 
+  // Team-based access: any team member can update flows in their team
   const [flow] = await db
     .update(tables.discubotFlows)
     .set({
       ...updates,
-      updatedBy: ownerId
+      updatedBy: userId
     })
     .where(
       and(
         eq(tables.discubotFlows.id, recordId),
-        eq(tables.discubotFlows.teamId, teamId),
-        eq(tables.discubotFlows.owner, ownerId)
+        eq(tables.discubotFlows.teamId, teamId)
       )
     )
     .returning()
@@ -185,17 +185,17 @@ export async function updateDiscubotFlow(
 export async function deleteDiscubotFlow(
   recordId: string,
   teamId: string,
-  ownerId: string
+  _userId?: string // Kept for API compatibility, but not used for authorization
 ) {
   const db = useDB()
 
+  // Team-based access: any team member can delete flows in their team
   const [deleted] = await db
     .delete(tables.discubotFlows)
     .where(
       and(
         eq(tables.discubotFlows.id, recordId),
-        eq(tables.discubotFlows.teamId, teamId),
-        eq(tables.discubotFlows.owner, ownerId)
+        eq(tables.discubotFlows.teamId, teamId)
       )
     )
     .returning()
