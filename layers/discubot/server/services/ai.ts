@@ -197,7 +197,7 @@ function buildSummaryPrompt(
     prompt = `Analyze this discussion thread${sourceContext} and provide:
 
 1. A concise summary (2-3 sentences)
-2. 3-5 key points or decisions
+2. Key points or decisions (ONLY if meaningful ones exist - return empty array if none)
 3. Overall sentiment (positive, neutral, or negative)${domainInstructions}
 
 Discussion:
@@ -206,11 +206,13 @@ ${messages}
 Respond in JSON format:
 {
   "summary": "...",
-  "keyPoints": ["...", "...", "..."],
+  "keyPoints": ["..."] or [],
   "sentiment": "positive|neutral|negative",
   "confidence": 0.0-1.0,
   "domain": "domain-name"|null
-}`
+}
+
+IMPORTANT: Do NOT fabricate key points. If the discussion is brief or lacks meaningful decisions/insights, return an empty keyPoints array.`
   }
 
   return prompt
@@ -376,22 +378,20 @@ ${domainInstructions}
 For each task, extract **task-specific action items** - concrete steps needed to complete ONLY this task.
 
 <action_items_rules>
-- Action items must be SPECIFIC to the individual task, not global discussion insights
-- Each task should have 2-6 actionable checklist items
-- Focus on WHAT needs to be done for THIS task, not WHY decisions were made
-- Avoid duplicating the same action items across multiple tasks
-- If task is simple, fewer items are okay (even 1-2)
-- If no clear action items exist for a task, return null or empty array
+CRITICAL: Only extract action items that are EXPLICITLY mentioned in the discussion.
+- Do NOT fabricate or infer action items that weren't stated
+- Do NOT generate implementation steps based on the task title
+- If no specific steps/subtasks are mentioned, return null
+- Only include items the participants actually discussed doing
 
-GOOD task-specific action items:
-✅ "Create collapsible nav component with 48px/240px states"
-✅ "Add aria-label attributes to all navigation items"
-✅ "Test responsive behavior on mobile devices"
+GOOD - Extracting what was actually said:
+✅ Discussion: "We need to update the colors and test on mobile"
+   → actionItems: ["Update the colors", "Test on mobile"]
 
-BAD action items (too generic/global):
-❌ "Analytics showed Dashboard is used 68% of the time" (this is context, not an action)
-❌ "Rejected bottom nav pattern in favor of side nav" (this is a decision, not a task step)
-❌ "Team decided to use Lucide icons" (this is background, not what to do)
+BAD - Fabricating steps not mentioned:
+❌ Discussion: "Convert codebase to JavaScript"
+   → actionItems: ["Audit current codebase", "Set up tooling", "Convert files"] // WRONG - none of this was discussed
+   → actionItems: null // CORRECT - no specific steps were mentioned
 </action_items_rules>
 
 <examples>

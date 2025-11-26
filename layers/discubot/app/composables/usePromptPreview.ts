@@ -71,7 +71,7 @@ function buildSummaryPrompt(customPrompt?: string): string {
     prompt = `Analyze this discussion thread${sourceContext} and provide:
 
 1. A concise summary (2-3 sentences)
-2. 3-5 key points or decisions
+2. Key points or decisions (ONLY if meaningful ones exist - return empty array if none)
 3. Overall sentiment (positive, neutral, or negative)
 
 Discussion:
@@ -80,10 +80,12 @@ ${messages}
 Respond in JSON format:
 {
   "summary": "...",
-  "keyPoints": ["...", "...", "..."],
+  "keyPoints": ["..."] or [],
   "sentiment": "positive|neutral|negative",
   "confidence": 0.0-1.0
-}`
+}
+
+IMPORTANT: Do NOT fabricate key points. If the discussion is brief or lacks meaningful decisions/insights, return an empty keyPoints array.`
   }
 
   return prompt
