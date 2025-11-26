@@ -58,9 +58,65 @@ const integrations = [
 
     <!-- Content -->
     <div class="mx-auto max-w-4xl px-6 text-center lg:px-8">
+      <!-- Panda Logo -->
+      <div
+        class="mb-8 flex justify-center transition-all duration-700"
+        :class="isVisible ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-8 opacity-0 scale-90'"
+      >
+        <svg
+          viewBox="0 0 200 200"
+          class="size-48 drop-shadow-2xl sm:size-56 md:size-64"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <!-- Left Ear -->
+          <ellipse cx="55" cy="45" rx="30" ry="28" class="fill-gray-900 dark:fill-gray-100" />
+          <ellipse cx="55" cy="45" rx="18" ry="16" class="fill-gray-700 dark:fill-gray-300" />
+
+          <!-- Right Ear -->
+          <ellipse cx="145" cy="45" rx="30" ry="28" class="fill-gray-900 dark:fill-gray-100" />
+          <ellipse cx="145" cy="45" rx="18" ry="16" class="fill-gray-700 dark:fill-gray-300" />
+
+          <!-- Face (white/cream) -->
+          <ellipse cx="100" cy="110" rx="70" ry="65" class="fill-white dark:fill-gray-200" />
+
+          <!-- Left Eye Patch -->
+          <ellipse cx="70" cy="95" rx="25" ry="22" class="fill-gray-900 dark:fill-gray-800" transform="rotate(-15 70 95)" />
+
+          <!-- Right Eye Patch -->
+          <ellipse cx="130" cy="95" rx="25" ry="22" class="fill-gray-900 dark:fill-gray-800" transform="rotate(15 130 95)" />
+
+          <!-- Left Eye (white) -->
+          <ellipse cx="72" cy="95" rx="10" ry="11" class="fill-white" />
+
+          <!-- Right Eye (white) -->
+          <ellipse cx="128" cy="95" rx="10" ry="11" class="fill-white" />
+
+          <!-- Left Pupil -->
+          <circle cx="74" cy="97" r="5" class="fill-gray-900 dark:fill-black" />
+          <circle cx="76" cy="95" r="2" class="fill-white" />
+
+          <!-- Right Pupil -->
+          <circle cx="126" cy="97" r="5" class="fill-gray-900 dark:fill-black" />
+          <circle cx="128" cy="95" r="2" class="fill-white" />
+
+          <!-- Nose -->
+          <ellipse cx="100" cy="125" rx="12" ry="8" class="fill-gray-900 dark:fill-gray-800" />
+
+          <!-- Mouth -->
+          <path d="M 88 135 Q 100 148 112 135" stroke="currentColor" stroke-width="3" fill="none" class="stroke-gray-700 dark:stroke-gray-600" />
+
+          <!-- Blush (left) -->
+          <ellipse cx="55" cy="120" rx="12" ry="8" class="fill-pink-300/50 dark:fill-pink-400/30" />
+
+          <!-- Blush (right) -->
+          <ellipse cx="145" cy="120" rx="12" ry="8" class="fill-pink-300/50 dark:fill-pink-400/30" />
+        </svg>
+      </div>
+
       <!-- Trust badge -->
       <div
-        class="mb-8 flex items-center justify-center gap-2 transition-all duration-700"
+        class="mb-8 flex items-center justify-center gap-2 transition-all duration-700 delay-150"
         :class="isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'"
       >
         <UBadge color="primary" variant="subtle" size="lg" class="animate-pulse-subtle">
