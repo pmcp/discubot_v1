@@ -1415,6 +1415,43 @@ export async function processDiscussion(
         discussionId,
       })
 
+      // Store discovered users as pending mappings
+      if (bootstrapResult.mentionedUsers.length > 0) {
+        // Determine sourceWorkspaceId based on source type
+        let sourceWorkspaceId: string
+        if (parsed.sourceType === 'slack') {
+          sourceWorkspaceId = flowData?.matchedInput?.sourceMetadata?.slackTeamId
+            || config?.sourceMetadata?.slackTeamId
+            || ''
+        } else if (parsed.sourceType === 'figma') {
+          sourceWorkspaceId = flowData?.matchedInput?.emailSlug
+            || config?.emailSlug
+            || ''
+        } else {
+          sourceWorkspaceId = ''
+        }
+
+        if (sourceWorkspaceId) {
+          const newMappingsCount = await storeDiscoveredUsers(
+            bootstrapResult.mentionedUsers,
+            actualTeamId,
+            parsed.sourceType,
+            sourceWorkspaceId,
+          )
+          logger.info('Stored discovered users from bootstrap comment', {
+            newMappingsCount,
+            totalMentioned: bootstrapResult.mentionedUsers.length,
+            sourceWorkspaceId,
+          })
+        } else {
+          logger.warn('Cannot store discovered users - sourceWorkspaceId not found', {
+            sourceType: parsed.sourceType,
+            hasFlowData: !!flowData,
+            hasConfig: !!config,
+          })
+        }
+      }
+
       // Update discussion status to indicate bootstrap processing
       await updateDiscussionStatus(discussionId, 'completed')
 
