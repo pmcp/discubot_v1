@@ -1435,17 +1435,17 @@ export async function processDiscussion(
           bootstrapSourceWorkspaceId = ''
         }
 
-        if (sourceWorkspaceId) {
+        if (bootstrapSourceWorkspaceId) {
           const newMappingsCount = await storeDiscoveredUsers(
             bootstrapResult.mentionedUsers,
             actualTeamId,
             parsed.sourceType,
-            sourceWorkspaceId,
+            bootstrapSourceWorkspaceId,
           )
           logger.info('Stored discovered users from bootstrap comment', {
             newMappingsCount,
             totalMentioned: bootstrapResult.mentionedUsers.length,
-            sourceWorkspaceId,
+            sourceWorkspaceId: bootstrapSourceWorkspaceId,
           })
         } else {
           logger.warn('Cannot store discovered users - sourceWorkspaceId not found', {
