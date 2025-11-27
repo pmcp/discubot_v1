@@ -421,7 +421,7 @@
 
 #### Phase 3: Components (~5h)
 
-- [ ] Task 17.9: Create UI components (5h)
+- 🔄 Task 17.9: Create UI components (5h)
   - `NotionUserPicker.vue` - Reusable dropdown for selecting Notion users
   - `UserMappingTable.vue` - Display existing mappings
   - `UserMappingDrawer.vue` - Container routing to correct discovery UI
