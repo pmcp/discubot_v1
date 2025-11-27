@@ -13,8 +13,8 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 93 / 95 |
-| Remaining Tasks | 2 |
+| Tasks Completed | 94 / 95 |
+| Remaining Tasks | 1 |
 | Hours Logged | 159 / 175-178 |
 | Current Phase | Phase 17 - User Mapping Flow-Aware UX 🎯 |
 | Days Elapsed | 7 / 21 |
@@ -376,7 +376,7 @@
 
 ### Phase 17: User Mapping Flow-Aware UX 🎯
 **Status**: In Progress
-**Progress**: 8/10 tasks (80%)
+**Progress**: 9/10 tasks (90%)
 **Time**: 4h / 11-13h estimated
 **Target**: Week 3
 **Briefing**: `/docs/briefings/user-mapping-flow-brief.md`
@@ -421,7 +421,7 @@
 
 #### Phase 3: Components (~5h)
 
-- 🔄 Task 17.9: Create UI components (5h)
+- [x] Task 17.9: Create UI components (5h) ✅
   - `NotionUserPicker.vue` - Reusable dropdown for selecting Notion users
   - `UserMappingTable.vue` - Display existing mappings
   - `UserMappingDrawer.vue` - Container routing to correct discovery UI
