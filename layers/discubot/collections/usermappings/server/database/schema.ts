@@ -27,7 +27,7 @@ export const discubotUsermappings = sqliteTable('discubot_usermappings', {
   sourceUserId: text('sourceUserId').notNull(),
   sourceUserEmail: text('sourceUserEmail'),
   sourceUserName: text('sourceUserName'),
-  notionUserId: text('notionUserId').notNull(),
+  notionUserId: text('notionUserId'), // null = pending mapping (discovered but not yet mapped)
   notionUserName: text('notionUserName'),
   notionUserEmail: text('notionUserEmail'),
   mappingType: text('mappingType').notNull(),

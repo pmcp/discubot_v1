@@ -10,7 +10,7 @@ export interface DiscubotUserMapping {
   sourceUserId: string
   sourceUserEmail?: string
   sourceUserName?: string
-  notionUserId: string
+  notionUserId: string | null // null = pending mapping (discovered but not yet mapped)
   notionUserName?: string
   notionUserEmail?: string
   mappingType: string
