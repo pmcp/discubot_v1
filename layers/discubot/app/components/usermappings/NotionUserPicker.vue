@@ -6,7 +6,13 @@
  * Used in user mapping flows to select Notion users.
  */
 
-import type { NotionUser } from '~/layers/discubot/app/composables/useNotionUsers'
+interface NotionUser {
+  id: string
+  name: string
+  email: string | null
+  type: 'person' | 'bot'
+  avatarUrl: string | null
+}
 
 interface Props {
   /** Notion API token */
@@ -111,18 +117,15 @@ const filteredItems = computed(() => {
     <!-- User picker -->
     <USelectMenu
       v-else
-      :model-value="modelValue"
-      :items="filteredItems"
+      :model-value="modelValue || undefined"
+      :items="userItems"
       value-attribute="value"
-      option-attribute="label"
       :placeholder="placeholder"
       :disabled="disabled || loading"
       :loading="loading"
       searchable
-      :search-placeholder="'Search by name or email...'"
-      :size="size"
       class="w-full"
-      @update:model-value="handleSelect"
+      @update:model-value="(val: string) => handleSelect(val || null)"
     >
       <!-- Selected value display -->
       <template #leading>
@@ -138,8 +141,8 @@ const filteredItems = computed(() => {
         />
       </template>
 
-      <!-- Option template -->
-      <template #option="{ item }">
+      <!-- Option item template -->
+      <template #item="{ item }">
         <div class="flex items-center gap-2">
           <UAvatar
             v-if="item.avatarUrl"

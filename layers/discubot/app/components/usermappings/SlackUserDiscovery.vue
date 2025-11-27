@@ -6,9 +6,36 @@
  * by email and manual mapping capabilities.
  */
 
-import type { SlackUser } from '~/layers/discubot/app/composables/useSlackUsers'
-import type { NotionUser } from '~/layers/discubot/app/composables/useNotionUsers'
-import type { UserMatch, SourceUser } from '~/layers/discubot/app/composables/useAutoMatch'
+interface SlackUser {
+  id: string
+  name: string
+  email: string | null
+  avatar: string | null
+  realName: string | null
+}
+
+interface NotionUser {
+  id: string
+  name: string
+  email: string | null
+  type: 'person' | 'bot'
+  avatarUrl: string | null
+}
+
+interface SourceUser {
+  id: string
+  name: string
+  email: string | null
+  avatar?: string | null
+  realName?: string | null
+}
+
+interface UserMatch {
+  sourceUser: SourceUser
+  notionUser: NotionUser
+  confidence: number
+  matchType: 'email' | 'name' | 'manual'
+}
 
 interface Props {
   /** Slack workspace ID */
