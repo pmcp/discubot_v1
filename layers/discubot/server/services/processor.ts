@@ -38,6 +38,7 @@ import type {
   FlowOutput,
 } from '#layers/discubot/types'
 import { analyzeDiscussion } from './ai'
+import { extractMentionsFromComment } from '../adapters/figma'
 import { createNotionTask, createNotionTasks, createNotionConfigFromOutput } from './notion'
 import { retryWithBackoff } from '../utils/retry'
 import { SYSTEM_USER_ID } from '../utils/constants'
@@ -116,6 +117,178 @@ function validateParsedDiscussion(parsed: ParsedDiscussion): void {
       { missing },
       false, // Not retryable - bad input
     )
+  }
+}
+
+/**
+ * Bootstrap comment detection result
+ */
+export interface BootstrapCommentResult {
+  isBootstrap: boolean
+  mentionedUsers: Array<{ userId: string, displayName: string }>
+  reason?: string
+}
+
+/**
+ * Store discovered users as pending user mappings
+ *
+ * Creates user mappings with notionUserId: null (pending state) for discovered
+ * users from bootstrap comments. Skips users that already have mappings.
+ *
+ * @param mentionedUsers - Users discovered from @mentions
+ * @param teamId - Team ID for the mapping
+ * @param sourceType - Source platform ('slack' | 'figma')
+ * @param sourceWorkspaceId - Workspace identifier (Slack team ID or Figma email slug)
+ * @returns Number of new pending mappings created
+ */
+async function storeDiscoveredUsers(
+  mentionedUsers: Array<{ userId: string, displayName: string }>,
+  teamId: string,
+  sourceType: string,
+  sourceWorkspaceId: string,
+): Promise<number> {
+  if (mentionedUsers.length === 0) {
+    return 0
+  }
+
+  const { createDiscubotUserMapping } = await import(
+    '#layers/discubot/collections/usermappings/server/database/queries'
+  )
+
+  // Get existing mappings to avoid duplicates
+  const { getAllDiscubotUserMappings } = await import(
+    '#layers/discubot/collections/usermappings/server/database/queries'
+  )
+  const existingMappings = await getAllDiscubotUserMappings(teamId)
+  const existingSourceUserIds = new Set(
+    existingMappings
+      .filter((m) => m.sourceType === sourceType && m.sourceWorkspaceId === sourceWorkspaceId)
+      .map((m) => m.sourceUserId),
+  )
+
+  let createdCount = 0
+
+  for (const user of mentionedUsers) {
+    // Skip if mapping already exists for this source user
+    if (existingSourceUserIds.has(user.userId)) {
+      logger.debug('Skipping discovered user - mapping already exists', {
+        userId: user.userId,
+        displayName: user.displayName,
+      })
+      continue
+    }
+
+    try {
+      await createDiscubotUserMapping({
+        teamId,
+        owner: SYSTEM_USER_ID,
+        sourceType,
+        sourceWorkspaceId,
+        sourceUserId: user.userId,
+        sourceUserName: user.displayName,
+        sourceUserEmail: undefined, // Unknown from @mention
+        notionUserId: null, // Pending - to be mapped by user
+        notionUserName: undefined,
+        notionUserEmail: undefined,
+        mappingType: 'discovered',
+        confidence: 0, // No confidence until mapped
+        active: false, // Inactive until mapped
+        metadata: {
+          discoveredAt: new Date().toISOString(),
+          discoverySource: 'bootstrap_comment',
+        },
+      })
+      createdCount++
+      logger.debug('Created pending user mapping', {
+        userId: user.userId,
+        displayName: user.displayName,
+        sourceType,
+        sourceWorkspaceId,
+      })
+    } catch (error) {
+      logger.warn('Failed to create pending user mapping', {
+        userId: user.userId,
+        error,
+      })
+    }
+  }
+
+  logger.info('Stored discovered users as pending mappings', {
+    totalDiscovered: mentionedUsers.length,
+    newMappingsCreated: createdCount,
+    skippedExisting: mentionedUsers.length - createdCount,
+    sourceType,
+    sourceWorkspaceId,
+  })
+
+  return createdCount
+}
+
+/**
+ * Detect if a thread is a bootstrap/user sync comment
+ *
+ * Bootstrap comments are used to trigger user discovery without creating tasks.
+ * Detection triggers (case insensitive):
+ * - Text contains "user sync"
+ * - Text contains "bootstrap"
+ * - Text mentions "@discubot" or similar bot mention
+ *
+ * For Figma sources, extracts @mentions using the Figma mention format.
+ *
+ * @param thread - The discussion thread to check
+ * @param sourceType - The source type ('slack' | 'figma')
+ * @returns Bootstrap detection result with extracted mentions
+ */
+export function isBootstrapComment(
+  thread: DiscussionThread,
+  sourceType: string,
+): BootstrapCommentResult {
+  const content = thread.rootMessage.content.toLowerCase()
+
+  // Check for bootstrap triggers
+  const hasUserSync = content.includes('user sync')
+  const hasBootstrap = content.includes('bootstrap')
+  const hasDiscubotMention = content.includes('@discubot')
+    || content.includes('@discu_bot')
+    || content.includes('@discubot_') // Handle variations
+
+  const isBootstrap = hasUserSync || hasBootstrap || hasDiscubotMention
+
+  if (!isBootstrap) {
+    return {
+      isBootstrap: false,
+      mentionedUsers: [],
+    }
+  }
+
+  // Determine the reason for bootstrap detection
+  let reason: string
+  if (hasUserSync) {
+    reason = 'Contains "user sync" keyword'
+  } else if (hasBootstrap) {
+    reason = 'Contains "bootstrap" keyword'
+  } else {
+    reason = 'Contains @discubot mention'
+  }
+
+  // Extract mentions based on source type
+  let mentionedUsers: Array<{ userId: string, displayName: string }> = []
+
+  if (sourceType === 'figma') {
+    // Use the Figma mention extractor for the original (non-lowercased) content
+    const figmaMentions = extractMentionsFromComment(thread.rootMessage.content)
+    mentionedUsers = figmaMentions.map((m) => ({
+      userId: m.userId,
+      displayName: m.displayName,
+    }))
+  }
+  // For Slack, mentions would be extracted differently (already parsed by Slack adapter)
+  // Could add Slack mention extraction here if needed
+
+  return {
+    isBootstrap: true,
+    mentionedUsers,
+    reason,
   }
 }
 
@@ -1041,8 +1214,6 @@ export async function processDiscussion(
           flowId: flowData?.flow.id, // Include flow ID if using flows
           inputId: flowData?.matchedInput.id, // Include matched input ID
         },
-        createdBy: SYSTEM_USER_ID,
-        updatedBy: SYSTEM_USER_ID,
       })
 
       jobId = job?.id
@@ -1227,6 +1398,138 @@ export async function processDiscussion(
     })
 
     let notionTasks: NotionTaskResult[] = []
+
+    // ============================================================================
+    // BOOTSTRAP COMMENT CHECK
+    // ============================================================================
+    // Check if this is a bootstrap/user sync comment
+    // Bootstrap comments skip task creation and are used for user discovery
+    const bootstrapResult = isBootstrapComment(thread, parsed.sourceType)
+
+    if (bootstrapResult.isBootstrap) {
+      logger.info('Bootstrap comment detected - skipping Notion task creation', {
+        reason: bootstrapResult.reason,
+        mentionedUserCount: bootstrapResult.mentionedUsers.length,
+        mentionedUsers: bootstrapResult.mentionedUsers.map((u) => u.displayName),
+        sourceType: parsed.sourceType,
+        discussionId,
+      })
+
+      // Store discovered users as pending mappings
+      if (bootstrapResult.mentionedUsers.length > 0) {
+        // Determine sourceWorkspaceId based on source type
+        // Use the same sourceWorkspaceId that was resolved earlier in Stage 2.5
+        // For Slack: slackTeamId from sourceMetadata
+        // For Figma: emailSlug from flow input or parsed metadata
+        let bootstrapSourceWorkspaceId: string
+        if (parsed.sourceType === 'slack') {
+          bootstrapSourceWorkspaceId = flowData?.matchedInput?.sourceMetadata?.slackTeamId
+            || config?.sourceMetadata?.slackTeamId
+            || ''
+        } else if (parsed.sourceType === 'figma') {
+          // For Figma, use emailSlug from flow input or parsed metadata
+          bootstrapSourceWorkspaceId = flowData?.matchedInput?.emailSlug
+            || parsed.metadata?.emailSlug
+            || ''
+        } else {
+          bootstrapSourceWorkspaceId = ''
+        }
+
+        if (bootstrapSourceWorkspaceId) {
+          const newMappingsCount = await storeDiscoveredUsers(
+            bootstrapResult.mentionedUsers,
+            actualTeamId,
+            parsed.sourceType,
+            bootstrapSourceWorkspaceId,
+          )
+          logger.info('Stored discovered users from bootstrap comment', {
+            newMappingsCount,
+            totalMentioned: bootstrapResult.mentionedUsers.length,
+            sourceWorkspaceId: bootstrapSourceWorkspaceId,
+          })
+        } else {
+          logger.warn('Cannot store discovered users - sourceWorkspaceId not found', {
+            sourceType: parsed.sourceType,
+            hasFlowData: !!flowData,
+            hasConfig: !!config,
+          })
+        }
+      }
+
+      // Update discussion status to indicate bootstrap processing
+      await updateDiscussionStatus(discussionId, 'completed')
+
+      // Build config for posting reply (from flow or legacy config)
+      const replyConfig = flowData
+        ? {
+            id: flowData.matchedInput.id,
+            teamId: flowData.flow.teamId,
+            sourceType: flowData.matchedInput.sourceType,
+            apiToken: flowData.matchedInput.apiToken || '',
+            sourceMetadata: flowData.matchedInput.sourceMetadata,
+          } as SourceConfig
+        : config!
+
+      // Post reply to source with discovered users info
+      try {
+        const { getAdapter } = await import('../adapters')
+        const adapter = getAdapter(parsed.sourceType)
+
+        // Remove the initial "eyes" reaction if present
+        if ('removeReaction' in adapter && typeof adapter.removeReaction === 'function') {
+          await adapter.removeReaction(parsed.sourceThreadId, 'eyes', replyConfig)
+        }
+
+        // Build bootstrap response message
+        const userCount = bootstrapResult.mentionedUsers.length
+        const bootstrapMessage = userCount > 0
+          ? `Found ${userCount} user${userCount === 1 ? '' : 's'}. Map them in your dashboard.`
+          : 'Bootstrap comment processed. No @mentions detected - add users manually in the dashboard.'
+
+        await adapter.postReply(parsed.sourceThreadId, bootstrapMessage, replyConfig)
+        await adapter.updateStatus(parsed.sourceThreadId, 'completed', replyConfig)
+
+        logger.info('Bootstrap reply sent to source', {
+          userCount,
+          sourceType: parsed.sourceType,
+        })
+      } catch (error) {
+        logger.warn('Failed to send bootstrap reply to source', { error })
+        // Don't fail the process if reply fails
+      }
+
+      // Finalize job for bootstrap
+      if (jobId) {
+        const processingTime = Date.now() - startTime
+        try {
+          const { updateDiscubotJob } = await import(
+            '#layers/discubot/collections/jobs/server/database/queries'
+          )
+
+          await updateDiscubotJob(jobId, actualTeamId, SYSTEM_USER_ID, {
+            status: 'completed',
+            completedAt: new Date(),
+            processingTime,
+            metadata: {
+              isBootstrap: true,
+              bootstrapReason: bootstrapResult.reason,
+              mentionedUsers: bootstrapResult.mentionedUsers,
+            },
+          })
+        } catch (error) {
+          logger.warn('Failed to finalize bootstrap job', { error })
+        }
+      }
+
+      // Return early - no task creation for bootstrap comments
+      return {
+        discussionId,
+        aiAnalysis,
+        notionTasks: [], // No tasks created for bootstrap
+        processingTime: Date.now() - startTime,
+        isMultiTask: false,
+      }
+    }
 
     const aiEnabled = flowData?.flow.aiEnabled ?? config?.aiEnabled ?? false
 
