@@ -130,6 +130,101 @@ export interface BootstrapCommentResult {
 }
 
 /**
+ * Store discovered users as pending user mappings
+ *
+ * Creates user mappings with notionUserId: null (pending state) for discovered
+ * users from bootstrap comments. Skips users that already have mappings.
+ *
+ * @param mentionedUsers - Users discovered from @mentions
+ * @param teamId - Team ID for the mapping
+ * @param sourceType - Source platform ('slack' | 'figma')
+ * @param sourceWorkspaceId - Workspace identifier (Slack team ID or Figma email slug)
+ * @returns Number of new pending mappings created
+ */
+async function storeDiscoveredUsers(
+  mentionedUsers: Array<{ userId: string, displayName: string }>,
+  teamId: string,
+  sourceType: string,
+  sourceWorkspaceId: string,
+): Promise<number> {
+  if (mentionedUsers.length === 0) {
+    return 0
+  }
+
+  const { createDiscubotUserMapping } = await import(
+    '#layers/discubot/collections/usermappings/server/database/queries'
+  )
+
+  // Get existing mappings to avoid duplicates
+  const { getAllDiscubotUserMappings } = await import(
+    '#layers/discubot/collections/usermappings/server/database/queries'
+  )
+  const existingMappings = await getAllDiscubotUserMappings(teamId)
+  const existingSourceUserIds = new Set(
+    existingMappings
+      .filter((m) => m.sourceType === sourceType && m.sourceWorkspaceId === sourceWorkspaceId)
+      .map((m) => m.sourceUserId),
+  )
+
+  let createdCount = 0
+
+  for (const user of mentionedUsers) {
+    // Skip if mapping already exists for this source user
+    if (existingSourceUserIds.has(user.userId)) {
+      logger.debug('Skipping discovered user - mapping already exists', {
+        userId: user.userId,
+        displayName: user.displayName,
+      })
+      continue
+    }
+
+    try {
+      await createDiscubotUserMapping({
+        teamId,
+        owner: SYSTEM_USER_ID,
+        sourceType,
+        sourceWorkspaceId,
+        sourceUserId: user.userId,
+        sourceUserName: user.displayName,
+        sourceUserEmail: undefined, // Unknown from @mention
+        notionUserId: null, // Pending - to be mapped by user
+        notionUserName: undefined,
+        notionUserEmail: undefined,
+        mappingType: 'discovered',
+        confidence: 0, // No confidence until mapped
+        active: false, // Inactive until mapped
+        metadata: {
+          discoveredAt: new Date().toISOString(),
+          discoverySource: 'bootstrap_comment',
+        },
+      })
+      createdCount++
+      logger.debug('Created pending user mapping', {
+        userId: user.userId,
+        displayName: user.displayName,
+        sourceType,
+        sourceWorkspaceId,
+      })
+    } catch (error) {
+      logger.warn('Failed to create pending user mapping', {
+        userId: user.userId,
+        error,
+      })
+    }
+  }
+
+  logger.info('Stored discovered users as pending mappings', {
+    totalDiscovered: mentionedUsers.length,
+    newMappingsCreated: createdCount,
+    skippedExisting: mentionedUsers.length - createdCount,
+    sourceType,
+    sourceWorkspaceId,
+  })
+
+  return createdCount
+}
+
+/**
  * Detect if a thread is a bootstrap/user sync comment
  *
  * Bootstrap comments are used to trigger user discovery without creating tasks.
