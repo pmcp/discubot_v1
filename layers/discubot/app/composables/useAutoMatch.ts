@@ -181,8 +181,10 @@ export function useAutoMatch() {
     const index = matches.value.findIndex(m => m.sourceUser.id === sourceUserId)
     if (index !== -1) {
       const match = matches.value[index]
-      matches.value.splice(index, 1)
-      unmatched.value.push(match.sourceUser)
+      if (match) {
+        matches.value.splice(index, 1)
+        unmatched.value.push(match.sourceUser)
+      }
     }
   }
 
