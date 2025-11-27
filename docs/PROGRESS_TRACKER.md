@@ -2,8 +2,8 @@
 
 **Project Start Date**: 2025-11-11
 **Expected Completion**: 2025-12-16 (5 weeks)
-**Current Phase**: Phase 17 - User Mapping Flow-Aware UX 🎯
-**Overall Progress**: 85/95 tasks complete (10 new tasks added)
+**Current Phase**: Phase 17 - User Mapping Flow-Aware UX ✅
+**Overall Progress**: 95/95 tasks complete (Phase 17 complete!)
 
 > **📋 Historical Archive**: For completed phases (1-7, 9-11, 13), see [PROGRESS_MADE.md](./PROGRESS_MADE.md)
 
@@ -13,10 +13,10 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 94 / 95 |
-| Remaining Tasks | 1 |
-| Hours Logged | 159 / 175-178 |
-| Current Phase | Phase 17 - User Mapping Flow-Aware UX 🎯 |
+| Tasks Completed | 95 / 95 |
+| Remaining Tasks | 0 |
+| Hours Logged | 160.5 / 175-178 |
+| Current Phase | Phase 17 - User Mapping Flow-Aware UX ✅ |
 | Days Elapsed | 7 / 21 |
 | Blockers | 0 |
 | Tests Passing | 366+ / 440+ (83%+ - 42 expected API key failures) |
@@ -374,10 +374,10 @@
 
 ---
 
-### Phase 17: User Mapping Flow-Aware UX 🎯
-**Status**: In Progress
-**Progress**: 9/10 tasks (90%)
-**Time**: 4h / 11-13h estimated
+### Phase 17: User Mapping Flow-Aware UX ✅
+**Status**: Complete
+**Progress**: 10/10 tasks (100%)
+**Time**: 5.5h / 11-13h estimated
 **Target**: Week 3
 **Briefing**: `/docs/briefings/user-mapping-flow-brief.md`
 
@@ -430,10 +430,12 @@
 
 #### Phase 4: Integration (~1.5h)
 
-- [ ] Task 17.10: FlowBuilder integration (1.5h)
-  - Add "Manage Users" button to input cards
-  - Wire up context extraction (sourceType, sourceWorkspaceId, apiToken)
-  - Add toast notifications
+- [x] Task 17.10: FlowBuilder integration (1.5h) ✅
+  - Added "Manage Users" button to input cards with UTooltip
+  - Wired up context extraction (sourceType, sourceWorkspaceId from sourceMetadata, apiToken)
+  - Added UserMappingDrawer component integration
+  - Added toast notifications for success and error states
+  - Validation: Shows warning if no workspace ID or no Notion output configured
 
 **Checkpoint**: User can click "Manage Users" on any flow input, Slack users auto-fetched, Figma bootstrap flow works, mappings saved with correct sourceWorkspaceId
 
@@ -841,4 +843,4 @@ Track items deferred to future phases:
 
 ---
 
-**Last Updated**: 2025-11-17
+**Last Updated**: 2025-11-27

@@ -176,6 +176,16 @@ const isEditInputModalOpen = ref(false)
 const editingInputIndex = ref<number | null>(null)
 const editingInput = ref<Partial<FlowInput> | null>(null)
 
+// User mapping drawer state
+const isUserMappingDrawerOpen = ref(false)
+const userMappingContext = ref<{
+  sourceType: 'slack' | 'figma'
+  sourceWorkspaceId: string
+  apiToken?: string
+  notionToken: string
+  inputName: string
+} | null>(null)
+
 // Computed email address for Figma inputs
 const computedEmailAddress = computed(() => {
   if (inputFormState.sourceType === 'figma' && inputFormState.emailAddress) {
@@ -384,6 +394,64 @@ async function saveEditInput() {
   toast.add({
     title: 'Input updated',
     description: `${input.name} has been updated`,
+    color: 'success'
+  })
+}
+
+function openUserMappingDrawer(index: number) {
+  const input = inputsList.value[index]
+
+  if (!input) {
+    toast.add({
+      title: 'Error',
+      description: 'Input not found',
+      color: 'error'
+    })
+    return
+  }
+
+  // Get workspace ID based on source type
+  const sourceWorkspaceId = input.sourceType === 'slack'
+    ? (input.sourceMetadata?.slackTeamId as string) || ''
+    : input.emailAddress || input.emailSlug || ''
+
+  if (!sourceWorkspaceId) {
+    toast.add({
+      title: 'Missing Workspace ID',
+      description: 'This input doesn\'t have a workspace ID configured yet.',
+      color: 'warning'
+    })
+    return
+  }
+
+  // Get Notion token from first Notion output
+  const notionOutput = outputsList.value.find(o => o.outputType === 'notion')
+  const notionToken = (notionOutput?.outputConfig as { notionToken?: string })?.notionToken || ''
+
+  if (!notionToken) {
+    toast.add({
+      title: 'No Notion Output',
+      description: 'Add a Notion output first to manage user mappings.',
+      color: 'warning'
+    })
+    return
+  }
+
+  userMappingContext.value = {
+    sourceType: input.sourceType as 'slack' | 'figma',
+    sourceWorkspaceId,
+    apiToken: input.apiToken,
+    notionToken,
+    inputName: input.name || 'Input'
+  }
+
+  isUserMappingDrawerOpen.value = true
+}
+
+function handleUserMappingSaved() {
+  toast.add({
+    title: 'Mappings Saved',
+    description: 'User mappings have been saved successfully.',
     color: 'success'
   })
 }
@@ -1261,6 +1329,16 @@ function cancel() {
                     </div>
                   </div>
                   <div class="flex gap-2">
+                    <UTooltip text="Manage user mappings">
+                      <UButton
+                        type="button"
+                        color="neutral"
+                        variant="ghost"
+                        size="sm"
+                        icon="i-lucide-users"
+                        @click="openUserMappingDrawer(index)"
+                      />
+                    </UTooltip>
                     <UButton
                       type="button"
                       color="neutral"
@@ -1624,7 +1702,18 @@ function cancel() {
       </template>
     </UStepper>
 
-
+    <!-- User Mapping Drawer -->
+    <UserMappingDrawer
+      v-if="userMappingContext"
+      v-model:open="isUserMappingDrawerOpen"
+      :source-type="userMappingContext.sourceType"
+      :source-workspace-id="userMappingContext.sourceWorkspaceId"
+      :api-token="userMappingContext.apiToken"
+      :notion-token="userMappingContext.notionToken"
+      :team-id="teamId"
+      :input-name="userMappingContext.inputName"
+      @saved="handleUserMappingSaved"
+    />
   </div>
 </template>
 
