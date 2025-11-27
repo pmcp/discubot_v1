@@ -60,7 +60,7 @@ const sourceTypeIcon = computed(() => {
 </script>
 
 <template>
-  <USlideover v-model:open="isOpen" :ui="{ width: 'max-w-2xl' }">
+  <USlideover v-model:open="isOpen" class="max-w-2xl">
     <!-- Header -->
     <template #header>
       <div class="flex items-center gap-3">
