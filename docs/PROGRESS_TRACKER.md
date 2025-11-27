@@ -13,9 +13,9 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 90 / 95 |
-| Remaining Tasks | 5 |
-| Hours Logged | 158 / 175-178 |
+| Tasks Completed | 93 / 95 |
+| Remaining Tasks | 2 |
+| Hours Logged | 159 / 175-178 |
 | Current Phase | Phase 17 - User Mapping Flow-Aware UX 🎯 |
 | Days Elapsed | 7 / 21 |
 | Blockers | 0 |
@@ -376,8 +376,8 @@
 
 ### Phase 17: User Mapping Flow-Aware UX 🎯
 **Status**: In Progress
-**Progress**: 5/10 tasks (50%)
-**Time**: 3h / 11-13h estimated
+**Progress**: 8/10 tasks (80%)
+**Time**: 4h / 11-13h estimated
 **Target**: Week 3
 **Briefing**: `/docs/briefings/user-mapping-flow-brief.md`
 
@@ -413,11 +413,11 @@
   - Uses mappingType: `'discovered'`, confidence: 0, active: false
   - Skips users that already have mappings (deduplication)
 
-#### Phase 2: Composables (~1h)
+#### Phase 2: Composables (~1h) ✅
 
-- [ ] Task 17.6: Create `useSlackUsers.ts` composable (20min)
-- [ ] Task 17.7: Create `useNotionUsers.ts` wrapper composable (20min)
-- [ ] Task 17.8: Create `useAutoMatch.ts` composable (20min)
+- [x] Task 17.6: Create `useSlackUsers.ts` composable (20min) ✅
+- [x] Task 17.7: Create `useNotionUsers.ts` wrapper composable (20min) ✅
+- [x] Task 17.8: Create `useAutoMatch.ts` composable (20min) ✅
 
 #### Phase 3: Components (~5h)
 
