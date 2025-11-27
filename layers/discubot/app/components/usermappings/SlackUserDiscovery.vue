@@ -398,7 +398,7 @@ onMounted(initialize)
                 :team-id="teamId"
                 placeholder="Select Notion user..."
                 size="sm"
-                @select="(notionUser) => handleManualMatch(user, notionUser?.id || null)"
+                @select="(notionUser: NotionUser | null) => handleManualMatch(user, notionUser?.id || null)"
               />
             </div>
           </div>

@@ -8,7 +8,13 @@
  * 3. Manual entry fallback
  */
 
-import type { NotionUser } from '~/layers/discubot/app/composables/useNotionUsers'
+interface NotionUser {
+  id: string
+  name: string
+  email: string | null
+  type: 'person' | 'bot'
+  avatarUrl: string | null
+}
 
 interface Props {
   /** Figma workspace ID (email slug) */
@@ -325,7 +331,7 @@ onMounted(initialize)
               :team-id="teamId"
               placeholder="Select Notion user..."
               size="sm"
-              @select="(notionUser) => notionUser && saveDiscoveredMapping(mapping, notionUser.id)"
+              @select="(notionUser: NotionUser | null) => notionUser && saveDiscoveredMapping(mapping, notionUser.id)"
             />
           </div>
 
