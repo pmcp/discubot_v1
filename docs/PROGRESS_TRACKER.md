@@ -13,9 +13,9 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 89 / 95 |
-| Remaining Tasks | 6 |
-| Hours Logged | 157.5 / 175-178 |
+| Tasks Completed | 90 / 95 |
+| Remaining Tasks | 5 |
+| Hours Logged | 158 / 175-178 |
 | Current Phase | Phase 17 - User Mapping Flow-Aware UX 🎯 |
 | Days Elapsed | 7 / 21 |
 | Blockers | 0 |
@@ -376,8 +376,8 @@
 
 ### Phase 17: User Mapping Flow-Aware UX 🎯
 **Status**: In Progress
-**Progress**: 4/10 tasks (40%)
-**Time**: 2.5h / 11-13h estimated
+**Progress**: 5/10 tasks (50%)
+**Time**: 3h / 11-13h estimated
 **Target**: Week 3
 **Briefing**: `/docs/briefings/user-mapping-flow-brief.md`
 
@@ -406,10 +406,12 @@
   - Added `isBootstrapComment()` function with detection for "user sync", "bootstrap", "@discubot"
   - Bootstrap comments skip Notion task creation and post reply with discovered user count
 
-- 🔄 Task 17.5: Store discovered users as pending mappings (30min)
-  - Create user mappings with `notionUserId: null` (pending)
-  - Use mappingType: `'discovered'`
-  - confidence: 0 until mapped
+- [x] Task 17.5: Store discovered users as pending mappings (30min) ✅
+  - Updated schema to make `notionUserId` nullable (pending state)
+  - Created `storeDiscoveredUsers()` function in processor
+  - Integrated with bootstrap comment handler
+  - Uses mappingType: `'discovered'`, confidence: 0, active: false
+  - Skips users that already have mappings (deduplication)
 
 #### Phase 2: Composables (~1h)
 
