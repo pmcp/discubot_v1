@@ -406,7 +406,7 @@
   - Added `isBootstrapComment()` function with detection for "user sync", "bootstrap", "@discubot"
   - Bootstrap comments skip Notion task creation and post reply with discovered user count
 
-- [ ] Task 17.5: Store discovered users as pending mappings (30min)
+- 🔄 Task 17.5: Store discovered users as pending mappings (30min)
   - Create user mappings with `notionUserId: null` (pending)
   - Use mappingType: `'discovered'`
   - confidence: 0 until mapped
