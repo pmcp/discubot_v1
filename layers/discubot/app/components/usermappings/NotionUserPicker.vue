@@ -51,21 +51,18 @@ watch(
   () => [props.notionToken, props.teamId],
   async ([token, team]) => {
     if (token && team) {
-      await fetchNotionUsers({ notionToken: token, teamId: team })
+      await fetchNotionUsers({ notionToken: token as string, teamId: team as string })
       hasFetched.value = true
     }
   },
   { immediate: true }
 )
 
-// Format users for USelectMenu
+// Format users for USelectMenu - use simple string items
 const userItems = computed(() => {
   return users.value.map(user => ({
-    value: user.id,
-    label: user.name,
-    email: user.email,
-    avatarUrl: user.avatarUrl,
-    user // Keep reference to full user object
+    label: `${user.name}${user.email ? ` (${user.email})` : ''}`,
+    value: user.id
   }))
 })
 
@@ -76,24 +73,12 @@ const selectedUser = computed(() => {
 })
 
 // Handle selection change
-function handleSelect(value: string | null) {
+function handleSelect(item: { label: string; value: string } | undefined) {
+  const value = item?.value || null
   emit('update:modelValue', value)
   const user = value ? users.value.find(u => u.id === value) || null : null
   emit('select', user)
 }
-
-// Search filter
-const searchQuery = ref('')
-
-const filteredItems = computed(() => {
-  if (!searchQuery.value) return userItems.value
-
-  const query = searchQuery.value.toLowerCase()
-  return userItems.value.filter(item =>
-    item.label.toLowerCase().includes(query) ||
-    (item.email && item.email.toLowerCase().includes(query))
-  )
-})
 </script>
 
 <template>
@@ -117,15 +102,14 @@ const filteredItems = computed(() => {
     <!-- User picker -->
     <USelectMenu
       v-else
-      :model-value="modelValue || undefined"
+      :model-value="userItems.find(i => i.value === modelValue)"
       :items="userItems"
-      value-attribute="value"
       :placeholder="placeholder"
       :disabled="disabled || loading"
       :loading="loading"
       searchable
       class="w-full"
-      @update:model-value="(val: string) => handleSelect(val || null)"
+      @update:model-value="handleSelect"
     >
       <!-- Selected value display -->
       <template #leading>
@@ -139,26 +123,6 @@ const filteredItems = computed(() => {
           name="i-lucide-user"
           class="w-4 h-4 text-muted"
         />
-      </template>
-
-      <!-- Option item template -->
-      <template #item="{ item }">
-        <div class="flex items-center gap-2">
-          <UAvatar
-            v-if="item.avatarUrl"
-            :src="item.avatarUrl"
-            size="2xs"
-          />
-          <UIcon
-            v-else
-            name="i-lucide-user"
-            class="w-4 h-4 text-muted"
-          />
-          <div class="flex flex-col">
-            <span class="font-medium">{{ item.label }}</span>
-            <span v-if="item.email" class="text-xs text-muted">{{ item.email }}</span>
-          </div>
-        </div>
       </template>
 
       <!-- Empty state -->
