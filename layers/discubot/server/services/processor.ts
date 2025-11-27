@@ -1418,17 +1418,21 @@ export async function processDiscussion(
       // Store discovered users as pending mappings
       if (bootstrapResult.mentionedUsers.length > 0) {
         // Determine sourceWorkspaceId based on source type
-        let sourceWorkspaceId: string
+        // Use the same sourceWorkspaceId that was resolved earlier in Stage 2.5
+        // For Slack: slackTeamId from sourceMetadata
+        // For Figma: emailSlug from flow input or parsed metadata
+        let bootstrapSourceWorkspaceId: string
         if (parsed.sourceType === 'slack') {
-          sourceWorkspaceId = flowData?.matchedInput?.sourceMetadata?.slackTeamId
+          bootstrapSourceWorkspaceId = flowData?.matchedInput?.sourceMetadata?.slackTeamId
             || config?.sourceMetadata?.slackTeamId
             || ''
         } else if (parsed.sourceType === 'figma') {
-          sourceWorkspaceId = flowData?.matchedInput?.emailSlug
-            || config?.emailSlug
+          // For Figma, use emailSlug from flow input or parsed metadata
+          bootstrapSourceWorkspaceId = flowData?.matchedInput?.emailSlug
+            || parsed.metadata?.emailSlug
             || ''
         } else {
-          sourceWorkspaceId = ''
+          bootstrapSourceWorkspaceId = ''
         }
 
         if (sourceWorkspaceId) {
