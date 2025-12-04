@@ -393,7 +393,7 @@ onMounted(initialize)
 
             <!-- Notion user picker -->
             <div class="flex-1">
-              <NotionUserPicker
+              <DiscubotUsermappingsNotionUserPicker
                 :notion-token="notionToken"
                 :team-id="teamId"
                 placeholder="Select Notion user..."
@@ -408,7 +408,7 @@ onMounted(initialize)
       <!-- Existing Mappings -->
       <div v-if="existingMappings.length > 0" class="space-y-3">
         <h5 class="font-medium">Existing Mappings ({{ existingMappings.length }})</h5>
-        <UserMappingTable
+        <DiscubotUsermappingsUserMappingTable
           :mappings="existingMappings"
           :loading="loadingMappings"
           compact
