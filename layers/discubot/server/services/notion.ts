@@ -262,7 +262,25 @@ async function buildTaskProperties(
     }
 
     // Check if this field has a mapping
-    const mapping = fieldMapping[aiField]
+    // Support both new format: { priority: { notionProperty, propertyType, valueMap } }
+    // And old format: { priorityProperty: 'Priority' }
+    let mapping = fieldMapping[aiField]
+
+    // If not found, try old format (aiField + 'Property')
+    if (!mapping) {
+      const oldKey = aiField + 'Property'
+      const oldValue = fieldMapping[oldKey]
+      if (typeof oldValue === 'string') {
+        // Convert old format to new format, default to 'select' type
+        mapping = {
+          notionProperty: oldValue,
+          propertyType: 'select', // Default assumption for legacy data
+          valueMap: {},
+        }
+        logger.warn('Using legacy field mapping format', { aiField, oldKey, oldValue })
+      }
+    }
+
     if (!mapping || !mapping.notionProperty) {
       continue
     }
