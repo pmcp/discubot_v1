@@ -38,10 +38,11 @@ const NOTION_API_VERSION = '2022-06-28'
  * Source metadata for building message URLs
  */
 export interface SourceMetadata {
-  sourceType: 'figma' | 'slack'
+  sourceType: 'figma' | 'slack' | 'notion'
   fileKey?: string // Figma
   channelId?: string // Slack
   slackTeamId?: string // Slack
+  pageId?: string // Notion - page where comments are located
 }
 
 /**
@@ -63,6 +64,13 @@ function buildMessageUrl(
 
   if (metadata.sourceType === 'slack' && metadata.channelId && metadata.slackTeamId) {
     return `https://slack.com/app_redirect?team=${metadata.slackTeamId}&channel=${metadata.channelId}&message_ts=${messageId}`
+  }
+
+  // Notion: Link to the page where the comment thread is located
+  // Notion doesn't have direct comment permalinks, so we link to the page
+  if (metadata.sourceType === 'notion' && metadata.pageId) {
+    const cleanPageId = metadata.pageId.replace(/-/g, '')
+    return `https://notion.so/${cleanPageId}`
   }
 
   return null

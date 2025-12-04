@@ -1749,7 +1749,7 @@ export async function processDiscussion(
 
       // Build source metadata for linking author names and @mentions to source platform
       const sourceMetadata: SourceMetadata | undefined = (() => {
-        const sourceType = parsed.sourceType as 'figma' | 'slack'
+        const sourceType = parsed.sourceType as 'figma' | 'slack' | 'notion'
 
         if (sourceType === 'figma') {
           const fileKey = parsed.metadata?.fileKey
@@ -1765,6 +1765,12 @@ export async function processDiscussion(
             || parsed.teamId
           if (channelId && slackTeamId) {
             return { sourceType, channelId, slackTeamId }
+          }
+        } else if (sourceType === 'notion') {
+          // For Notion, extract parentId (page ID) from metadata
+          const pageId = parsed.metadata?.parentId
+          if (pageId) {
+            return { sourceType, pageId }
           }
         }
         return undefined
