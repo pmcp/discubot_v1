@@ -160,11 +160,28 @@ async function storeDiscoveredUsers(
     '#layers/discubot/collections/usermappings/server/database/queries'
   )
   const existingMappings = await getAllDiscubotUserMappings(teamId)
+
+  // Debug: log what we got
+  logger.debug('Existing mappings for duplicate check', {
+    count: existingMappings.length,
+    mappings: existingMappings.map((m) => ({
+      sourceType: m.sourceType,
+      sourceWorkspaceId: m.sourceWorkspaceId,
+      sourceUserId: m.sourceUserId,
+    })),
+  })
+
   const existingSourceUserIds = new Set(
     existingMappings
       .filter((m) => m.sourceType === sourceType && m.sourceWorkspaceId === sourceWorkspaceId)
       .map((m) => m.sourceUserId),
   )
+
+  logger.debug('Existing source user IDs for this workspace', {
+    sourceType,
+    sourceWorkspaceId,
+    existingIds: Array.from(existingSourceUserIds),
+  })
 
   let createdCount = 0
 
@@ -228,31 +245,36 @@ async function storeDiscoveredUsers(
  * Detect if a thread is a bootstrap/user sync comment
  *
  * Bootstrap comments are used to trigger user discovery without creating tasks.
- * Detection triggers (case insensitive):
+ * Detection triggers (case insensitive, checked in both API and email content):
  * - Text contains "user sync"
  * - Text contains "bootstrap"
- * - Text mentions "@discubot" or similar bot mention
  *
- * For Figma sources, extracts @mentions using the Figma mention format.
+ * Expected format: @bot User Sync: @user1 @user2 @user3
+ * - Bot mention first (triggers webhook)
+ * - "User Sync:" keyword
+ * - Users to discover listed AFTER the keyword
+ *
+ * For Figma sources, only extracts @mentions AFTER "user sync:" to exclude the bot.
  *
  * @param thread - The discussion thread to check
  * @param sourceType - The source type ('slack' | 'figma')
+ * @param emailContent - Optional email body content (for additional trigger detection)
  * @returns Bootstrap detection result with extracted mentions
  */
 export function isBootstrapComment(
   thread: DiscussionThread,
   sourceType: string,
+  emailContent?: string,
 ): BootstrapCommentResult {
-  const content = thread.rootMessage.content.toLowerCase()
+  const apiContent = thread.rootMessage.content.toLowerCase()
+  const emailBody = emailContent?.toLowerCase() || ''
 
-  // Check for bootstrap triggers
-  const hasUserSync = content.includes('user sync')
-  const hasBootstrap = content.includes('bootstrap')
-  const hasDiscubotMention = content.includes('@discubot')
-    || content.includes('@discu_bot')
-    || content.includes('@discubot_') // Handle variations
+  // Check for bootstrap triggers in BOTH API content and email body
+  // The bot can have any name (e.g., "legoman"), so we just look for keywords
+  const hasUserSync = apiContent.includes('user sync') || emailBody.includes('user sync')
+  const hasBootstrap = apiContent.includes('bootstrap') || emailBody.includes('bootstrap')
 
-  const isBootstrap = hasUserSync || hasBootstrap || hasDiscubotMention
+  const isBootstrap = hasUserSync || hasBootstrap
 
   if (!isBootstrap) {
     return {
@@ -265,22 +287,69 @@ export function isBootstrapComment(
   let reason: string
   if (hasUserSync) {
     reason = 'Contains "user sync" keyword'
-  } else if (hasBootstrap) {
-    reason = 'Contains "bootstrap" keyword'
   } else {
-    reason = 'Contains @discubot mention'
+    reason = 'Contains "bootstrap" keyword'
   }
 
   // Extract mentions based on source type
+  // For Figma, only extract mentions AFTER "user sync:" to exclude the bot mention
   let mentionedUsers: Array<{ userId: string, displayName: string }> = []
 
   if (sourceType === 'figma') {
-    // Use the Figma mention extractor for the original (non-lowercased) content
-    const figmaMentions = extractMentionsFromComment(thread.rootMessage.content)
-    mentionedUsers = figmaMentions.map((m) => ({
-      userId: m.userId,
-      displayName: m.displayName,
-    }))
+    const originalContent = thread.rootMessage.content
+
+    // Debug: log content being parsed
+    logger.debug('Bootstrap content parsing', {
+      apiContent: originalContent.substring(0, 200),
+      emailContent: emailContent?.substring(0, 200),
+      hasUserSync,
+      hasBootstrap,
+    })
+
+    // Find "user sync" position and extract only mentions AFTER it
+    // Format: @bot User Sync: @user1 @user2 @user3
+    const userSyncIndex = originalContent.toLowerCase().indexOf('user sync')
+    if (userSyncIndex !== -1) {
+      const afterUserSync = originalContent.substring(userSyncIndex)
+
+      // Debug: log what we're extracting from
+      logger.debug('Extracting mentions after user sync', {
+        userSyncIndex,
+        afterUserSync: afterUserSync.substring(0, 100),
+      })
+
+      // Extract Figma mentions from the part AFTER "user sync"
+      const figmaMentions = extractMentionsFromComment(afterUserSync)
+
+      // Debug: log extraction result
+      logger.debug('Mention extraction result', {
+        figmaMentionsCount: figmaMentions.length,
+        figmaMentions,
+      })
+
+      mentionedUsers = figmaMentions.map((m) => ({
+        userId: m.userId,
+        displayName: m.displayName,
+      }))
+    } else {
+      // Fallback: if "user sync" not found in API content but was in email,
+      // extract all mentions from API content
+      logger.debug('User sync not in API content, using fallback extraction', {
+        originalContentLength: originalContent.length,
+      })
+
+      const figmaMentions = extractMentionsFromComment(originalContent)
+
+      logger.debug('Fallback mention extraction result', {
+        figmaMentionsCount: figmaMentions.length,
+        figmaMentions,
+      })
+
+      mentionedUsers = figmaMentions.map((m) => ({
+        userId: m.userId,
+        displayName: m.displayName,
+      }))
+    }
   }
   // For Slack, mentions would be extracted differently (already parsed by Slack adapter)
   // Could add Slack mention extraction here if needed
@@ -1222,7 +1291,10 @@ export async function processDiscussion(
         teamId: config?.teamId,
       })
     } catch (error) {
-      logger.error('Failed to create job record', { error })
+      logger.error('Failed to create job record', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      })
       // Don't fail processing if job creation fails
     }
 
@@ -1404,7 +1476,7 @@ export async function processDiscussion(
     // ============================================================================
     // Check if this is a bootstrap/user sync comment
     // Bootstrap comments skip task creation and are used for user discovery
-    const bootstrapResult = isBootstrapComment(thread, parsed.sourceType)
+    const bootstrapResult = isBootstrapComment(thread, parsed.sourceType, parsed.content)
 
     if (bootstrapResult.isBootstrap) {
       logger.info('Bootstrap comment detected - skipping Notion task creation', {

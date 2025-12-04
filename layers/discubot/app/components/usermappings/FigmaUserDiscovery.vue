@@ -55,6 +55,7 @@ async function fetchExistingMappings() {
   loadingMappings.value = true
   try {
     const response = await $fetch<any[]>(`/api/teams/${props.teamId}/discubot-usermappings`)
+
     // Filter by sourceType and sourceWorkspaceId
     const allMappings = response.filter(m =>
       m.sourceType === 'figma' && m.sourceWorkspaceId === props.workspaceId
@@ -211,11 +212,11 @@ async function deleteMapping(mapping: any) {
 
 // Copy bootstrap command
 function copyBootstrapCommand() {
-  const command = 'User sync: @everyone @discubot'
+  const command = '@yourbot User Sync: @user1 @user2 @user3'
   navigator.clipboard.writeText(command)
   toast.add({
     title: 'Copied!',
-    description: 'Paste this in a Figma comment',
+    description: 'Replace @yourbot with your bot\'s Figma name, then add team members',
     color: 'success'
   })
 }
@@ -270,12 +271,12 @@ onMounted(initialize)
 
         <div class="space-y-2">
           <p class="text-sm text-muted">
-            Post a comment in your Figma file @mentioning everyone you want to map:
+            Post a comment in your Figma file with this format:
           </p>
 
           <div class="flex items-center gap-2">
             <code class="flex-1 p-3 rounded-lg bg-gray-100 dark:bg-gray-900 font-mono text-sm">
-              User sync: @alice @bob @charlie @discubot
+              @yourbot User Sync: @alice @bob @charlie
             </code>
             <UButton
               color="neutral"
@@ -288,10 +289,11 @@ onMounted(initialize)
             </UButton>
           </div>
 
-          <p class="text-xs text-muted">
-            We'll detect the bootstrap comment and extract user IDs from @mentions.
-            Discovered users will appear below for mapping.
-          </p>
+          <div class="text-xs text-muted space-y-1">
+            <p><strong>@yourbot</strong> — First mention your bot (triggers the webhook)</p>
+            <p><strong>User Sync:</strong> — This keyword indicates a bootstrap comment</p>
+            <p><strong>@alice @bob</strong> — Users listed after will be discovered</p>
+          </div>
         </div>
       </div>
     </UCard>
@@ -326,7 +328,7 @@ onMounted(initialize)
 
           <!-- Notion user picker -->
           <div class="flex-1">
-            <NotionUserPicker
+            <DiscubotUsermappingsNotionUserPicker
               :notion-token="notionToken"
               :team-id="teamId"
               placeholder="Select Notion user..."
@@ -385,7 +387,7 @@ onMounted(initialize)
           </UFormField>
 
           <UFormField label="Notion User">
-            <NotionUserPicker
+            <DiscubotUsermappingsNotionUserPicker
               v-model="manualForm.notionUserId"
               :notion-token="notionToken"
               :team-id="teamId"
@@ -410,7 +412,7 @@ onMounted(initialize)
     <!-- Existing Mappings -->
     <div v-if="existingMappings.length > 0" class="space-y-3">
       <h5 class="font-medium">Existing Mappings ({{ existingMappings.length }})</h5>
-      <UserMappingTable
+      <DiscubotUsermappingsUserMappingTable
         :mappings="existingMappings"
         :loading="loadingMappings"
         compact

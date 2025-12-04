@@ -645,9 +645,8 @@ export function extractMentionsFromComment(message: string): FigmaMention[] {
 
   const mentions: FigmaMention[] = []
 
-  // Regex to match Figma @mention format: @[userId:displayName]
-  // userId: one or more non-colon, non-bracket characters
-  // displayName: one or more non-bracket characters (can include colons, spaces, special chars)
+  // First try: Figma bracket format @[userId:displayName]
+  // This is the standard format when Figma resolves @mentions
   const mentionRegex = /@\[([^\]:]+):([^\]]+)\]/g
 
   let match: RegExpExecArray | null
@@ -661,6 +660,24 @@ export function extractMentionsFromComment(message: string): FigmaMention[] {
         userId: userId.trim(),
         displayName: displayName.trim(),
       })
+    }
+  }
+
+  // Fallback: if no bracket format mentions found, try plain text @mentions
+  // This handles cases where Figma doesn't resolve the mentions
+  if (mentions.length === 0) {
+    const plainMentionRegex = /@([a-zA-Z0-9_.-]+)/g
+    let plainMatch: RegExpExecArray | null
+    while ((plainMatch = plainMentionRegex.exec(message)) !== null) {
+      const username = plainMatch[1]
+      if (!username) continue
+      // Skip common non-user patterns
+      if (!['everyone', 'here', 'channel'].includes(username.toLowerCase())) {
+        mentions.push({
+          userId: username,
+          displayName: username,
+        })
+      }
     }
   }
 

@@ -88,12 +88,19 @@ export async function getDiscubotUserMappingsByIds(teamId: string, usermappingId
   return usermappings
 }
 
-export async function createDiscubotUserMapping(data: NewDiscubotUserMapping) {
+export async function createDiscubotUserMapping(data: NewDiscubotUserMapping & { createdBy?: string; updatedBy?: string }) {
   const db = useDB()
+
+  // Ensure audit fields are set (defaulting to owner if not provided)
+  const insertData = {
+    ...data,
+    createdBy: data.createdBy || data.owner,
+    updatedBy: data.updatedBy || data.owner,
+  }
 
   const [usermapping] = await db
     .insert(tables.discubotUsermappings)
-    .values(data)
+    .values(insertData)
     .returning()
 
   return usermapping
@@ -106,18 +113,31 @@ export async function updateDiscubotUserMapping(
   updates: Partial<DiscubotUserMapping>
 ) {
   const db = useDB()
+  const { or } = await import('drizzle-orm')
+
+  // Allow update if:
+  // 1. User owns the record (ownerId matches), OR
+  // 2. Record is owned by 'system' (discovered mappings can be claimed by any team member)
+  // When claiming a system-owned mapping (setting notionUserId), transfer ownership to the user
+  const setData: Record<string, any> = {
+    ...updates,
+    updatedBy: ownerId,
+  }
+  if (updates.notionUserId) {
+    setData.owner = ownerId
+  }
 
   const [usermapping] = await db
     .update(tables.discubotUsermappings)
-    .set({
-      ...updates,
-      updatedBy: ownerId
-    })
+    .set(setData)
     .where(
       and(
         eq(tables.discubotUsermappings.id, recordId),
         eq(tables.discubotUsermappings.teamId, teamId),
-        eq(tables.discubotUsermappings.owner, ownerId)
+        or(
+          eq(tables.discubotUsermappings.owner, ownerId),
+          eq(tables.discubotUsermappings.owner, 'system')
+        )
       )
     )
     .returning()
@@ -138,14 +158,19 @@ export async function deleteDiscubotUserMapping(
   ownerId: string
 ) {
   const db = useDB()
+  const { or } = await import('drizzle-orm')
 
+  // Allow delete if user owns the record OR it's a system-owned (discovered) mapping
   const [deleted] = await db
     .delete(tables.discubotUsermappings)
     .where(
       and(
         eq(tables.discubotUsermappings.id, recordId),
         eq(tables.discubotUsermappings.teamId, teamId),
-        eq(tables.discubotUsermappings.owner, ownerId)
+        or(
+          eq(tables.discubotUsermappings.owner, ownerId),
+          eq(tables.discubotUsermappings.owner, 'system')
+        )
       )
     )
     .returning()

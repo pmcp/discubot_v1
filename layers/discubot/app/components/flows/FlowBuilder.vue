@@ -411,9 +411,11 @@ function openUserMappingDrawer(index: number) {
   }
 
   // Get workspace ID based on source type
+  // For Figma: use emailSlug (the part before @), NOT the full email address
+  // This matches what the processor stores in the database
   const sourceWorkspaceId = input.sourceType === 'slack'
     ? (input.sourceMetadata?.slackTeamId as string) || ''
-    : input.emailAddress || input.emailSlug || ''
+    : input.emailSlug || ''
 
   if (!sourceWorkspaceId) {
     toast.add({
@@ -1703,7 +1705,7 @@ function cancel() {
     </UStepper>
 
     <!-- User Mapping Drawer -->
-    <UserMappingDrawer
+    <DiscubotUsermappingsUserMappingDrawer
       v-if="userMappingContext"
       v-model:open="isUserMappingDrawerOpen"
       :source-type="userMappingContext.sourceType"

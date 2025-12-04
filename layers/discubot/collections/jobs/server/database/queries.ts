@@ -98,12 +98,19 @@ export async function getDiscubotJobsByIds(teamId: string, jobIds: string[]) {
   return jobs
 }
 
-export async function createDiscubotJob(data: NewDiscubotJob) {
+export async function createDiscubotJob(data: NewDiscubotJob & { createdBy?: string; updatedBy?: string }) {
   const db = useDB()
+
+  // Ensure audit fields are set (defaulting to owner if not provided)
+  const insertData = {
+    ...data,
+    createdBy: data.createdBy || data.owner,
+    updatedBy: data.updatedBy || data.owner,
+  }
 
   const [job] = await db
     .insert(tables.discubotJobs)
-    .values(data)
+    .values(insertData)
     .returning()
 
   return job
