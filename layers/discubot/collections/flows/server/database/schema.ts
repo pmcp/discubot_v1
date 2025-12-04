@@ -29,6 +29,7 @@ export const discubotFlows = sqliteTable('discubot_flows', {
   anthropicApiKey: text('anthropicApiKey'),
   aiSummaryPrompt: text('aiSummaryPrompt'),
   aiTaskPrompt: text('aiTaskPrompt'),
+  replyPersonality: text('replyPersonality'), // Preset key or 'custom:...' for AI prompt
   active: integer('active', { mode: 'boolean' }).notNull().$default(() => false),
   onboardingComplete: integer('onboardingComplete', { mode: 'boolean' }).notNull().$default(() => false),
 

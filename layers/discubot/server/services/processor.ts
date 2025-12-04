@@ -40,6 +40,7 @@ import type {
 import { analyzeDiscussion } from './ai'
 import { extractMentionsFromComment } from '../adapters/figma'
 import { createNotionTask, createNotionTasks, createNotionConfigFromOutput, type SourceMetadata } from './notion'
+import { generateReplyMessage, generateBootstrapMessage } from './reply-generator'
 import { retryWithBackoff } from '../utils/retry'
 import { SYSTEM_USER_ID } from '../utils/constants'
 import { logger } from '../utils/logger'
@@ -1677,11 +1678,11 @@ export async function processDiscussion(
           await adapter.removeReaction(parsed.sourceThreadId, 'eyes', replyConfig)
         }
 
-        // Build bootstrap response message
+        // Build bootstrap response message with personality
         const userCount = bootstrapResult.mentionedUsers.length
-        const bootstrapMessage = userCount > 0
-          ? `Found ${userCount} user${userCount === 1 ? '' : 's'}. Map them in your dashboard.`
-          : 'Bootstrap comment processed. No @mentions detected - add users manually in the dashboard.'
+        const replyPersonality = flowData?.flow.replyPersonality || null
+        const anthropicApiKey = flowData?.flow.anthropicApiKey || config?.anthropicApiKey
+        const bootstrapMessage = await generateBootstrapMessage(userCount, replyPersonality, anthropicApiKey)
 
         await adapter.postReply(parsed.sourceThreadId, bootstrapMessage, replyConfig)
         await adapter.updateStatus(parsed.sourceThreadId, 'completed', replyConfig)
@@ -1973,8 +1974,10 @@ export async function processDiscussion(
         await adapter.removeReaction(parsed.sourceThreadId, 'eyes', threadBuildConfig)
       }
 
-      // Build confirmation message with Notion task URLs
-      const confirmationMessage = buildConfirmationMessage(notionTasks)
+      // Build confirmation message with personality
+      const replyPersonality = flowData?.flow.replyPersonality || null
+      const anthropicApiKey = flowData?.flow.anthropicApiKey || config?.anthropicApiKey
+      const confirmationMessage = await generateReplyMessage(notionTasks, replyPersonality, anthropicApiKey)
 
       // Post reply to the thread
       await adapter.postReply(parsed.sourceThreadId, confirmationMessage, threadBuildConfig)
@@ -2146,23 +2149,6 @@ export async function retryFailedDiscussion(
   )
 }
 
-/**
- * Build confirmation message for source notification
- *
- * Formats Notion task results into a user-friendly message.
- */
-function buildConfirmationMessage(tasks: NotionTaskResult[]): string {
-  if (tasks.length === 0) {
-    return '✅ Discussion processed (no tasks created)'
-  }
-
-  if (tasks.length === 1 && tasks[0]) {
-    return `✅ Task created in Notion\n🔗 ${tasks[0].url}`
-  }
-
-  const taskList = tasks.map((t, i) => `${i + 1}. ${t.url}`).join('\n')
-  return `✅ Created ${tasks.length} tasks in Notion:\n${taskList}`
-}
 
 /**
  * Update job record with new status/stage/metadata

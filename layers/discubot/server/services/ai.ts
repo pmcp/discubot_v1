@@ -158,6 +158,12 @@ function buildSummaryPrompt(
 
   const sourceContext = sourceType ? ` from ${sourceType}` : ''
 
+  // Build page context if available (for Notion - shows what was commented on)
+  let pageContext = ''
+  if (thread.metadata?.pageContent) {
+    pageContext = `\nPage Context (the content being discussed):\n${thread.metadata.pageContent}\n`
+  }
+
   // Build domain detection instructions
   let domainInstructions = ''
   if (availableDomains && availableDomains.length > 0) {
@@ -178,6 +184,11 @@ function buildSummaryPrompt(
     // Add context about the source
     if (sourceContext) {
       prompt += `Context: This discussion is${sourceContext}.\n\n`
+    }
+
+    // Add page context if available (what the comment is about)
+    if (pageContext) {
+      prompt += `${pageContext}\n`
     }
 
     // Add the thread content
@@ -203,7 +214,7 @@ function buildSummaryPrompt(
 1. A concise summary (2-3 sentences)
 2. Key points or decisions (ONLY if meaningful ones exist - return empty array if none)
 3. Overall sentiment (positive, neutral, or negative)${domainInstructions}
-
+${pageContext}
 Discussion:
 ${messages}
 
@@ -360,11 +371,16 @@ Return null if uncertain or if the task spans multiple domains.
 `
   }
 
+  // Build page context if available (for Notion - shows what was commented on)
+  const pageContext = thread.metadata?.pageContent
+    ? `<page_context>\n${thread.metadata.pageContent}\n</page_context>\n\n`
+    : ''
+
   const prompt = `<task>
 Analyze this discussion and identify actionable tasks. Extract task-specific action items for each task.
 </task>
 
-<discussion>
+${pageContext}<discussion>
 ${messages}
 </discussion>
 

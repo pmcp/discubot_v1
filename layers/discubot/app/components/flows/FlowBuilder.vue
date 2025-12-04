@@ -62,6 +62,7 @@ const flowSchema = z.object({
   anthropicApiKey: z.string().optional(),
   aiSummaryPrompt: z.string().optional(),
   aiTaskPrompt: z.string().optional(),
+  replyPersonality: z.string().optional(),
   availableDomains: z.array(z.string()).min(1, 'At least one domain required').default(DEFAULT_DOMAINS)
 })
 
@@ -74,6 +75,7 @@ const flowState = reactive<Partial<FlowSchema>>({
   anthropicApiKey: props.flow?.anthropicApiKey || '',
   aiSummaryPrompt: props.flow?.aiSummaryPrompt || '',
   aiTaskPrompt: props.flow?.aiTaskPrompt || '',
+  replyPersonality: props.flow?.replyPersonality || '',
   availableDomains: props.flow?.availableDomains || DEFAULT_DOMAINS
 })
 
@@ -106,6 +108,36 @@ const promptPresets = [
 ]
 
 const selectedPreset = ref('default')
+
+// Reply personality presets
+const personalityPresets = [
+  { value: 'professional', label: 'Professional (default)', description: 'Formal, clear, minimal' },
+  { value: 'friendly', label: 'Friendly', description: 'Warm, encouraging' },
+  { value: 'concise', label: 'Concise', description: 'Ultra-brief' },
+  { value: 'pirate', label: 'Pirate', description: 'Arrr!' },
+  { value: 'robot', label: 'Robot', description: 'Beep boop' },
+  { value: 'zen', label: 'Zen', description: 'Calm, mindful' },
+  { value: 'custom', label: 'Custom...', description: 'Write your own AI prompt' }
+]
+
+// Custom personality prompt (extracted from replyPersonality when it starts with 'custom:')
+const customPersonalityPrompt = ref('')
+
+// Sync custom prompt with replyPersonality
+watch(() => flowState.replyPersonality, (value) => {
+  if (value?.startsWith('custom:')) {
+    customPersonalityPrompt.value = value.replace(/^custom:/, '')
+  } else {
+    customPersonalityPrompt.value = ''
+  }
+}, { immediate: true })
+
+// Update replyPersonality when custom prompt changes
+watch(customPersonalityPrompt, (value) => {
+  if (flowState.replyPersonality === 'custom' || (flowState.replyPersonality && flowState.replyPersonality.startsWith('custom:'))) {
+    flowState.replyPersonality = value ? `custom:${value}` : 'custom'
+  }
+})
 
 // Watch preset changes
 watch(selectedPreset, (preset) => {
@@ -1217,6 +1249,41 @@ function cancel() {
                     class="w-full"
                   />
                 </UFormField>
+
+                <USeparator class="my-4" />
+
+                <!-- Reply Personality -->
+                <UFormField
+                  label="Reply Personality"
+                  name="replyPersonality"
+                  help="How the bot responds when tasks are created"
+                >
+                  <USelect
+                    v-model="flowState.replyPersonality"
+                    :items="personalityPresets.map(p => ({ value: p.value, label: p.label }))"
+                    value-attribute="value"
+                    label-attribute="label"
+                    placeholder="Professional (default)"
+                    class="w-full"
+                  />
+                </UFormField>
+
+                <!-- Custom Personality Prompt (shown when "custom" is selected) -->
+                <UFormField
+                  v-if="flowState.replyPersonality === 'custom' || (flowState.replyPersonality && flowState.replyPersonality.startsWith('custom:'))"
+                  label="Custom Personality Prompt"
+                  name="customPersonalityPrompt"
+                  help="Describe how the bot should respond (requires API key)"
+                >
+                  <UTextarea
+                    v-model="customPersonalityPrompt"
+                    placeholder="e.g., Reply as a friendly Australian, Be extremely enthusiastic with lots of emojis"
+                    :rows="2"
+                    class="w-full"
+                  />
+                </UFormField>
+
+                <USeparator class="my-4" />
 
                 <UFormField
                   label="Custom Summary Prompt"

@@ -8,6 +8,7 @@ export const discubotFlowSchema = z.object({
   anthropicApiKey: z.string().optional(),
   aiSummaryPrompt: z.string().optional(),
   aiTaskPrompt: z.string().optional(),
+  replyPersonality: z.string().optional(),
   active: z.boolean(),
   onboardingComplete: z.boolean()
 })
@@ -20,6 +21,7 @@ export const discubotFlowsColumns = [
   { accessorKey: 'anthropicApiKey', header: 'AnthropicApiKey' },
   { accessorKey: 'aiSummaryPrompt', header: 'AiSummaryPrompt' },
   { accessorKey: 'aiTaskPrompt', header: 'AiTaskPrompt' },
+  { accessorKey: 'replyPersonality', header: 'ReplyPersonality' },
   { accessorKey: 'active', header: 'Active' },
   { accessorKey: 'onboardingComplete', header: 'OnboardingComplete' }
 ]
@@ -38,6 +40,7 @@ export const discubotFlowsConfig = {
     anthropicApiKey: '',
     aiSummaryPrompt: '',
     aiTaskPrompt: '',
+    replyPersonality: '',
     active: false,
     onboardingComplete: false
   },

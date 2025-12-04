@@ -289,6 +289,120 @@ async function postComment(
 }
 
 /**
+ * Fetch page/block content from Notion to provide AI context
+ *
+ * @param blockId - The page or block ID to fetch content from
+ * @param token - Notion API token
+ * @param maxLength - Maximum content length to return (default: 5000 chars)
+ * @returns Plain text representation of the page content
+ */
+async function fetchPageContent(
+  blockId: string,
+  token: string,
+  maxLength: number = 5000,
+): Promise<string> {
+  let content = ''
+  let cursor: string | null = null
+
+  try {
+    // Fetch blocks with pagination (max 2 pages to limit API calls)
+    let pagesFetched = 0
+    const maxPages = 2
+
+    while (content.length < maxLength && pagesFetched < maxPages) {
+      const url: string = cursor
+        ? `${NOTION_API_BASE}/blocks/${blockId}/children?start_cursor=${cursor}`
+        : `${NOTION_API_BASE}/blocks/${blockId}/children`
+
+      const response: {
+        results: Array<{ type: string; [key: string]: any }>
+        has_more: boolean
+        next_cursor: string | null
+      } = await $fetch<{
+        results: Array<{
+          type: string
+          [key: string]: any
+        }>
+        has_more: boolean
+        next_cursor: string | null
+      }>(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Notion-Version': NOTION_API_VERSION,
+        },
+      })
+
+      // Extract text from common block types
+      for (const block of response.results) {
+        const blockContent = extractBlockText(block)
+        if (blockContent) {
+          content += blockContent + '\n'
+        }
+        if (content.length >= maxLength) break
+      }
+
+      if (!response.has_more) break
+      cursor = response.next_cursor
+      pagesFetched++
+    }
+
+    // Truncate to max length at word boundary
+    if (content.length > maxLength) {
+      const truncated = content.substring(0, maxLength)
+      const lastSpace = truncated.lastIndexOf(' ')
+      content = lastSpace > 0 ? truncated.substring(0, lastSpace) + '...' : truncated
+    }
+
+    return content.trim()
+  } catch (error) {
+    logger.warn('Failed to fetch page content for AI context:', { blockId, error })
+    return '' // Graceful fallback - AI will work without context
+  }
+}
+
+/**
+ * Extract plain text from a Notion block
+ */
+function extractBlockText(block: { type: string; [key: string]: any }): string {
+  const blockData = block[block.type]
+  if (!blockData) return ''
+
+  // Handle blocks with rich_text array
+  if (blockData.rich_text && Array.isArray(blockData.rich_text)) {
+    const text = blockData.rich_text.map((rt: NotionRichText) => rt.plain_text).join('')
+
+    // Add formatting based on block type
+    switch (block.type) {
+      case 'heading_1':
+        return `# ${text}`
+      case 'heading_2':
+        return `## ${text}`
+      case 'heading_3':
+        return `### ${text}`
+      case 'bulleted_list_item':
+        return `• ${text}`
+      case 'numbered_list_item':
+        return `- ${text}`
+      case 'to_do':
+        const checked = blockData.checked ? '☑' : '☐'
+        return `${checked} ${text}`
+      case 'code':
+        return `\`\`\`\n${text}\n\`\`\``
+      case 'quote':
+        return `> ${text}`
+      default:
+        return text
+    }
+  }
+
+  // Handle special block types
+  if (block.type === 'divider') return '---'
+  if (block.type === 'equation' && blockData.expression) return blockData.expression
+
+  return ''
+}
+
+/**
  * Check if a trigger keyword exists in rich text content
  *
  * @param richText - Array of rich text objects
@@ -546,6 +660,18 @@ export class NotionAdapter implements DiscussionSourceAdapter {
         participantSet.add(comment.created_by.id)
       })
 
+      // Fetch page content for AI context (non-blocking, graceful failure)
+      let pageContent = ''
+      if (config.apiToken) {
+        pageContent = await fetchPageContent(pageId, config.apiToken)
+        if (pageContent) {
+          logger.debug('Fetched page content for AI context', {
+            pageId,
+            contentLength: pageContent.length,
+          })
+        }
+      }
+
       // Build thread
       const thread = {
         id: discussionId,
@@ -556,6 +682,7 @@ export class NotionAdapter implements DiscussionSourceAdapter {
           pageId,
           discussionId,
           commentCount: comments.length,
+          pageContent, // Page content for AI context
         },
       }
 

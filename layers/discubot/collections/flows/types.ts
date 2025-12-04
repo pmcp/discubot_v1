@@ -12,6 +12,7 @@ export interface DiscubotFlow {
   anthropicApiKey?: string
   aiSummaryPrompt?: string
   aiTaskPrompt?: string
+  replyPersonality?: string // Preset key (e.g., 'friendly') or 'custom:...' for AI prompt
   active: boolean
   onboardingComplete: boolean
   createdAt: Date

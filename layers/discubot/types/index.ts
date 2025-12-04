@@ -292,6 +292,8 @@ export interface Flow {
   aiSummaryPrompt?: string
   /** AI task detection prompt override */
   aiTaskPrompt?: string
+  /** Reply personality - preset key (e.g., 'friendly') or 'custom:...' for AI prompt */
+  replyPersonality?: string
   /** Whether onboarding is complete */
   onboardingComplete?: boolean
   /** Whether this flow is active */
