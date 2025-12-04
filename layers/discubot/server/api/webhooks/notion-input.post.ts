@@ -190,23 +190,31 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    logger.debug('[Notion Webhook] Payload type:', body?.type)
+    logger.info('[Notion Webhook] Payload type:', body?.type)
+    logger.info('[Notion Webhook] Payload keys:', Object.keys(body || {}))
+    logger.info('[Notion Webhook] body.entity:', JSON.stringify(body?.entity, null, 2))
+    logger.info('[Notion Webhook] body.data:', JSON.stringify(body?.data, null, 2))
 
     // ============================================================================
     // HANDLE URL VERIFICATION CHALLENGE
+    // Notion sends: { "verification_token": "secret_..." } without a type field
     // ============================================================================
-    if (body && body.type === 'url_verification') {
-      logger.debug('[Notion Webhook] URL verification challenge received')
-
-      if (!body.verification_token) {
-        logger.warn('[Notion Webhook] Missing verification_token in challenge')
-        return {
-          success: false,
-          message: 'Missing verification_token',
-        }
-      }
+    if (body && body.verification_token && !body.type) {
+      logger.info('[Notion Webhook] URL verification challenge received')
+      logger.info('[Notion Webhook] ✅ VERIFICATION TOKEN:', body.verification_token)
+      logger.info('[Notion Webhook] Copy this token and paste it into Notion\'s verification form')
 
       // Echo back the verification token
+      return {
+        verification_token: body.verification_token,
+      }
+    }
+
+    // Also handle if Notion adds a type field in the future
+    if (body && body.type === 'url_verification' && body.verification_token) {
+      logger.info('[Notion Webhook] URL verification challenge received (with type)')
+      logger.info('[Notion Webhook] ✅ VERIFICATION TOKEN:', body.verification_token)
+
       return {
         verification_token: body.verification_token,
       }
@@ -282,16 +290,24 @@ export default defineEventHandler(async (event) => {
 
     // ============================================================================
     // VALIDATE PAYLOAD STRUCTURE
+    // Notion webhook structure (as of 2024):
+    // - body.entity.id = comment ID
+    // - body.entity.type = "comment"
+    // - body.data.parent.id = page/block ID
+    // - body.data.parent.type = "page" | "block"
     // ============================================================================
-    if (!body.data || !body.data.id || !body.data.discussion_id) {
-      logger.warn('[Notion Webhook] Invalid comment.created payload - missing required fields')
+    const commentId = body.entity?.id
+    const parentId = body.data?.parent?.id || body.data?.page_id
+    const parentType = body.data?.parent?.type || 'page'
+
+    if (!commentId) {
+      logger.warn('[Notion Webhook] Invalid comment.created payload - missing comment ID in entity')
       return {
         success: false,
-        message: 'Invalid payload structure',
+        message: 'Invalid payload structure - missing entity.id',
       }
     }
 
-    const parentId = body.data.parent.page_id || body.data.parent.block_id
     if (!parentId) {
       logger.warn('[Notion Webhook] Missing parent ID in payload')
       return {
@@ -300,12 +316,13 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    logger.debug('[Notion Webhook] Comment event details:', {
-      commentId: body.data.id,
-      discussionId: body.data.discussion_id,
+    const integrationId = body.integration_id
+    logger.info('[Notion Webhook] Comment event details:', {
+      commentId,
       parentId,
-      parentType: body.data.parent.type,
+      parentType,
       workspaceId,
+      integrationId,
     })
 
     // ============================================================================
@@ -335,9 +352,11 @@ export default defineEventHandler(async (event) => {
       .all()
 
     // Find matching input by workspace ID (stored in sourceMetadata)
+    // Fallback: if no workspace ID stored, match any active Notion input with a valid token
     let matchedInput: typeof inputs[0] | undefined
     let matchedFlow: any
 
+    // First try: match by workspace ID
     for (const input of inputs) {
       const inputWorkspaceId = input.sourceMetadata?.notionWorkspaceId
       if (inputWorkspaceId === workspaceId) {
@@ -354,7 +373,74 @@ export default defineEventHandler(async (event) => {
         if (flow) {
           matchedInput = input
           matchedFlow = flow
+          logger.info('[Notion Webhook] Matched input by workspace ID', {
+            inputId: input.id,
+            workspaceId,
+          })
           break
+        }
+      }
+    }
+
+    // Fallback: if no workspace match, only use fallback if there's exactly ONE Notion input with a token
+    // This prevents accidentally matching the wrong workspace when multiple are configured
+    if (!matchedInput) {
+      logger.info('[Notion Webhook] No workspace ID match, checking for unambiguous fallback...')
+
+      // Find all inputs with tokens and active flows
+      const inputsWithTokens: Array<{ input: typeof inputs[0]; flow: any }> = []
+
+      for (const input of inputs) {
+        const hasToken = input.sourceMetadata?.notionToken || input.apiToken
+        if (hasToken) {
+          const [flow] = await db
+            .select()
+            .from(discubotFlows)
+            .where(and(
+              eq(discubotFlows.id, input.flowId),
+              eq(discubotFlows.active, true),
+            ))
+            .limit(1)
+
+          if (flow) {
+            inputsWithTokens.push({ input, flow })
+          }
+        }
+      }
+
+      if (inputsWithTokens.length === 1) {
+        // Unambiguous - only one option
+        matchedInput = inputsWithTokens[0].input
+        matchedFlow = inputsWithTokens[0].flow
+        logger.info('[Notion Webhook] Matched input by unambiguous fallback (single input with token)', {
+          inputId: matchedInput.id,
+          inputName: matchedInput.name,
+        })
+      } else if (inputsWithTokens.length > 1) {
+        // Multiple inputs found - try to match by integration_id if stored
+        for (const { input, flow } of inputsWithTokens) {
+          if (input.sourceMetadata?.notionIntegrationId === integrationId) {
+            matchedInput = input
+            matchedFlow = flow
+            logger.info('[Notion Webhook] Matched input by integration ID', {
+              inputId: input.id,
+              integrationId,
+            })
+            break
+          }
+        }
+
+        // Still no match - use first one with warning (for development/testing)
+        if (!matchedInput) {
+          logger.warn('[Notion Webhook] Multiple Notion inputs found, using first one (configure workspace/integration ID for precise matching)', {
+            workspaceId,
+            integrationId,
+            inputCount: inputsWithTokens.length,
+            inputNames: inputsWithTokens.map(i => i.input.name),
+            selectedInput: inputsWithTokens[0].input.name,
+          })
+          matchedInput = inputsWithTokens[0].input
+          matchedFlow = inputsWithTokens[0].flow
         }
       }
     }
@@ -377,11 +463,13 @@ export default defineEventHandler(async (event) => {
       inputId: matchedInput.id,
     })
 
-    // Get API token from flow input
-    const apiToken = matchedInput.apiToken
+    // Get API token from flow input (can be in apiToken or sourceMetadata.notionToken)
+    const apiToken = matchedInput.apiToken || matchedInput.sourceMetadata?.notionToken
     if (!apiToken) {
       logger.warn('[Notion Webhook] No API token configured for input', {
         inputId: matchedInput.id,
+        hasApiToken: !!matchedInput.apiToken,
+        hasSourceMetadataToken: !!matchedInput.sourceMetadata?.notionToken,
       })
       return {
         success: false,
@@ -389,11 +477,17 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    logger.info('[Notion Webhook] Using API token from input', {
+      inputId: matchedInput.id,
+      tokenSource: matchedInput.apiToken ? 'apiToken' : 'sourceMetadata.notionToken',
+    })
+
     // Fetch the comment to get its content
-    const comment = await fetchComment(body.data.id, apiToken)
+    const comment = await fetchComment(commentId, apiToken)
     if (!comment) {
       logger.warn('[Notion Webhook] Failed to fetch comment', {
-        commentId: body.data.id,
+        commentId,
+        parentId,
       })
       return {
         success: false,
@@ -403,11 +497,15 @@ export default defineEventHandler(async (event) => {
 
     // Check for trigger keyword
     const triggerKeyword = matchedInput.sourceMetadata?.triggerKeyword || DEFAULT_TRIGGER_KEYWORD
+    logger.info('[Notion Webhook] Checking for trigger keyword', {
+      triggerKeyword,
+      commentTextPreview: comment.rich_text?.map(r => r.plain_text).join('').substring(0, 100),
+    })
     const hasTrigger = checkForTrigger(comment.rich_text, triggerKeyword)
 
     if (!hasTrigger) {
-      logger.debug('[Notion Webhook] No trigger keyword found in comment', {
-        commentId: body.data.id,
+      logger.info('[Notion Webhook] No trigger keyword found in comment', {
+        commentId,
         triggerKeyword,
       })
       return {
@@ -417,7 +515,7 @@ export default defineEventHandler(async (event) => {
     }
 
     logger.info('[Notion Webhook] Trigger keyword found - processing comment', {
-      commentId: body.data.id,
+      commentId,
       triggerKeyword,
     })
 
@@ -438,7 +536,12 @@ export default defineEventHandler(async (event) => {
     let parsed
     try {
       parsed = await adapter.parseIncoming(body, sourceConfig)
-      logger.debug('[Notion Webhook] Successfully parsed event:', {
+
+      // Override teamId with the actual team from the matched flow
+      // (the adapter returns workspace_id which is not the correct team ID)
+      parsed.teamId = matchedFlow.teamId
+
+      logger.info('[Notion Webhook] Successfully parsed event:', {
         sourceThreadId: parsed.sourceThreadId,
         teamId: parsed.teamId,
         title: parsed.title,

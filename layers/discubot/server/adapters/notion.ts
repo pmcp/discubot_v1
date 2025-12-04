@@ -165,8 +165,25 @@ async function fetchComment(
     )
     return response
   } catch (error: any) {
+    // Log detailed error info for debugging
+    const errorData = error.data || error.response?._data || {}
+    logger.error('[Notion] Failed to fetch comment', error, {
+      commentId,
+      status: error.statusCode || error.status,
+      notionCode: errorData.code,
+      notionMessage: errorData.message,
+      tokenPrefix: token ? `${token.substring(0, 10)}...` : 'missing',
+    })
+
     if (error.statusCode === 404) {
       return null
+    }
+    if (error.statusCode === 403) {
+      logger.error('[Notion] 403 Forbidden - Check that:', null, {
+        hint1: 'Integration has "Read comments" capability enabled',
+        hint2: 'Integration is connected to the page where comment was made',
+        hint3: 'Using the correct integration token',
+      })
     }
     throw error
   }
@@ -358,25 +375,36 @@ export class NotionAdapter implements DiscussionSourceAdapter {
       }
 
       // Extract IDs from webhook payload
-      const commentId = webhookPayload.data.id
-      const discussionId = webhookPayload.data.discussion_id
+      // Notion webhook structure (2024+):
+      // - commentId is in entity.id
+      // - parentId is in data.parent.id (not page_id/block_id)
+      // - discussionId must be fetched from the comment via API
+      const commentId = webhookPayload.entity?.id || webhookPayload.data?.id
       const parentId =
-        webhookPayload.data.parent.page_id ||
-        webhookPayload.data.parent.block_id
+        webhookPayload.data?.parent?.id ||
+        webhookPayload.data?.parent?.page_id ||
+        webhookPayload.data?.parent?.block_id ||
+        webhookPayload.data?.page_id
 
-      if (!commentId || !discussionId || !parentId) {
+      if (!commentId || !parentId) {
         throw new AdapterError(
-          'Missing required IDs in webhook payload (commentId, discussionId, or parentId)',
+          'Missing required IDs in webhook payload (commentId or parentId)',
           {
             sourceType: this.sourceType,
             retryable: false,
+            context: {
+              hasEntityId: !!webhookPayload.entity?.id,
+              hasDataId: !!webhookPayload.data?.id,
+              hasParentId: !!webhookPayload.data?.parent?.id,
+            },
           }
         )
       }
 
-      // If we have a config, fetch the full comment content
+      // Fetch the full comment to get discussionId and content
       let content = ''
       let authorId = ''
+      let discussionId = webhookPayload.data?.discussion_id || ''
       let createdTime = webhookPayload.timestamp
 
       if (config?.apiToken) {
@@ -385,7 +413,18 @@ export class NotionAdapter implements DiscussionSourceAdapter {
           content = extractPlainText(comment.rich_text)
           authorId = comment.created_by.id
           createdTime = comment.created_time
+          // Get discussionId from fetched comment if not in payload
+          discussionId = discussionId || comment.discussion_id
         }
+      }
+
+      // If we still don't have discussionId, use commentId as fallback
+      if (!discussionId) {
+        discussionId = commentId
+        logger.warn('[NotionAdapter] No discussionId found, using commentId as fallback', {
+          commentId,
+          parentId,
+        })
       }
 
       // Build source thread ID (format: page_id:discussion_id)
@@ -413,7 +452,7 @@ export class NotionAdapter implements DiscussionSourceAdapter {
           commentId,
           discussionId,
           parentId,
-          parentType: webhookPayload.data.parent.type,
+          parentType: webhookPayload.data?.parent?.type || 'page',
           workspaceId: webhookPayload.workspace_id,
           entityId: webhookPayload.entity?.id,
           entityType: webhookPayload.entity?.type,

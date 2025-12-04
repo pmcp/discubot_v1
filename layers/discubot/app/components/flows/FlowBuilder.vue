@@ -286,9 +286,10 @@ const inputSchema = computed(() => z.object({
   emailSlug: inputFormState.sourceType === 'figma'
     ? z.string().min(1, 'Email slug is required')
     : z.string().optional(),
+  // For non-Figma inputs, allow empty string or valid email (since emailAddress defaults to '')
   emailAddress: inputFormState.sourceType === 'figma'
     ? z.string().email('Invalid email')
-    : z.string().email().optional(),
+    : z.union([z.string().email(), z.literal('')]).optional(),
   apiToken: inputFormState.sourceType === 'figma'
     ? z.string().min(1, 'Figma API token is required')
     : z.string().optional(),
@@ -452,20 +453,41 @@ async function saveInput(event: FormSubmitEvent<InputFormData>, close: () => voi
   }
 }
 
-function deleteInput(index: number) {
+async function deleteInput(index: number) {
   const input = inputsList.value[index]
+
+  // If input has an ID, delete from database
+  if (input.id) {
+    try {
+      await $fetch(`/api/teams/${props.teamId}/discubot-flowinputs/${input.id}`, {
+        method: 'DELETE',
+      })
+    } catch (error: any) {
+      toast.add({
+        title: 'Failed to delete input',
+        description: error.message || 'Could not delete input from database',
+        color: 'error'
+      })
+      return
+    }
+  }
+
+  // Remove from local list
   inputsList.value.splice(index, 1)
   toast.add({
-    title: 'Input removed',
-    description: `${input.name} has been removed`,
-    color: 'neutral'
+    title: 'Input deleted',
+    description: `${input.name} has been deleted`,
+    color: 'success'
   })
 }
 
 function openEditInput(index: number) {
   const input = inputsList.value[index]
   editingInputIndex.value = index
-  editingInput.value = { ...input }
+  editingInput.value = {
+    ...input,
+    sourceMetadata: { ...(input.sourceMetadata || {}) }
+  }
   isEditInputModalOpen.value = true
 }
 
@@ -483,7 +505,8 @@ async function saveEditInput() {
           name: input.name,
           apiToken: input.apiToken,
           emailAddress: input.emailAddress,
-          emailSlug: input.emailSlug
+          emailSlug: input.emailSlug,
+          sourceMetadata: input.sourceMetadata
         }
       })
       console.log('[FlowBuilder] Input updated in database')
@@ -745,13 +768,31 @@ function saveOutput(event: FormSubmitEvent<OutputFormData>, close: () => void) {
   })
 }
 
-function deleteOutput(index: number) {
+async function deleteOutput(index: number) {
   const output = outputsList.value[index]
+
+  // If output has an ID, delete from database
+  if (output.id) {
+    try {
+      await $fetch(`/api/teams/${props.teamId}/discubot-flowoutputs/${output.id}`, {
+        method: 'DELETE',
+      })
+    } catch (error: any) {
+      toast.add({
+        title: 'Failed to delete output',
+        description: error.message || 'Could not delete output from database',
+        color: 'error'
+      })
+      return
+    }
+  }
+
+  // Remove from local list
   outputsList.value.splice(index, 1)
   toast.add({
-    title: 'Output removed',
-    description: `${output.name} has been removed`,
-    color: 'neutral'
+    title: 'Output deleted',
+    description: `${output.name} has been deleted`,
+    color: 'success'
   })
 }
 
@@ -1742,6 +1783,33 @@ function cancel() {
                         v-model="editingInput.apiToken"
                         type="password"
                         placeholder="figd_..."
+                        class="w-full"
+                      />
+                    </UFormField>
+
+                    <!-- Notion-specific fields -->
+                    <UFormField
+                      v-if="editingInput.sourceType === 'notion'"
+                      label="Notion Integration Token"
+                      help="Internal integration token from Notion settings"
+                      required
+                    >
+                      <UInput
+                        v-model="editingInput.sourceMetadata.notionToken"
+                        type="password"
+                        placeholder="secret_..."
+                        class="w-full"
+                      />
+                    </UFormField>
+
+                    <UFormField
+                      v-if="editingInput.sourceType === 'notion'"
+                      label="Trigger Keyword"
+                      help="Keyword that triggers task creation (e.g., @discubot)"
+                    >
+                      <UInput
+                        v-model="editingInput.sourceMetadata.triggerKeyword"
+                        placeholder="@discubot"
                         class="w-full"
                       />
                     </UFormField>

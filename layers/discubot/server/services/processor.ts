@@ -396,6 +396,15 @@ async function loadFlow(
       return input.sourceMetadata?.slackTeamId === identifier
     } else if (sourceType === 'figma') {
       return input.emailSlug === metadata?.emailSlug
+    } else if (sourceType === 'notion') {
+      // Match by workspace ID stored in sourceMetadata, or fallback to any Notion input
+      // if workspace ID not stored (for backwards compatibility)
+      const inputWorkspaceId = input.sourceMetadata?.notionWorkspaceId
+      if (inputWorkspaceId) {
+        return inputWorkspaceId === identifier
+      }
+      // Fallback: if no workspace ID stored, accept any active Notion input
+      return true
     }
     return false
   })
@@ -1419,12 +1428,13 @@ export async function processDiscussion(
 
     // Build thread with either flow input config or legacy config
     // For Figma inputs, use the input's name as botHandle if not explicitly set
+    // For Notion inputs, token may be in sourceMetadata.notionToken instead of apiToken
     const threadBuildConfig = flowData
       ? {
           id: flowData.matchedInput.id,
           teamId: flowData.flow.teamId,
           sourceType: flowData.matchedInput.sourceType,
-          apiToken: flowData.matchedInput.apiToken || '',
+          apiToken: flowData.matchedInput.apiToken || flowData.matchedInput.sourceMetadata?.notionToken || '',
           sourceMetadata: {
             ...flowData.matchedInput.sourceMetadata,
             // Use input name as botHandle for Figma (the bot account name)
