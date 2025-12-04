@@ -397,11 +397,12 @@ async function loadFlow(
     } else if (sourceType === 'figma') {
       return input.emailSlug === metadata?.emailSlug
     } else if (sourceType === 'notion') {
-      // Match by workspace ID stored in sourceMetadata, or fallback to any Notion input
-      // if workspace ID not stored (for backwards compatibility)
+      // Match by workspace ID stored in sourceMetadata
+      // Check metadata.notionWorkspaceId first (preferred), then fall back to identifier
       const inputWorkspaceId = input.sourceMetadata?.notionWorkspaceId
+      const lookupWorkspaceId = metadata?.notionWorkspaceId || identifier
       if (inputWorkspaceId) {
-        return inputWorkspaceId === identifier
+        return inputWorkspaceId === lookupWorkspaceId
       }
       // Fallback: if no workspace ID stored, accept any active Notion input
       return true

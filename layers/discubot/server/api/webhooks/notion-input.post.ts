@@ -573,6 +573,12 @@ export default defineEventHandler(async (event) => {
       // (the adapter returns workspace_id which is not the correct team ID)
       parsed.teamId = matchedFlow.teamId
 
+      // Add workspace ID to metadata for flow lookup in processor
+      parsed.metadata = {
+        ...parsed.metadata,
+        notionWorkspaceId: workspaceId,
+      }
+
       logger.info('[Notion Webhook] Successfully parsed event:', {
         sourceThreadId: parsed.sourceThreadId,
         teamId: parsed.teamId,
