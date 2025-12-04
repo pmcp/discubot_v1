@@ -141,14 +141,18 @@ function buildSummaryPrompt(
   customPrompt?: string,
   availableDomains?: string[],
 ): string {
+  // Helper to get display name (authorName if available, fallback to authorHandle)
+  const getDisplayName = (authorName?: string, authorHandle?: string) =>
+    authorName || authorHandle || 'Unknown'
+
   // Build conversation history
   const messages = [
-    `Root message by ${thread.rootMessage.authorHandle}:`,
+    `Root message by ${getDisplayName(thread.rootMessage.authorName, thread.rootMessage.authorHandle)}:`,
     thread.rootMessage.content,
     '',
     ...thread.replies.map(
       reply =>
-        `Reply by ${reply.authorHandle}:\n${reply.content}`,
+        `Reply by ${getDisplayName(reply.authorName, reply.authorHandle)}:\n${reply.content}`,
     ),
   ].join('\n')
 
@@ -308,14 +312,18 @@ async function detectTasks(
 ): Promise<TaskDetectionResult> {
   const client = getAnthropicClient()
 
+  // Helper to get display name (authorName if available, fallback to authorHandle)
+  const getDisplayName = (authorName?: string, authorHandle?: string) =>
+    authorName || authorHandle || 'Unknown'
+
   // Build conversation history
   const messages = [
-    `Root message by ${thread.rootMessage.authorHandle}:`,
+    `Root message by ${getDisplayName(thread.rootMessage.authorName, thread.rootMessage.authorHandle)}:`,
     thread.rootMessage.content,
     '',
     ...thread.replies.map(
       reply =>
-        `Reply by ${reply.authorHandle}:\n${reply.content}`,
+        `Reply by ${getDisplayName(reply.authorName, reply.authorHandle)}:\n${reply.content}`,
     ),
   ].join('\n')
 

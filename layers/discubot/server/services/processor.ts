@@ -296,60 +296,46 @@ export function isBootstrapComment(
   let mentionedUsers: Array<{ userId: string, displayName: string }> = []
 
   if (sourceType === 'figma') {
-    const originalContent = thread.rootMessage.content
+    // IMPORTANT: Figma API does NOT include user IDs in @mention text
+    // The only way to get a user's Figma ID is from comment.user.id (the comment author)
+    //
+    // Strategy: Capture all unique users who have posted in this thread
+    // Each participant's authorHandle = their Figma user ID
+    // Each participant's authorName = their display name
 
-    // Debug: log content being parsed
-    logger.debug('Bootstrap content parsing', {
-      apiContent: originalContent.substring(0, 200),
-      emailContent: emailContent?.substring(0, 200),
-      hasUserSync,
-      hasBootstrap,
+    logger.info('Figma bootstrap: Capturing thread participants as discovered users', {
+      rootAuthorHandle: thread.rootMessage.authorHandle,
+      rootAuthorName: thread.rootMessage.authorName,
+      replyCount: thread.replies.length,
     })
 
-    // Find "user sync" position and extract only mentions AFTER it
-    // Format: @bot User Sync: @user1 @user2 @user3
-    const userSyncIndex = originalContent.toLowerCase().indexOf('user sync')
-    if (userSyncIndex !== -1) {
-      const afterUserSync = originalContent.substring(userSyncIndex)
+    // Collect unique users from thread (author + any reply authors)
+    const userMap = new Map<string, string>() // userId -> displayName
 
-      // Debug: log what we're extracting from
-      logger.debug('Extracting mentions after user sync', {
-        userSyncIndex,
-        afterUserSync: afterUserSync.substring(0, 100),
-      })
-
-      // Extract Figma mentions from the part AFTER "user sync"
-      const figmaMentions = extractMentionsFromComment(afterUserSync)
-
-      // Debug: log extraction result
-      logger.debug('Mention extraction result', {
-        figmaMentionsCount: figmaMentions.length,
-        figmaMentions,
-      })
-
-      mentionedUsers = figmaMentions.map((m) => ({
-        userId: m.userId,
-        displayName: m.displayName,
-      }))
-    } else {
-      // Fallback: if "user sync" not found in API content but was in email,
-      // extract all mentions from API content
-      logger.debug('User sync not in API content, using fallback extraction', {
-        originalContentLength: originalContent.length,
-      })
-
-      const figmaMentions = extractMentionsFromComment(originalContent)
-
-      logger.debug('Fallback mention extraction result', {
-        figmaMentionsCount: figmaMentions.length,
-        figmaMentions,
-      })
-
-      mentionedUsers = figmaMentions.map((m) => ({
-        userId: m.userId,
-        displayName: m.displayName,
-      }))
+    // Add root message author
+    if (thread.rootMessage.authorHandle && thread.rootMessage.authorName) {
+      userMap.set(thread.rootMessage.authorHandle, thread.rootMessage.authorName)
     }
+
+    // Add reply authors (if any)
+    for (const reply of thread.replies) {
+      if (reply.authorHandle && reply.authorName) {
+        // Skip if this looks like a bot (numeric ID with no meaningful name, or same as bot)
+        // The bot's handle is usually in the participants list but we want real users
+        userMap.set(reply.authorHandle, reply.authorName)
+      }
+    }
+
+    // Convert to array format
+    mentionedUsers = Array.from(userMap.entries()).map(([userId, displayName]) => ({
+      userId,
+      displayName,
+    }))
+
+    logger.info('Figma bootstrap: Discovered users from thread participants', {
+      userCount: mentionedUsers.length,
+      users: mentionedUsers,
+    })
   }
   // For Slack, mentions would be extracted differently (already parsed by Slack adapter)
   // Could add Slack mention extraction here if needed
@@ -1152,10 +1138,19 @@ export async function processDiscussion(
     // ============================================================================
     // Check if we're already processing this sourceThreadId to prevent duplicates
     // from Slack retries
+    //
+    // EXCEPTIONS:
+    // - Bootstrap/User Sync comments: Always allow (they don't create tasks)
+    // - Failed discussions: Allow retry
     const db = useDB()
     const { discubotDiscussions } = await import(
       '#layers/discubot/collections/discussions/server/database/schema'
     )
+
+    // Check if this looks like a bootstrap comment (before we have the full thread)
+    const contentLower = parsed.content.toLowerCase()
+    const isLikelyBootstrap = contentLower.includes('user sync') || contentLower.includes('bootstrap')
+
     const [existingDiscussion] = await db
       .select({ id: discubotDiscussions.id, status: discubotDiscussions.status })
       .from(discubotDiscussions)
@@ -1163,24 +1158,42 @@ export async function processDiscussion(
       .limit(1)
 
     if (existingDiscussion) {
-      logger.info('Discussion already exists for this thread, skipping duplicate', {
+      // Allow retry for failed discussions or bootstrap comments
+      const shouldAllowRetry = existingDiscussion.status === 'failed' || isLikelyBootstrap
+
+      if (!shouldAllowRetry) {
+        logger.info('Discussion already exists for this thread, skipping duplicate', {
+          sourceThreadId: parsed.sourceThreadId,
+          existingDiscussionId: existingDiscussion.id,
+          existingStatus: existingDiscussion.status,
+        })
+        // Return a mock result to indicate this was already processed
+        return {
+          discussionId: existingDiscussion.id,
+          aiAnalysis: {
+            summary: { summary: 'Already processed', keyPoints: [] },
+            taskDetection: { isMultiTask: false, tasks: [] },
+            processingTime: 0,
+            cached: true,
+          },
+          notionTasks: [],
+          processingTime: 0,
+          isMultiTask: false,
+        }
+      }
+
+      // Delete the existing failed/bootstrap discussion to allow fresh processing
+      logger.info('Allowing retry for discussion', {
         sourceThreadId: parsed.sourceThreadId,
         existingDiscussionId: existingDiscussion.id,
         existingStatus: existingDiscussion.status,
+        reason: isLikelyBootstrap ? 'bootstrap_comment' : 'failed_status',
       })
-      // Return a mock result to indicate this was already processed
-      return {
-        discussionId: existingDiscussion.id,
-        aiAnalysis: {
-          summary: { summary: 'Already processed', keyPoints: [] },
-          taskDetection: { isMultiTask: false, tasks: [] },
-          processingTime: 0,
-          cached: true,
-        },
-        notionTasks: [],
-        processingTime: 0,
-        isMultiTask: false,
-      }
+
+      // Delete the old record to allow fresh processing
+      await db
+        .delete(discubotDiscussions)
+        .where(eq(discubotDiscussions.id, existingDiscussion.id))
     }
 
     // ============================================================================
@@ -1288,7 +1301,8 @@ export async function processDiscussion(
 
       for (const mapping of allUserMappings) {
         // Filter by sourceType, active status, and sourceWorkspaceId
-        const matchesWorkspace = !sourceWorkspaceId || mapping.sourceWorkspaceId === sourceWorkspaceId
+        // Allow mappings with empty sourceWorkspaceId to match any workspace (global mappings)
+        const matchesWorkspace = !sourceWorkspaceId || !mapping.sourceWorkspaceId || mapping.sourceWorkspaceId === sourceWorkspaceId
         if (mapping.sourceType === parsed.sourceType && mapping.active && matchesWorkspace) {
           const displayName = mapping.notionUserName || mapping.sourceUserName || mapping.sourceUserId
           const mentionData = {

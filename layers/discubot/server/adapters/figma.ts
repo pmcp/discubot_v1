@@ -256,6 +256,17 @@ export class FigmaAdapter implements DiscussionSourceAdapter {
         })
       }
 
+      // Debug: Log raw Figma API message content to understand mention format
+      logger.info('[FigmaAdapter] Raw comment from API:', {
+        commentId: rootComment.id,
+        userId: rootComment.user.id,
+        userHandle: rootComment.user.handle,
+        rawMessage: rootComment.message,
+        messageLength: rootComment.message.length,
+        // Log character codes to detect special unicode characters
+        charCodes: rootComment.message.substring(0, 100).split('').map(c => c.charCodeAt(0)),
+      })
+
       // Build thread structure
       const rootMessage = this.convertToThreadMessage(rootComment)
       const replies = data.comments
@@ -634,8 +645,10 @@ export class FigmaAdapter implements DiscussionSourceAdapter {
 /**
  * Extract @mentions from Figma comment text
  *
- * Figma formats mentions as: @[userId:displayName]
- * Example: "Hey @[123456:john.smith] can you review this?"
+ * Figma formats mentions in several ways:
+ * 1. Parentheses format: @Name (uuid) - most common in real Figma comments
+ * 2. Bracket format: @[userId:displayName] - alternative format
+ * 3. Plain text: @username - fallback when mention isn't resolved
  *
  * @param message - The comment text to parse
  * @returns Array of extracted mentions with userId and displayName
@@ -647,14 +660,15 @@ export function extractMentionsFromComment(message: string): FigmaMention[] {
 
   const mentions: FigmaMention[] = []
 
-  // First try: Figma bracket format @[userId:displayName]
-  // This is the standard format when Figma resolves @mentions
-  const mentionRegex = /@\[([^\]:]+):([^\]]+)\]/g
+  // First try: Figma parentheses format @Name (uuid)
+  // This is the most common format in real Figma comments
+  // Example: "@Maarten Lauwaert (a36f9347-1da7-400e-9ac5-06442413f18d)"
+  const parenMentionRegex = /@([^(@]+?)\s*\(([a-f0-9-]+)\)/gi
 
-  let match: RegExpExecArray | null
-  while ((match = mentionRegex.exec(message)) !== null) {
-    const userId = match[1]
-    const displayName = match[2]
+  let parenMatch: RegExpExecArray | null
+  while ((parenMatch = parenMentionRegex.exec(message)) !== null) {
+    const displayName = parenMatch[1]
+    const userId = parenMatch[2]
 
     // Only add if both userId and displayName are non-empty
     if (userId && displayName) {
@@ -665,8 +679,29 @@ export function extractMentionsFromComment(message: string): FigmaMention[] {
     }
   }
 
-  // Fallback: if no bracket format mentions found, try plain text @mentions
+  // Second try: Figma bracket format @[userId:displayName]
+  // Alternative format that may be used by some Figma integrations
+  if (mentions.length === 0) {
+    const bracketRegex = /@\[([^\]:]+):([^\]]+)\]/g
+
+    let match: RegExpExecArray | null
+    while ((match = bracketRegex.exec(message)) !== null) {
+      const userId = match[1]
+      const displayName = match[2]
+
+      // Only add if both userId and displayName are non-empty
+      if (userId && displayName) {
+        mentions.push({
+          userId: userId.trim(),
+          displayName: displayName.trim(),
+        })
+      }
+    }
+  }
+
+  // Fallback: if no structured mentions found, try plain text @mentions
   // This handles cases where Figma doesn't resolve the mentions
+  // NOTE: This uses username as userId which may not be accurate
   if (mentions.length === 0) {
     const plainMentionRegex = /@([a-zA-Z0-9_.-]+)/g
     let plainMatch: RegExpExecArray | null
