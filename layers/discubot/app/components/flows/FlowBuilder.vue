@@ -2,7 +2,7 @@
 import { z } from 'zod'
 import { humanId } from 'human-id'
 import type { FormSubmitEvent, StepperItem } from '@nuxt/ui'
-import type { Flow, FlowInput, FlowOutput, NotionOutputConfig } from '~/layers/discubot/types'
+import type { Flow, FlowInput, FlowOutput, NotionOutputConfig, NotionInputConfig } from '~/layers/discubot/types'
 
 /**
  * FlowBuilder - Multi-step wizard for creating/editing flows
@@ -150,12 +150,15 @@ function removeDomain(domain: string) {
 // ============================================================================
 
 interface InputFormData {
-  sourceType: 'slack' | 'figma' | 'email'
+  sourceType: 'slack' | 'figma' | 'email' | 'notion'
   name: string
   emailSlug?: string
   emailAddress?: string
   apiToken?: string
   sourceMetadata?: Record<string, any>
+  // Notion-specific fields
+  notionToken?: string
+  triggerKeyword?: string
 }
 
 const inputsList = ref<Partial<FlowInput>[]>(props.inputs || [])
@@ -166,12 +169,16 @@ const inputFormState = reactive<Partial<InputFormData>>({
   emailSlug: '',
   emailAddress: '',
   apiToken: '',
-  sourceMetadata: {}
+  sourceMetadata: {},
+  // Notion-specific fields
+  notionToken: '',
+  triggerKeyword: '@discubot'
 })
 
 // Modal state control
 const isSlackModalOpen = ref(false)
 const isFigmaModalOpen = ref(false)
+const isNotionInputModalOpen = ref(false)
 const isEditInputModalOpen = ref(false)
 const editingInputIndex = ref<number | null>(null)
 const editingInput = ref<Partial<FlowInput> | null>(null)
@@ -199,8 +206,82 @@ const computedEmailAddress = computed(() => {
   return ''
 })
 
+// Computed webhook URL for Notion inputs
+const notionWebhookUrl = computed(() => {
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}/api/webhooks/notion-input`
+  }
+  return '/api/webhooks/notion-input'
+})
+
+// Notion connection test state
+const testingNotionConnection = ref(false)
+const notionConnectionStatus = ref<'idle' | 'success' | 'error'>('idle')
+const notionConnectionError = ref('')
+
+// Copy webhook URL to clipboard
+async function copyNotionWebhookUrl() {
+  try {
+    await navigator.clipboard.writeText(notionWebhookUrl.value)
+    toast.add({
+      title: 'Copied!',
+      description: 'Webhook URL copied to clipboard',
+      color: 'success'
+    })
+  } catch {
+    toast.add({
+      title: 'Copy failed',
+      description: 'Please copy the URL manually',
+      color: 'error'
+    })
+  }
+}
+
+// Test Notion connection
+async function testNotionConnection() {
+  if (!inputFormState.notionToken) {
+    toast.add({
+      title: 'Missing token',
+      description: 'Please enter your Notion integration token first',
+      color: 'warning'
+    })
+    return
+  }
+
+  testingNotionConnection.value = true
+  notionConnectionStatus.value = 'idle'
+  notionConnectionError.value = ''
+
+  try {
+    // Call Notion API to verify token (GET /users/me)
+    const response = await $fetch('/api/notion/test-connection', {
+      method: 'POST',
+      body: {
+        notionToken: inputFormState.notionToken
+      }
+    })
+
+    notionConnectionStatus.value = 'success'
+    toast.add({
+      title: 'Connection successful!',
+      description: `Connected as ${(response as any).bot?.owner?.user?.name || 'Notion Integration'}`,
+      color: 'success'
+    })
+  } catch (error: any) {
+    notionConnectionStatus.value = 'error'
+    notionConnectionError.value = error.message || 'Failed to connect to Notion'
+    toast.add({
+      title: 'Connection failed',
+      description: error.message || 'Unable to verify Notion token',
+      color: 'error'
+    })
+  } finally {
+    testingNotionConnection.value = false
+  }
+}
+
 const inputSchema = computed(() => z.object({
-  sourceType: z.enum(['slack', 'figma', 'email']),
+  sourceType: z.enum(['slack', 'figma', 'email', 'notion']),
   name: z.string().min(3, 'Name must be at least 3 characters'),
   emailSlug: inputFormState.sourceType === 'figma'
     ? z.string().min(1, 'Email slug is required')
@@ -210,6 +291,13 @@ const inputSchema = computed(() => z.object({
     : z.string().email().optional(),
   apiToken: inputFormState.sourceType === 'figma'
     ? z.string().min(1, 'Figma API token is required')
+    : z.string().optional(),
+  // Notion-specific validation
+  notionToken: inputFormState.sourceType === 'notion'
+    ? z.string().min(1, 'Notion token is required')
+    : z.string().optional(),
+  triggerKeyword: inputFormState.sourceType === 'notion'
+    ? z.string().min(1, 'Trigger keyword is required')
     : z.string().optional()
 }))
 
@@ -272,7 +360,7 @@ const { openOAuthPopup, waitingForOAuth } = useFlowOAuth({
   }
 })
 
-function resetInputForm(sourceType: 'slack' | 'figma' | 'email') {
+function resetInputForm(sourceType: 'slack' | 'figma' | 'email' | 'notion') {
   inputFormState.sourceType = sourceType
   inputFormState.name = ''
   inputFormState.apiToken = ''
@@ -290,16 +378,37 @@ function resetInputForm(sourceType: 'slack' | 'figma' | 'email') {
     inputFormState.emailSlug = ''
     inputFormState.emailAddress = ''
   }
+
+  // Reset Notion-specific fields
+  if (sourceType === 'notion') {
+    inputFormState.notionToken = ''
+    inputFormState.triggerKeyword = '@discubot'
+  } else {
+    inputFormState.notionToken = ''
+    inputFormState.triggerKeyword = ''
+  }
 }
 
 async function saveInput(event: FormSubmitEvent<InputFormData>, close: () => void) {
+  // Build sourceMetadata based on source type
+  let sourceMetadata: Record<string, any> = { ...inputFormState.sourceMetadata }
+
+  // Add Notion-specific config to sourceMetadata
+  if (event.data.sourceType === 'notion') {
+    sourceMetadata = {
+      ...sourceMetadata,
+      notionToken: inputFormState.notionToken,
+      triggerKeyword: inputFormState.triggerKeyword || '@discubot'
+    } as NotionInputConfig
+  }
+
   const inputData: Partial<FlowInput> = {
     sourceType: event.data.sourceType,
     name: event.data.name,
     emailSlug: event.data.emailSlug || inputFormState.emailSlug,
     emailAddress: event.data.emailAddress || inputFormState.emailAddress,
     apiToken: event.data.apiToken,
-    sourceMetadata: inputFormState.sourceMetadata,
+    sourceMetadata,
     active: true
   }
 
@@ -1364,6 +1473,168 @@ function cancel() {
                       </div>
                     </template>
                   </UModal>
+
+                  <!-- Add Notion Input Modal -->
+                  <UModal v-model:open="isNotionInputModalOpen">
+                    <UButton
+                      type="button"
+                      color="primary"
+                      size="sm"
+                      variant="outline"
+                      @click="resetInputForm('notion'); isNotionInputModalOpen = true"
+                    >
+                      <UIcon name="i-simple-icons-notion" />
+                      Add Notion
+                    </UButton>
+
+                    <template #content="{ close }">
+                      <div class="p-6">
+                        <h3 class="text-lg font-semibold mb-4">
+                          Add Input - Notion
+                        </h3>
+
+                        <UForm
+                          :state="inputFormState"
+                          :schema="inputSchema"
+                          class="space-y-4"
+                          @submit="(event) => saveInput(event, close)"
+                        >
+                          <UFormField label="Name" name="name" required>
+                            <UInput
+                              v-model="inputFormState.name"
+                              placeholder="e.g., Product Docs Notion"
+                              class="w-full"
+                            />
+                          </UFormField>
+
+                          <UFormField
+                            label="Notion Integration Token"
+                            name="notionToken"
+                            help="Internal integration token from your Notion workspace"
+                            required
+                          >
+                            <UInput
+                              v-model="inputFormState.notionToken"
+                              type="password"
+                              placeholder="secret_..."
+                              class="w-full"
+                            />
+                            <template #hint>
+                              <a
+                                href="https://www.notion.so/my-integrations"
+                                target="_blank"
+                                class="text-primary hover:underline"
+                              >
+                                Create a Notion integration
+                              </a>
+                            </template>
+                          </UFormField>
+
+                          <UFormField
+                            label="Trigger Keyword"
+                            name="triggerKeyword"
+                            help="The keyword that triggers task creation when mentioned in comments"
+                          >
+                            <UInput
+                              v-model="inputFormState.triggerKeyword"
+                              placeholder="@discubot"
+                              class="w-full"
+                            />
+                            <template #hint>
+                              <span class="text-muted-foreground text-xs">
+                                Examples: @discubot, @task, #todo
+                              </span>
+                            </template>
+                          </UFormField>
+
+                          <UFormField
+                            label="Webhook URL"
+                            help="Configure this URL in your Notion integration settings"
+                          >
+                            <div class="flex gap-2">
+                              <UInput
+                                :model-value="notionWebhookUrl"
+                                readonly
+                                class="flex-1 font-mono text-sm"
+                              />
+                              <UTooltip text="Copy webhook URL">
+                                <UButton
+                                  type="button"
+                                  color="neutral"
+                                  variant="outline"
+                                  icon="i-lucide-copy"
+                                  @click="copyNotionWebhookUrl"
+                                />
+                              </UTooltip>
+                            </div>
+                          </UFormField>
+
+                          <!-- Test Connection Button -->
+                          <div class="flex items-center gap-3">
+                            <UButton
+                              type="button"
+                              color="neutral"
+                              variant="outline"
+                              size="sm"
+                              :loading="testingNotionConnection"
+                              @click="testNotionConnection"
+                            >
+                              <UIcon name="i-lucide-plug" class="mr-1" />
+                              Test Connection
+                            </UButton>
+                            <span v-if="notionConnectionStatus === 'success'" class="text-sm text-green-600 dark:text-green-400 flex items-center gap-1">
+                              <UIcon name="i-lucide-check-circle" class="w-4 h-4" />
+                              Connected
+                            </span>
+                            <span v-else-if="notionConnectionStatus === 'error'" class="text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+                              <UIcon name="i-lucide-x-circle" class="w-4 h-4" />
+                              {{ notionConnectionError }}
+                            </span>
+                          </div>
+
+                          <UAlert
+                            color="info"
+                            variant="soft"
+                            icon="i-lucide-book-open"
+                            title="Setup Guide"
+                          >
+                            <template #description>
+                              <ol class="list-decimal list-inside text-sm space-y-1 mt-1">
+                                <li>Create a Notion internal integration</li>
+                                <li>Enable "Read comments" and "Insert comments" capabilities</li>
+                                <li>Subscribe to "comment.created" webhook events</li>
+                                <li>Connect the integration to your target pages/databases</li>
+                              </ol>
+                              <a
+                                href="/docs/guides/notion-input-setup-guide"
+                                target="_blank"
+                                class="text-primary hover:underline text-sm mt-2 inline-block"
+                              >
+                                View full setup guide
+                              </a>
+                            </template>
+                          </UAlert>
+
+                          <div class="flex justify-end gap-2 mt-6">
+                            <UButton
+                              type="button"
+                              color="neutral"
+                              variant="ghost"
+                              @click="close"
+                            >
+                              Cancel
+                            </UButton>
+                            <UButton
+                              type="submit"
+                              color="primary"
+                            >
+                              Add Input
+                            </UButton>
+                          </div>
+                        </UForm>
+                      </div>
+                    </template>
+                  </UModal>
                 </div>
               </div>
             </template>
@@ -1372,7 +1643,7 @@ function cancel() {
             <div v-if="inputsList.length === 0" class="text-center py-8 text-muted">
               <UIcon name="i-lucide-inbox" class="w-12 h-12 mx-auto mb-3 opacity-30" />
               <p>No inputs added yet</p>
-              <p class="text-sm mt-1">Add Slack or Figma sources to receive discussions</p>
+              <p class="text-sm mt-1">Add Slack, Figma, or Notion sources to receive discussions</p>
             </div>
 
             <div v-else class="space-y-3">
@@ -1384,7 +1655,7 @@ function cancel() {
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-3">
                     <UIcon
-                      :name="input.sourceType === 'slack' ? 'i-simple-icons-slack' : 'i-simple-icons-figma'"
+                      :name="input.sourceType === 'slack' ? 'i-simple-icons-slack' : input.sourceType === 'notion' ? 'i-simple-icons-notion' : 'i-simple-icons-figma'"
                       class="w-5 h-5"
                     />
                     <div>
@@ -1394,6 +1665,9 @@ function cancel() {
                       </p>
                       <p v-if="input.emailAddress" class="text-xs text-muted-foreground font-mono mt-1">
                         {{ input.emailAddress }}
+                      </p>
+                      <p v-if="input.sourceType === 'notion' && input.sourceMetadata?.triggerKeyword" class="text-xs text-muted-foreground mt-1">
+                        Trigger: <code class="bg-gray-100 dark:bg-gray-800 px-1 rounded">{{ input.sourceMetadata.triggerKeyword }}</code>
                       </p>
                     </div>
                   </div>

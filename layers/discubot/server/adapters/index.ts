@@ -8,6 +8,7 @@
 import type { DiscussionSourceAdapter, AdapterRegistry } from './base'
 import { createFigmaAdapter } from './figma'
 import { createSlackAdapter } from './slack'
+import { createNotionAdapter } from './notion'
 
 /**
  * Registry of all available adapters
@@ -15,6 +16,7 @@ import { createSlackAdapter } from './slack'
 const adapters: AdapterRegistry = {
   figma: createFigmaAdapter(),
   slack: createSlackAdapter(),
+  notion: createNotionAdapter(),
   // Future adapters:
   // linear: createLinearAdapter(),
 }
@@ -79,3 +81,4 @@ export type { DiscussionSourceAdapter, AdapterRegistry }
 export { AdapterError } from './base'
 export { FigmaAdapter, createFigmaAdapter } from './figma'
 export { SlackAdapter, createSlackAdapter } from './slack'
+export { NotionAdapter, createNotionAdapter } from './notion'
