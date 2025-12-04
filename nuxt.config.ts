@@ -33,6 +33,7 @@ export default defineNuxtConfig({
     slackClientSecret: process.env.SLACK_CLIENT_SECRET,
     // Webhook Security
     slackSigningSecret: process.env.SLACK_SIGNING_SECRET,
+    notionWebhookSecret: process.env.NOTION_WEBHOOK_SECRET,
     mailgunSigningKey: process.env.MAILGUN_SIGNING_KEY, // Legacy - can be removed if using Resend
     resendWebhookSigningSecret: process.env.RESEND_WEBHOOK_SIGNING_SECRET,
     // Email Configuration
