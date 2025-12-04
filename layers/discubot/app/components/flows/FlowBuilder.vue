@@ -176,6 +176,11 @@ const isEditInputModalOpen = ref(false)
 const editingInputIndex = ref<number | null>(null)
 const editingInput = ref<Partial<FlowInput> | null>(null)
 
+// Output edit modal state
+const isEditOutputModalOpen = ref(false)
+const editingOutputIndex = ref<number | null>(null)
+const editingOutput = ref<Partial<FlowOutput> | null>(null)
+
 // User mapping drawer state
 const isUserMappingDrawerOpen = ref(false)
 const userMappingContext = ref<{
@@ -638,6 +643,68 @@ function deleteOutput(index: number) {
     title: 'Output removed',
     description: `${output.name} has been removed`,
     color: 'neutral'
+  })
+}
+
+function openEditOutput(index: number) {
+  const output = outputsList.value[index]
+  editingOutputIndex.value = index
+  editingOutput.value = {
+    ...output,
+    outputConfig: { ...output.outputConfig }
+  }
+  isEditOutputModalOpen.value = true
+}
+
+async function saveEditOutput() {
+  if (editingOutputIndex.value === null || !editingOutput.value) return
+
+  const output = editingOutput.value
+
+  // If output has an ID, update in database
+  if (output.id && savedFlowId.value) {
+    try {
+      await $fetch(`/api/teams/${props.teamId}/discubot-flowoutputs/${output.id}`, {
+        method: 'PATCH',
+        body: {
+          name: output.name,
+          domainFilter: output.domainFilter,
+          isDefault: output.isDefault,
+          outputConfig: output.outputConfig
+        }
+      })
+      console.log('[FlowBuilder] Output updated in database')
+    } catch (error: any) {
+      console.error('[FlowBuilder] Failed to update output:', error)
+      toast.add({
+        title: 'Update failed',
+        description: error.message || 'Failed to update output',
+        color: 'error'
+      })
+      return
+    }
+  }
+
+  // If setting as default, unset other defaults
+  if (output.isDefault) {
+    outputsList.value.forEach((o: Partial<FlowOutput>, i: number) => {
+      if (i !== editingOutputIndex.value) {
+        o.isDefault = false
+      }
+    })
+  }
+
+  // Update local state
+  outputsList.value[editingOutputIndex.value] = { ...output }
+
+  isEditOutputModalOpen.value = false
+  editingOutputIndex.value = null
+  editingOutput.value = null
+
+  toast.add({
+    title: 'Output updated',
+    description: `${output.name} has been updated`,
+    color: 'success'
   })
 }
 
@@ -1667,6 +1734,14 @@ function cancel() {
                   <div class="flex gap-2">
                     <UButton
                       type="button"
+                      color="neutral"
+                      variant="ghost"
+                      size="sm"
+                      icon="i-lucide-pencil"
+                      @click="openEditOutput(index)"
+                    />
+                    <UButton
+                      type="button"
                       color="error"
                       variant="ghost"
                       size="sm"
@@ -1677,6 +1752,87 @@ function cancel() {
                 </div>
               </UCard>
             </div>
+
+            <!-- Edit Output Modal -->
+            <UModal v-model:open="isEditOutputModalOpen">
+              <template #content="{ close }">
+                <div class="p-6 max-h-[80vh] overflow-y-auto">
+                  <h3 class="text-lg font-semibold mb-4">
+                    Edit Output
+                  </h3>
+
+                  <div v-if="editingOutput" class="space-y-4">
+                    <UFormField label="Name" required>
+                      <UInput
+                        v-model="editingOutput.name"
+                        placeholder="Output name"
+                        class="w-full"
+                      />
+                    </UFormField>
+
+                    <UFormField
+                      label="Domain Filter"
+                      help="Select which domains should route to this output"
+                    >
+                      <USelectMenu
+                        v-model="editingOutput.domainFilter"
+                        :items="flowState.availableDomains || []"
+                        multiple
+                        placeholder="All domains (no filter)"
+                        class="w-full"
+                      />
+                    </UFormField>
+
+                    <UFormField>
+                      <UCheckbox
+                        v-model="editingOutput.isDefault"
+                        label="Set as default output"
+                        help="Default output receives tasks with no matched domain"
+                      />
+                    </UFormField>
+
+                    <template v-if="editingOutput.outputType === 'notion'">
+                      <USeparator />
+
+                      <UFormField label="Notion Token">
+                        <UInput
+                          v-model="(editingOutput.outputConfig as NotionOutputConfig).notionToken"
+                          type="password"
+                          placeholder="secret_..."
+                          class="w-full"
+                        />
+                      </UFormField>
+
+                      <UFormField label="Database ID">
+                        <UInput
+                          v-model="(editingOutput.outputConfig as NotionOutputConfig).databaseId"
+                          placeholder="abc123def456..."
+                          class="w-full"
+                        />
+                      </UFormField>
+                    </template>
+
+                    <div class="flex justify-end gap-2 mt-6">
+                      <UButton
+                        type="button"
+                        color="neutral"
+                        variant="ghost"
+                        @click="close(); editingOutput = null; editingOutputIndex = null"
+                      >
+                        Cancel
+                      </UButton>
+                      <UButton
+                        type="button"
+                        color="primary"
+                        @click="saveEditOutput"
+                      >
+                        Save Changes
+                      </UButton>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </UModal>
           </UCard>
 
           <!-- Navigation -->
