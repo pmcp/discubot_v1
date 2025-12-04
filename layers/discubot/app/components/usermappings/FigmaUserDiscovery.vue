@@ -50,6 +50,9 @@ const manualForm = reactive({
   notionUserId: ''
 })
 
+// Editing state
+const editingMappingId = ref<string | null>(null)
+
 // Fetch existing mappings
 async function fetchExistingMappings() {
   loadingMappings.value = true
@@ -122,7 +125,25 @@ async function saveDiscoveredMapping(mapping: any, notionUserId: string) {
   }
 }
 
-// Add manual mapping
+// Edit existing mapping - populate form with mapping data
+function editMapping(mapping: any) {
+  editingMappingId.value = mapping.id
+  manualForm.sourceUserId = mapping.sourceUserId || ''
+  manualForm.sourceUserEmail = mapping.sourceUserEmail || ''
+  manualForm.sourceUserName = mapping.sourceUserName || ''
+  manualForm.notionUserId = mapping.notionUserId || ''
+}
+
+// Cancel editing
+function cancelEdit() {
+  editingMappingId.value = null
+  manualForm.sourceUserId = ''
+  manualForm.sourceUserEmail = ''
+  manualForm.sourceUserName = ''
+  manualForm.notionUserId = ''
+}
+
+// Add or update manual mapping
 async function addManualMapping() {
   if (!manualForm.sourceUserId && !manualForm.sourceUserEmail) {
     toast.add({
@@ -143,31 +164,57 @@ async function addManualMapping() {
 
   saving.value = true
   const notionUser = notionUsers.value.find(u => u.id === manualForm.notionUserId)
+  const isEditing = !!editingMappingId.value
 
   try {
-    await $fetch(`/api/teams/${props.teamId}/discubot-usermappings`, {
-      method: 'POST',
-      body: {
-        sourceType: 'figma',
-        sourceWorkspaceId: props.workspaceId,
-        sourceUserId: manualForm.sourceUserId || manualForm.sourceUserEmail,
-        sourceUserEmail: manualForm.sourceUserEmail || null,
-        sourceUserName: manualForm.sourceUserName || null,
-        notionUserId: manualForm.notionUserId,
-        notionUserName: notionUser?.name,
-        notionUserEmail: notionUser?.email,
-        mappingType: 'manual',
-        confidence: 1.0,
-        active: true
-      }
-    })
+    if (isEditing) {
+      // Update existing mapping
+      await $fetch(`/api/teams/${props.teamId}/discubot-usermappings/${editingMappingId.value}`, {
+        method: 'PATCH',
+        body: {
+          sourceUserId: manualForm.sourceUserId || manualForm.sourceUserEmail,
+          sourceUserEmail: manualForm.sourceUserEmail || null,
+          sourceUserName: manualForm.sourceUserName || null,
+          notionUserId: manualForm.notionUserId,
+          notionUserName: notionUser?.name,
+          notionUserEmail: notionUser?.email,
+          mappingType: 'manual',
+          confidence: 1.0,
+          active: true
+        }
+      })
 
-    toast.add({
-      title: 'Mapping created',
-      color: 'success'
-    })
+      toast.add({
+        title: 'Mapping updated',
+        color: 'success'
+      })
+    } else {
+      // Create new mapping
+      await $fetch(`/api/teams/${props.teamId}/discubot-usermappings`, {
+        method: 'POST',
+        body: {
+          sourceType: 'figma',
+          sourceWorkspaceId: props.workspaceId,
+          sourceUserId: manualForm.sourceUserId || manualForm.sourceUserEmail,
+          sourceUserEmail: manualForm.sourceUserEmail || null,
+          sourceUserName: manualForm.sourceUserName || null,
+          notionUserId: manualForm.notionUserId,
+          notionUserName: notionUser?.name,
+          notionUserEmail: notionUser?.email,
+          mappingType: 'manual',
+          confidence: 1.0,
+          active: true
+        }
+      })
+
+      toast.add({
+        title: 'Mapping created',
+        color: 'success'
+      })
+    }
 
     // Reset form
+    editingMappingId.value = null
     manualForm.sourceUserId = ''
     manualForm.sourceUserEmail = ''
     manualForm.sourceUserName = ''
@@ -176,10 +223,10 @@ async function addManualMapping() {
     await fetchExistingMappings()
     emit('saved')
   } catch (err: any) {
-    console.error('Failed to create mapping:', err)
+    console.error('Failed to save mapping:', err)
     toast.add({
-      title: 'Create failed',
-      description: err.message || 'Failed to create mapping',
+      title: isEditing ? 'Update failed' : 'Create failed',
+      description: err.message || 'Failed to save mapping',
       color: 'error'
     })
   } finally {
@@ -350,17 +397,29 @@ onMounted(initialize)
     </div>
 
     <!-- Manual Entry -->
-    <UCard>
+    <UCard :class="{ 'ring-2 ring-primary': editingMappingId }">
       <template #header>
-        <div class="flex items-center gap-2">
-          <UIcon name="i-lucide-edit" class="w-5 h-5 text-primary" />
-          <h5 class="font-medium">Option 2: Manual Entry</h5>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <UIcon :name="editingMappingId ? 'i-lucide-pencil' : 'i-lucide-edit'" class="w-5 h-5 text-primary" />
+            <h5 class="font-medium">{{ editingMappingId ? 'Edit Mapping' : 'Option 2: Manual Entry' }}</h5>
+          </div>
+          <UButton
+            v-if="editingMappingId"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            icon="i-lucide-x"
+            @click="cancelEdit"
+          >
+            Cancel
+          </UButton>
         </div>
       </template>
 
       <div class="space-y-4">
         <p class="text-sm text-muted">
-          Add user mappings manually if you know the Figma user ID or email.
+          {{ editingMappingId ? 'Update the Notion user for this mapping.' : 'Add user mappings manually if you know the Figma user ID or email.' }}
         </p>
 
         <div class="grid grid-cols-2 gap-4">
@@ -398,12 +457,12 @@ onMounted(initialize)
         <div class="flex justify-end">
           <UButton
             color="primary"
-            icon="i-lucide-plus"
+            :icon="editingMappingId ? 'i-lucide-check' : 'i-lucide-plus'"
             :loading="saving"
             :disabled="(!manualForm.sourceUserId && !manualForm.sourceUserEmail) || !manualForm.notionUserId"
             @click="addManualMapping"
           >
-            Add Mapping
+            {{ editingMappingId ? 'Update Mapping' : 'Add Mapping' }}
           </UButton>
         </div>
       </div>
@@ -416,6 +475,7 @@ onMounted(initialize)
         :mappings="existingMappings"
         :loading="loadingMappings"
         compact
+        @edit="editMapping"
         @delete="deleteMapping"
       />
     </div>

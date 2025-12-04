@@ -69,6 +69,10 @@ const saving = ref(false)
 const existingMappings = ref<any[]>([])
 const loadingMappings = ref(false)
 
+// Editing state
+const editingMapping = ref<any | null>(null)
+const editingNotionUserId = ref<string | null>(null)
+
 // Fetch existing mappings
 async function fetchExistingMappings() {
   loadingMappings.value = true
@@ -219,6 +223,59 @@ async function deleteMapping(mapping: any) {
       description: err.message || 'Failed to delete mapping',
       color: 'error'
     })
+  }
+}
+
+// Edit existing mapping
+function editMappingStart(mapping: any) {
+  editingMapping.value = mapping
+  editingNotionUserId.value = mapping.notionUserId
+}
+
+// Cancel editing
+function cancelEdit() {
+  editingMapping.value = null
+  editingNotionUserId.value = null
+}
+
+// Save edited mapping
+async function saveEditedMapping() {
+  if (!editingMapping.value || !editingNotionUserId.value) return
+
+  saving.value = true
+  const notionUser = notionUsers.value.find(u => u.id === editingNotionUserId.value)
+
+  try {
+    await $fetch(`/api/teams/${props.teamId}/discubot-usermappings/${editingMapping.value.id}`, {
+      method: 'PATCH',
+      body: {
+        notionUserId: editingNotionUserId.value,
+        notionUserName: notionUser?.name,
+        notionUserEmail: notionUser?.email,
+        mappingType: 'manual',
+        confidence: 1.0,
+        active: true
+      }
+    })
+
+    toast.add({
+      title: 'Mapping updated',
+      color: 'success'
+    })
+
+    editingMapping.value = null
+    editingNotionUserId.value = null
+    await fetchExistingMappings()
+    emit('saved')
+  } catch (err: any) {
+    console.error('Failed to update mapping:', err)
+    toast.add({
+      title: 'Update failed',
+      description: err.message || 'Failed to update mapping',
+      color: 'error'
+    })
+  } finally {
+    saving.value = false
   }
 }
 
@@ -405,6 +462,61 @@ onMounted(initialize)
         </div>
       </div>
 
+      <!-- Editing inline section -->
+      <div v-if="editingMapping" class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h5 class="font-medium text-primary">Edit Mapping</h5>
+          <UButton
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            icon="i-lucide-x"
+            @click="cancelEdit"
+          >
+            Cancel
+          </UButton>
+        </div>
+
+        <div class="flex items-center gap-3 p-4 rounded-lg border-2 border-primary bg-primary-50 dark:bg-primary-950">
+          <!-- Source user (read-only) -->
+          <div class="flex items-center gap-2 flex-1 min-w-0">
+            <UIcon name="i-simple-icons-slack" class="w-5 h-5 flex-shrink-0" />
+            <div class="min-w-0">
+              <p class="font-medium truncate">
+                {{ editingMapping.sourceUserName || editingMapping.sourceUserId }}
+              </p>
+              <p v-if="editingMapping.sourceUserEmail" class="text-xs text-muted truncate">
+                {{ editingMapping.sourceUserEmail }}
+              </p>
+            </div>
+          </div>
+
+          <UIcon name="i-lucide-arrow-right" class="w-4 h-4 text-muted flex-shrink-0" />
+
+          <!-- Notion user picker -->
+          <div class="flex-1">
+            <DiscubotUsermappingsNotionUserPicker
+              v-model="editingNotionUserId"
+              :notion-token="notionToken"
+              :team-id="teamId"
+              placeholder="Select Notion user..."
+            />
+          </div>
+
+          <!-- Save button -->
+          <UButton
+            color="primary"
+            size="sm"
+            icon="i-lucide-check"
+            :loading="saving"
+            :disabled="!editingNotionUserId"
+            @click="saveEditedMapping"
+          >
+            Save
+          </UButton>
+        </div>
+      </div>
+
       <!-- Existing Mappings -->
       <div v-if="existingMappings.length > 0" class="space-y-3">
         <h5 class="font-medium">Existing Mappings ({{ existingMappings.length }})</h5>
@@ -412,6 +524,7 @@ onMounted(initialize)
           :mappings="existingMappings"
           :loading="loadingMappings"
           compact
+          @edit="editMappingStart"
           @delete="deleteMapping"
         />
       </div>
