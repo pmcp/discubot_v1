@@ -463,6 +463,38 @@ export default defineEventHandler(async (event) => {
       inputId: matchedInput.id,
     })
 
+    // Auto-capture workspace/integration IDs if not already stored
+    // This enables user mapping to work for Notion inputs
+    const needsWorkspaceUpdate = !matchedInput.sourceMetadata?.notionWorkspaceId && workspaceId !== 'unknown'
+    const needsIntegrationUpdate = !matchedInput.sourceMetadata?.notionIntegrationId && integrationId
+
+    if (needsWorkspaceUpdate || needsIntegrationUpdate) {
+      logger.info('[Notion Webhook] Auto-capturing workspace/integration IDs', {
+        inputId: matchedInput.id,
+        workspaceId: needsWorkspaceUpdate ? workspaceId : 'already set',
+        integrationId: needsIntegrationUpdate ? integrationId : 'already set',
+      })
+
+      const updatedMetadata = {
+        ...matchedInput.sourceMetadata,
+        ...(needsWorkspaceUpdate && { notionWorkspaceId: workspaceId }),
+        ...(needsIntegrationUpdate && { notionIntegrationId: integrationId }),
+      }
+
+      await db
+        .update(discubotFlowinputs)
+        .set({
+          sourceMetadata: updatedMetadata,
+          updatedAt: new Date(),
+        })
+        .where(eq(discubotFlowinputs.id, matchedInput.id))
+
+      // Update local reference for this request
+      matchedInput.sourceMetadata = updatedMetadata
+
+      logger.info('[Notion Webhook] Workspace/integration IDs captured successfully')
+    }
+
     // Get API token from flow input (can be in apiToken or sourceMetadata.notionToken)
     const apiToken = matchedInput.apiToken || matchedInput.sourceMetadata?.notionToken
     if (!apiToken) {

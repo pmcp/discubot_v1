@@ -191,7 +191,7 @@ const editingOutput = ref<Partial<FlowOutput> | null>(null)
 // User mapping drawer state
 const isUserMappingDrawerOpen = ref(false)
 const userMappingContext = ref<{
-  sourceType: 'slack' | 'figma'
+  sourceType: 'slack' | 'figma' | 'notion'
   sourceWorkspaceId: string
   apiToken?: string
   notionToken: string
@@ -383,7 +383,7 @@ function resetInputForm(sourceType: 'slack' | 'figma' | 'email' | 'notion') {
   // Reset Notion-specific fields
   if (sourceType === 'notion') {
     inputFormState.notionToken = ''
-    inputFormState.triggerKeyword = '@discubot'
+    inputFormState.triggerKeyword = 'discubot'
   } else {
     inputFormState.notionToken = ''
     inputFormState.triggerKeyword = ''
@@ -399,7 +399,7 @@ async function saveInput(event: FormSubmitEvent<InputFormData>, close: () => voi
     sourceMetadata = {
       ...sourceMetadata,
       notionToken: inputFormState.notionToken,
-      triggerKeyword: inputFormState.triggerKeyword || '@discubot'
+      triggerKeyword: inputFormState.triggerKeyword || 'discubot'
     } as NotionInputConfig
   }
 
@@ -549,35 +549,61 @@ function openUserMappingDrawer(index: number) {
 
   // Get workspace ID based on source type
   // For Figma: use emailSlug (the part before @), NOT the full email address
-  // This matches what the processor stores in the database
-  const sourceWorkspaceId = input.sourceType === 'slack'
-    ? (input.sourceMetadata?.slackTeamId as string) || ''
-    : input.emailSlug || ''
+  // For Notion: use notionWorkspaceId from sourceMetadata (auto-captured from webhook)
+  let sourceWorkspaceId = ''
+
+  if (input.sourceType === 'slack') {
+    sourceWorkspaceId = (input.sourceMetadata?.slackTeamId as string) || ''
+  } else if (input.sourceType === 'figma') {
+    sourceWorkspaceId = input.emailSlug || ''
+  } else if (input.sourceType === 'notion') {
+    sourceWorkspaceId = (input.sourceMetadata?.notionWorkspaceId as string) || ''
+  }
 
   if (!sourceWorkspaceId) {
-    toast.add({
-      title: 'Missing Workspace ID',
-      description: 'This input doesn\'t have a workspace ID configured yet.',
-      color: 'warning'
-    })
+    // Provide specific message for Notion
+    if (input.sourceType === 'notion') {
+      toast.add({
+        title: 'Workspace ID Not Yet Available',
+        description: 'Trigger a test comment with your keyword to capture the workspace ID.',
+        color: 'warning'
+      })
+    } else {
+      toast.add({
+        title: 'Missing Workspace ID',
+        description: 'This input doesn\'t have a workspace ID configured yet.',
+        color: 'warning'
+      })
+    }
     return
   }
 
-  // Get Notion token from first Notion output
-  const notionOutput = outputsList.value.find(o => o.outputType === 'notion')
-  const notionToken = (notionOutput?.outputConfig as { notionToken?: string })?.notionToken || ''
+  // Get Notion token - for Notion inputs, use the input's own token
+  // For other sources, get from first Notion output
+  let notionToken = ''
+
+  if (input.sourceType === 'notion') {
+    notionToken = (input.sourceMetadata?.notionToken as string) || input.apiToken || ''
+  }
+
+  if (!notionToken) {
+    const notionOutput = outputsList.value.find(o => o.outputType === 'notion')
+    notionToken = (notionOutput?.outputConfig as { notionToken?: string })?.notionToken || ''
+  }
 
   if (!notionToken) {
     toast.add({
-      title: 'No Notion Output',
-      description: 'Add a Notion output first to manage user mappings.',
+      title: input.sourceType === 'notion' ? 'No Notion Token' : 'No Notion Output',
+      description: input.sourceType === 'notion'
+        ? 'Please configure a Notion token for this input.'
+        : 'Add a Notion output first to manage user mappings.',
       color: 'warning'
     })
     return
   }
 
   userMappingContext.value = {
-    sourceType: input.sourceType as 'slack' | 'figma',
+    sourceType: input.sourceType as 'slack' | 'figma' | 'notion',
     sourceWorkspaceId,
     apiToken: input.apiToken,
     notionToken,
@@ -1578,12 +1604,12 @@ function cancel() {
                           >
                             <UInput
                               v-model="inputFormState.triggerKeyword"
-                              placeholder="@discubot"
+                              placeholder="discubot"
                               class="w-full"
                             />
                             <template #hint>
                               <span class="text-muted-foreground text-xs">
-                                Examples: @discubot, @task, #todo
+                                Examples: discubot, task, todo
                               </span>
                             </template>
                           </UFormField>
@@ -1805,11 +1831,11 @@ function cancel() {
                     <UFormField
                       v-if="editingInput.sourceType === 'notion'"
                       label="Trigger Keyword"
-                      help="Keyword that triggers task creation (e.g., @discubot)"
+                      help="Keyword that triggers task creation (e.g., discubot)"
                     >
                       <UInput
                         v-model="editingInput.sourceMetadata.triggerKeyword"
-                        placeholder="@discubot"
+                        placeholder="discubot"
                         class="w-full"
                       />
                     </UFormField>

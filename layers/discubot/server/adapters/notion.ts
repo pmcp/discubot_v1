@@ -38,8 +38,10 @@ const NOTION_API_VERSION = '2022-06-28'
 
 /**
  * Default trigger keyword for activating Discubot
+ * Note: For Notion input, we check for the word without @ prefix
+ * since Notion doesn't use @ mentions the same way as Slack/Figma
  */
-const DEFAULT_TRIGGER_KEYWORD = '@discubot'
+const DEFAULT_TRIGGER_KEYWORD = 'discubot'
 
 // ============================================================================
 // TYPE DEFINITIONS

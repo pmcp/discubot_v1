@@ -9,8 +9,8 @@
 interface Props {
   /** Whether the drawer is open */
   open: boolean
-  /** Source type (slack or figma) */
-  sourceType: 'slack' | 'figma'
+  /** Source type (slack, figma, or notion) */
+  sourceType: 'slack' | 'figma' | 'notion'
   /** Workspace ID for the source */
   sourceWorkspaceId: string
   /** Source API token (for Slack) */
@@ -46,6 +46,7 @@ const sourceTypeLabel = computed(() => {
   switch (props.sourceType) {
     case 'slack': return 'Slack'
     case 'figma': return 'Figma'
+    case 'notion': return 'Notion'
     default: return 'Source'
   }
 })
@@ -54,6 +55,7 @@ const sourceTypeIcon = computed(() => {
   switch (props.sourceType) {
     case 'slack': return 'i-simple-icons-slack'
     case 'figma': return 'i-simple-icons-figma'
+    case 'notion': return 'i-simple-icons-notion'
     default: return 'i-lucide-user'
   }
 })
@@ -92,6 +94,15 @@ const sourceTypeIcon = computed(() => {
         <!-- Figma Discovery -->
         <DiscubotUsermappingsFigmaUserDiscovery
           v-else-if="sourceType === 'figma'"
+          :workspace-id="sourceWorkspaceId"
+          :notion-token="notionToken"
+          :team-id="teamId"
+          @saved="handleSaved"
+        />
+
+        <!-- Notion Discovery -->
+        <DiscubotUsermappingsNotionUserDiscovery
+          v-else-if="sourceType === 'notion'"
           :workspace-id="sourceWorkspaceId"
           :notion-token="notionToken"
           :team-id="teamId"
