@@ -236,6 +236,11 @@ export function useFieldMapping() {
     generateAutoMapping,
 
     /**
+     * Alias for generateAutoMapping (used by OutputManager)
+     */
+    autoMapFields: generateAutoMapping,
+
+    /**
      * Get property type color for badges
      */
     getPropertyTypeColor,

@@ -98,8 +98,43 @@ const {
 
 const {
   autoMapFields,
+  generateValueMapping,
   getPropertyTypeColor
 } = useFieldMapping()
+
+/**
+ * Update field mapping with full structure when a property is selected
+ *
+ * This builds the correct format expected by the backend:
+ * { notionProperty: string, propertyType: string, valueMap: Record<string, string> }
+ */
+function updateFieldMapping(aiField: string, propertyName: string | null) {
+  if (!propertyName) {
+    // Clear the mapping if property is deselected
+    delete outputFormState.value.fieldMapping[aiField]
+    return
+  }
+
+  const propInfo = notionSchema.value?.properties?.[propertyName]
+  if (!propInfo) return
+
+  outputFormState.value.fieldMapping[aiField] = {
+    notionProperty: propertyName,
+    propertyType: propInfo.type,
+    valueMap: (propInfo.type === 'select' || propInfo.type === 'status')
+      ? generateValueMapping(aiField, propInfo.options)
+      : {}
+  }
+}
+
+/**
+ * Get the currently mapped Notion property name for an AI field
+ */
+function getMappedProperty(aiField: string): string | null {
+  const mapping = outputFormState.value.fieldMapping[aiField]
+  if (!mapping) return null
+  return typeof mapping === 'string' ? mapping : mapping.notionProperty || null
+}
 
 /**
  * Fetch Notion schema and auto-map fields
@@ -858,9 +893,10 @@ watch(() => props.modelValue, (newValue) => {
                 <!-- Priority Mapping -->
                 <UFormField label="Priority Field" name="priority">
                   <USelectMenu
-                    v-model="outputFormState.fieldMapping.priorityProperty"
+                    :model-value="getMappedProperty('priority')"
                     :options="Object.keys(notionSchema.properties || {})"
                     placeholder="Select property..."
+                    @update:model-value="updateFieldMapping('priority', $event)"
                   >
                     <template #option="{ option }">
                       <div class="flex items-center gap-2">
@@ -880,9 +916,10 @@ watch(() => props.modelValue, (newValue) => {
                 <!-- Type Mapping -->
                 <UFormField label="Type Field" name="type">
                   <USelectMenu
-                    v-model="outputFormState.fieldMapping.typeProperty"
+                    :model-value="getMappedProperty('type')"
                     :options="Object.keys(notionSchema.properties || {})"
                     placeholder="Select property..."
+                    @update:model-value="updateFieldMapping('type', $event)"
                   >
                     <template #option="{ option }">
                       <div class="flex items-center gap-2">
@@ -902,9 +939,10 @@ watch(() => props.modelValue, (newValue) => {
                 <!-- Assignee Mapping -->
                 <UFormField label="Assignee Field" name="assignee">
                   <USelectMenu
-                    v-model="outputFormState.fieldMapping.assigneeProperty"
+                    :model-value="getMappedProperty('assignee')"
                     :options="Object.keys(notionSchema.properties || {})"
                     placeholder="Select property..."
+                    @update:model-value="updateFieldMapping('assignee', $event)"
                   >
                     <template #option="{ option }">
                       <div class="flex items-center gap-2">
@@ -1061,9 +1099,10 @@ watch(() => props.modelValue, (newValue) => {
                 <!-- Priority Mapping -->
                 <UFormField label="Priority Field" name="priority">
                   <USelectMenu
-                    v-model="outputFormState.fieldMapping.priorityProperty"
+                    :model-value="getMappedProperty('priority')"
                     :options="Object.keys(notionSchema.properties || {})"
                     placeholder="Select property..."
+                    @update:model-value="updateFieldMapping('priority', $event)"
                   >
                     <template #option="{ option }">
                       <div class="flex items-center gap-2">
@@ -1083,9 +1122,10 @@ watch(() => props.modelValue, (newValue) => {
                 <!-- Type Mapping -->
                 <UFormField label="Type Field" name="type">
                   <USelectMenu
-                    v-model="outputFormState.fieldMapping.typeProperty"
+                    :model-value="getMappedProperty('type')"
                     :options="Object.keys(notionSchema.properties || {})"
                     placeholder="Select property..."
+                    @update:model-value="updateFieldMapping('type', $event)"
                   >
                     <template #option="{ option }">
                       <div class="flex items-center gap-2">
@@ -1105,9 +1145,10 @@ watch(() => props.modelValue, (newValue) => {
                 <!-- Assignee Mapping -->
                 <UFormField label="Assignee Field" name="assignee">
                   <USelectMenu
-                    v-model="outputFormState.fieldMapping.assigneeProperty"
+                    :model-value="getMappedProperty('assignee')"
                     :options="Object.keys(notionSchema.properties || {})"
                     placeholder="Select property..."
+                    @update:model-value="updateFieldMapping('assignee', $event)"
                   >
                     <template #option="{ option }">
                       <div class="flex items-center gap-2">
