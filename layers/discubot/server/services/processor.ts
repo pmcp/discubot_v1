@@ -39,7 +39,7 @@ import type {
 } from '#layers/discubot/types'
 import { analyzeDiscussion } from './ai'
 import { extractMentionsFromComment } from '../adapters/figma'
-import { createNotionTask, createNotionTasks, createNotionConfigFromOutput } from './notion'
+import { createNotionTask, createNotionTasks, createNotionConfigFromOutput, type SourceMetadata } from './notion'
 import { retryWithBackoff } from '../utils/retry'
 import { SYSTEM_USER_ID } from '../utils/constants'
 import { logger } from '../utils/logger'
@@ -1699,6 +1699,34 @@ export async function processDiscussion(
 
       const tasks = aiAnalysis.taskDetection.tasks
 
+      // Build source metadata for linking author names and @mentions to source platform
+      const sourceMetadata: SourceMetadata | undefined = (() => {
+        const sourceType = parsed.sourceType as 'figma' | 'slack'
+
+        if (sourceType === 'figma') {
+          const fileKey = parsed.metadata?.fileKey
+          if (fileKey) {
+            return { sourceType, fileKey }
+          }
+        } else if (sourceType === 'slack') {
+          const channelId = flowData?.matchedInput?.sourceMetadata?.channelId
+            || config?.sourceMetadata?.channelId
+            || parsed.metadata?.channelId
+          const slackTeamId = flowData?.matchedInput?.sourceMetadata?.slackTeamId
+            || config?.sourceMetadata?.slackTeamId
+            || parsed.teamId
+          if (channelId && slackTeamId) {
+            return { sourceType, channelId, slackTeamId }
+          }
+        }
+        return undefined
+      })()
+
+      logger.debug('Source metadata for platform linking', {
+        sourceMetadata,
+        hasMetadata: !!sourceMetadata,
+      })
+
       if (tasks.length === 0) {
         logger.info('No tasks detected, skipping Notion creation')
       }
@@ -1762,6 +1790,7 @@ export async function processDiscussion(
                 notionUserMappings,
                 fieldMapping,
                 notionUserMappings,
+                sourceMetadata,
               )
 
               notionTasks.push(result)
@@ -1818,6 +1847,7 @@ export async function processDiscussion(
               notionUserMappings,
               fieldMapping,
               notionUserMappings,
+              sourceMetadata,
             )
 
             notionTasks.push(result)
@@ -1835,6 +1865,7 @@ export async function processDiscussion(
             notionUserMappings,
             fieldMapping,
             notionUserMappings,
+            sourceMetadata,
           )
         }
 

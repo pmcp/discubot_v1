@@ -170,3 +170,148 @@ export function parseContentWithLinks(text: string): NotionRichTextItem[] {
 export function formatTextForNotion(text: string): string {
   return convertSlackEmojis(text)
 }
+
+/**
+ * Parse text content with @mentions linked to the source message URL
+ *
+ * Enhances parseContentWithLinks by also finding @Name patterns and
+ * linking them to the source platform message URL.
+ *
+ * @param text - Text that may contain :link: URL patterns and @mentions
+ * @param messageUrl - URL to link @mentions to (the source message)
+ * @returns Array of Notion rich text items with links and mentions
+ *
+ * @example
+ * parseContentWithMentionsAndLinks(
+ *   '@Maarten needs to review this',
+ *   'https://figma.com/file/abc#comment-123'
+ * )
+ * // Returns rich text array with @Maarten linked to the Figma comment
+ */
+export function parseContentWithMentionsAndLinks(
+  text: string,
+  messageUrl?: string,
+): NotionRichTextItem[] {
+  if (!text) return []
+
+  // First convert all emojis
+  const withEmojis = convertSlackEmojis(text)
+
+  // Pattern to match @Name where Name is one or more capitalized words
+  // Matches: @Maarten, @Maarten Lauwaert, @John Doe Smith
+  const mentionRegex = /@([A-Z][a-zA-Z]*(?:\s+[A-Z][a-zA-Z]*)*)/g
+
+  // Pattern to match :link: followed by URL (with 🔗 since we already converted)
+  const linkPattern = /(?:🔗|:link:)\s*(https?:\/\/[^\s]+)/g
+
+  const items: NotionRichTextItem[] = []
+  let lastIndex = 0
+
+  // Create a merged list of all matches (mentions and links) sorted by position
+  const allMatches: Array<{
+    type: 'mention' | 'link'
+    index: number
+    length: number
+    content: string
+    url?: string
+  }> = []
+
+  // Find all mentions
+  let match
+  while ((match = mentionRegex.exec(withEmojis)) !== null) {
+    allMatches.push({
+      type: 'mention',
+      index: match.index,
+      length: match[0].length,
+      content: match[0], // Full @Name
+      url: messageUrl,
+    })
+  }
+
+  // Find all links
+  while ((match = linkPattern.exec(withEmojis)) !== null) {
+    allMatches.push({
+      type: 'link',
+      index: match.index,
+      length: match[0].length,
+      content: match[1] || '', // The URL
+      url: match[1],
+    })
+  }
+
+  // Sort by position
+  allMatches.sort((a, b) => a.index - b.index)
+
+  // Process matches in order
+  for (const matchItem of allMatches) {
+    // Skip if this match overlaps with previously processed content
+    if (matchItem.index < lastIndex) continue
+
+    // Add text before the match
+    if (matchItem.index > lastIndex) {
+      const beforeText = withEmojis.substring(lastIndex, matchItem.index)
+      if (beforeText) {
+        items.push({
+          type: 'text',
+          text: { content: beforeText },
+        })
+      }
+    }
+
+    if (matchItem.type === 'mention' && matchItem.url) {
+      // Add linked @mention
+      items.push({
+        type: 'text',
+        text: {
+          content: matchItem.content,
+          link: { url: matchItem.url },
+        },
+        annotations: {
+          color: 'blue',
+        },
+      })
+    } else if (matchItem.type === 'mention') {
+      // Add plain @mention (no URL available)
+      items.push({
+        type: 'text',
+        text: { content: matchItem.content },
+      })
+    } else if (matchItem.type === 'link' && matchItem.url) {
+      // Add the link with 🔗 emoji
+      items.push({
+        type: 'text',
+        text: { content: '🔗 ' },
+      })
+      items.push({
+        type: 'text',
+        text: {
+          content: matchItem.url,
+          link: { url: matchItem.url },
+        },
+        annotations: {
+          color: 'blue',
+        },
+      })
+    }
+
+    lastIndex = matchItem.index + matchItem.length
+  }
+
+  // Add remaining text after last match
+  if (lastIndex < withEmojis.length) {
+    items.push({
+      type: 'text',
+      text: { content: withEmojis.substring(lastIndex) },
+    })
+  }
+
+  // If no matches were found, return simple text with emojis
+  if (items.length === 0) {
+    items.push({
+      type: 'text',
+      text: { content: withEmojis },
+    })
+  }
+
+  return items
+}

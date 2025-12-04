@@ -26,13 +26,47 @@ import type {
 } from '#layers/discubot/types'
 import { retryWithBackoff } from '../utils/retry'
 import { logger } from '../utils/logger'
-import { parseContentWithLinks } from '../utils/emoji-converter'
+import { parseContentWithLinks, parseContentWithMentionsAndLinks } from '../utils/emoji-converter'
 
 /**
  * Notion API Version
  * https://developers.notion.com/reference/versioning
  */
 const NOTION_API_VERSION = '2022-06-28'
+
+/**
+ * Source metadata for building message URLs
+ */
+export interface SourceMetadata {
+  sourceType: 'figma' | 'slack'
+  fileKey?: string // Figma
+  channelId?: string // Slack
+  slackTeamId?: string // Slack
+}
+
+/**
+ * Build a URL to a specific message in the source platform
+ *
+ * @param messageId - The message/comment ID
+ * @param metadata - Source-specific metadata for URL construction
+ * @returns URL to the message or null if metadata is insufficient
+ */
+function buildMessageUrl(
+  messageId: string,
+  metadata?: SourceMetadata,
+): string | null {
+  if (!metadata) return null
+
+  if (metadata.sourceType === 'figma' && metadata.fileKey) {
+    return `https://www.figma.com/file/${metadata.fileKey}#comment-${messageId}`
+  }
+
+  if (metadata.sourceType === 'slack' && metadata.channelId && metadata.slackTeamId) {
+    return `https://slack.com/app_redirect?team=${metadata.slackTeamId}&channel=${metadata.channelId}&message_ts=${messageId}`
+  }
+
+  return null
+}
 
 /**
  * Get Notion API key from config, runtime, or environment
@@ -325,6 +359,7 @@ async function buildTaskProperties(
  * - Deep link back to source
  *
  * @param userMentions - Optional map of source user IDs to Notion user IDs for @mentions
+ * @param sourceMetadata - Optional metadata for building source platform links
  */
 function buildTaskContent(
   task: DetectedTask,
@@ -332,6 +367,7 @@ function buildTaskContent(
   aiSummary: AISummary,
   config: NotionTaskConfig,
   userMentions?: Map<string, string>,
+  sourceMetadata?: SourceMetadata,
 ): any[] {
   const blocks: any[] = []
 
@@ -523,6 +559,11 @@ function buildTaskContent(
   const threadMessages: any[] = []
 
   // Add root message
+  const rootAuthorName = thread.rootMessage.authorName
+    ? `@${thread.rootMessage.authorName}`
+    : thread.rootMessage.authorHandle
+  const rootMessageUrl = buildMessageUrl(thread.rootMessage.id, sourceMetadata)
+
   threadMessages.push({
     object: 'block',
     type: 'paragraph',
@@ -530,8 +571,11 @@ function buildTaskContent(
       rich_text: [
         {
           type: 'text',
-          text: { content: `${thread.rootMessage.authorName ? `@${thread.rootMessage.authorName}` : thread.rootMessage.authorHandle}:` },
-          annotations: { bold: true },
+          text: {
+            content: `${rootAuthorName}:`,
+            link: rootMessageUrl ? { url: rootMessageUrl } : undefined,
+          },
+          annotations: { bold: true, color: rootMessageUrl ? 'blue' : 'default' },
         },
       ],
     },
@@ -540,12 +584,20 @@ function buildTaskContent(
     object: 'block',
     type: 'paragraph',
     paragraph: {
-      rich_text: parseContentWithLinks(thread.rootMessage.content.substring(0, 2000)),
+      rich_text: parseContentWithMentionsAndLinks(
+        thread.rootMessage.content.substring(0, 2000),
+        rootMessageUrl || undefined,
+      ),
     },
   })
 
   // Add replies
   for (const reply of thread.replies) {
+    const replyAuthorName = reply.authorName
+      ? `@${reply.authorName}`
+      : reply.authorHandle
+    const replyMessageUrl = buildMessageUrl(reply.id, sourceMetadata)
+
     threadMessages.push({
       object: 'block',
       type: 'paragraph',
@@ -565,8 +617,11 @@ function buildTaskContent(
         rich_text: [
           {
             type: 'text',
-            text: { content: `${reply.authorName ? `@${reply.authorName}` : reply.authorHandle}:` },
-            annotations: { bold: true },
+            text: {
+              content: `${replyAuthorName}:`,
+              link: replyMessageUrl ? { url: replyMessageUrl } : undefined,
+            },
+            annotations: { bold: true, color: replyMessageUrl ? 'blue' : 'default' },
           },
         ],
       },
@@ -575,7 +630,10 @@ function buildTaskContent(
       object: 'block',
       type: 'paragraph',
       paragraph: {
-        rich_text: parseContentWithLinks(reply.content.substring(0, 2000)),
+        rich_text: parseContentWithMentionsAndLinks(
+          reply.content.substring(0, 2000),
+          replyMessageUrl || undefined,
+        ),
       },
     })
   }
@@ -731,6 +789,7 @@ function buildTaskContent(
  * Uses retry logic for transient failures.
  *
  * @param userMentions - Optional map of source user IDs to Notion user IDs for @mentions
+ * @param sourceMetadata - Optional metadata for building source platform links
  */
 export async function createNotionTask(
   task: DetectedTask,
@@ -740,6 +799,7 @@ export async function createNotionTask(
   userMentions?: Map<string, string>,
   fieldMapping?: Record<string, any>,
   userMappings?: Map<string, string>,
+  sourceMetadata?: SourceMetadata,
 ): Promise<NotionTaskResult> {
   logger.info('Creating Notion task', {
     title: task.title,
@@ -749,7 +809,7 @@ export async function createNotionTask(
 
   const apiKey = getNotionApiKey(config.apiKey)
   const properties = await buildTaskProperties(task, fieldMapping, userMappings)
-  const children = buildTaskContent(task, thread, aiSummary, config, userMentions)
+  const children = buildTaskContent(task, thread, aiSummary, config, userMentions, sourceMetadata)
 
   const startTime = Date.now()
 
@@ -794,6 +854,7 @@ export async function createNotionTask(
  * @param userMentions - Optional map of source user IDs to Notion user IDs for @mentions
  * @param fieldMapping - Optional field mapping configuration from config.notionFieldMapping
  * @param userMappings - Optional map of source user IDs to Notion user IDs for assignee field
+ * @param sourceMetadata - Optional metadata for building source platform links
  */
 export async function createNotionTasks(
   tasks: DetectedTask[],
@@ -803,6 +864,7 @@ export async function createNotionTasks(
   userMentions?: Map<string, string>,
   fieldMapping?: Record<string, any>,
   userMappings?: Map<string, string>,
+  sourceMetadata?: SourceMetadata,
 ): Promise<NotionTaskResult[]> {
   logger.info('Creating batch of tasks', {
     taskCount: tasks.length,
@@ -817,7 +879,7 @@ export async function createNotionTasks(
     if (!task) continue
 
     try {
-      const result = await createNotionTask(task, thread, aiSummary, config, userMentions, fieldMapping, userMappings)
+      const result = await createNotionTask(task, thread, aiSummary, config, userMentions, fieldMapping, userMappings, sourceMetadata)
       results.push(result)
 
       logger.info('Created task in batch', {
