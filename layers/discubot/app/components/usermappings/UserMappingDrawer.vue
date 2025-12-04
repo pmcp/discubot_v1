@@ -75,36 +75,40 @@ const sourceTypeIcon = computed(() => {
     </template>
 
     <!-- Body - Route to appropriate discovery UI -->
-    <div class="p-6">
-      <!-- Slack Discovery -->
-      <SlackUserDiscovery
-        v-if="sourceType === 'slack'"
-        :workspace-id="sourceWorkspaceId"
-        :api-token="apiToken || ''"
-        :notion-token="notionToken"
-        :team-id="teamId"
-        @saved="handleSaved"
-      />
+    <template #content>
+      <div class="p-6">
 
-      <!-- Figma Discovery -->
-      <FigmaUserDiscovery
-        v-else-if="sourceType === 'figma'"
-        :workspace-id="sourceWorkspaceId"
-        :notion-token="notionToken"
-        :team-id="teamId"
-        @saved="handleSaved"
-      />
 
-      <!-- Unknown source type -->
-      <UAlert
-        v-else
-        color="warning"
-        variant="soft"
-        icon="i-lucide-alert-triangle"
-        title="Unknown source type"
-        :description="`User mapping is not supported for source type: ${sourceType}`"
-      />
-    </div>
+        <!-- Slack Discovery -->
+        <DiscubotUsermappingsSlackUserDiscovery
+          v-if="sourceType === 'slack'"
+          :workspace-id="sourceWorkspaceId"
+          :api-token="apiToken || ''"
+          :notion-token="notionToken"
+          :team-id="teamId"
+          @saved="handleSaved"
+        />
+
+        <!-- Figma Discovery -->
+        <DiscubotUsermappingsFigmaUserDiscovery
+          v-else-if="sourceType === 'figma'"
+          :workspace-id="sourceWorkspaceId"
+          :notion-token="notionToken"
+          :team-id="teamId"
+          @saved="handleSaved"
+        />
+
+        <!-- Unknown source type -->
+        <UAlert
+          v-else
+          color="warning"
+          variant="soft"
+          icon="i-lucide-alert-triangle"
+          title="Unknown source type"
+          :description="`User mapping is not supported for source type: ${sourceType}`"
+        />
+      </div>
+    </template>
 
     <!-- Footer -->
     <template #footer>
