@@ -902,6 +902,39 @@ async function buildThread(
   const userIdToMentionMap = userMappings || new Map<string, { name: string; notionId: string }>()
   const handleToMentionMap = new Map<string, { name: string; notionId: string }>() // For Figma @handle mentions
 
+  // For Notion sources, auto-fetch user info if no mappings exist
+  if (parsed.sourceType === 'notion' && userIdToMentionMap.size === 0 && config.apiToken) {
+    try {
+      logger.debug('Fetching Notion users for author resolution')
+      const NOTION_API_VERSION = '2022-06-28'
+      const response = await $fetch<{ results: Array<{ id: string; name?: string; type: string }> }>(
+        'https://api.notion.com/v1/users',
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${config.apiToken}`,
+            'Notion-Version': NOTION_API_VERSION,
+          },
+        }
+      )
+
+      // Build map of Notion user ID -> name
+      for (const user of response.results) {
+        if (user.name) {
+          userIdToMentionMap.set(user.id, {
+            name: user.name,
+            notionId: user.id, // For Notion, the source ID is the Notion ID
+          })
+        }
+      }
+      logger.info('Fetched Notion users for author resolution', {
+        userCount: userIdToMentionMap.size,
+      })
+    } catch (error) {
+      logger.warn('Failed to fetch Notion users, will use IDs as author names', { error })
+    }
+  }
+
   // Build handle map for Figma (only if we have user mappings)
   if (userMappings && parsed.sourceType === 'figma' && teamId) {
     try {
@@ -1293,11 +1326,15 @@ export async function processDiscussion(
       // Extract from flow input's sourceMetadata
       sourceWorkspaceId = flowData.matchedInput.sourceMetadata?.slackTeamId ||
                           flowData.matchedInput.sourceMetadata?.figmaOrgId ||
+                          flowData.matchedInput.sourceMetadata?.notionWorkspaceId ||
+                          parsed.metadata?.notionWorkspaceId ||
                           parsed.teamId
     } else if (config) {
       // Extract from legacy config's sourceMetadata
       sourceWorkspaceId = config.sourceMetadata?.slackTeamId ||
                           config.sourceMetadata?.figmaOrgId ||
+                          config.sourceMetadata?.notionWorkspaceId ||
+                          parsed.metadata?.notionWorkspaceId ||
                           parsed.teamId
     }
 
