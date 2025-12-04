@@ -26,6 +26,7 @@ import type {
 } from '#layers/discubot/types'
 import { retryWithBackoff } from '../utils/retry'
 import { logger } from '../utils/logger'
+import { parseContentWithLinks } from '../utils/emoji-converter'
 
 /**
  * Notion API Version
@@ -539,12 +540,7 @@ function buildTaskContent(
     object: 'block',
     type: 'paragraph',
     paragraph: {
-      rich_text: [
-        {
-          type: 'text',
-          text: { content: thread.rootMessage.content.substring(0, 2000) },
-        },
-      ],
+      rich_text: parseContentWithLinks(thread.rootMessage.content.substring(0, 2000)),
     },
   })
 
@@ -579,12 +575,7 @@ function buildTaskContent(
       object: 'block',
       type: 'paragraph',
       paragraph: {
-        rich_text: [
-          {
-            type: 'text',
-            text: { content: reply.content.substring(0, 2000) },
-          },
-        ],
+        rich_text: parseContentWithLinks(reply.content.substring(0, 2000)),
       },
     })
   }
