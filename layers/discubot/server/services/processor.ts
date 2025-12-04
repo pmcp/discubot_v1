@@ -975,7 +975,7 @@ async function buildThread(
         // Look up user in mappings by userId (Figma user ID)
         const mappedUser = userIdToMentionMap.get(userId)
         if (mappedUser) {
-          return `@${mappedUser.name} (${mappedUser.notionId})`
+          return `@${mappedUser.name}`
         }
 
         // Fallback: just use displayName without the UUID
@@ -1021,7 +1021,7 @@ async function buildThread(
         converted = converted.replace(/\s+/g, ' ').trim()
       }
 
-      // Convert @handle mentions to @Name (NotionID)
+      // Convert @handle mentions to @Name (just use display name, no ID in output)
       handleToMentionMap.forEach((mention, handle) => {
         // Escape special regex characters in handle
         const escapedHandle = handle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -1030,7 +1030,7 @@ async function buildThread(
         const regex = new RegExp(pattern, 'gi')
         converted = converted.replace(
           regex,
-          `@${mention.name} (${mention.notionId})`
+          `@${mention.name}`
         )
       })
     }
@@ -1404,13 +1404,18 @@ export async function processDiscussion(
     })
 
     // Build thread with either flow input config or legacy config
+    // For Figma inputs, use the input's name as botHandle if not explicitly set
     const threadBuildConfig = flowData
       ? {
           id: flowData.matchedInput.id,
           teamId: flowData.flow.teamId,
           sourceType: flowData.matchedInput.sourceType,
           apiToken: flowData.matchedInput.apiToken || '',
-          sourceMetadata: flowData.matchedInput.sourceMetadata,
+          sourceMetadata: {
+            ...flowData.matchedInput.sourceMetadata,
+            // Use input name as botHandle for Figma (the bot account name)
+            botHandle: flowData.matchedInput.sourceMetadata?.botHandle || flowData.matchedInput.name,
+          },
         } as SourceConfig
       : config!
 

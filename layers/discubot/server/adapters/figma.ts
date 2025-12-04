@@ -587,7 +587,7 @@ export class FigmaAdapter implements DiscussionSourceAdapter {
    * Convert Figma comment to ThreadMessage format
    *
    * Uses Figma user ID as authorHandle for reliable user mapping.
-   * The handle (username) is included in metadata for display purposes.
+   * The user's display name (handle) is stored as authorName for AI prompts and UI.
    */
   private convertToThreadMessage(comment: FigmaComment): ThreadMessage {
     return {
@@ -595,6 +595,8 @@ export class FigmaAdapter implements DiscussionSourceAdapter {
       // Use Figma user ID as authorHandle for user mapping lookup
       // This is more reliable than handle (username) which can change
       authorHandle: comment.user.id,
+      // Store display name for AI analysis and Notion display
+      authorName: comment.user.handle,
       content: comment.message,
       timestamp: new Date(comment.created_at),
     }
