@@ -324,6 +324,23 @@ function extractPlainText(richText: NotionRichText[]): string {
 }
 
 /**
+ * Strip trigger keyword from text content
+ * Handles: "legoman text", "@legoman text", "legoman: text"
+ * Does NOT strip if part of a word: "legomanize" stays unchanged
+ *
+ * @param text - The text to strip the trigger keyword from
+ * @param triggerKeyword - The trigger keyword to strip
+ * @returns Text with trigger keyword removed
+ */
+function stripTriggerKeyword(text: string, triggerKeyword: string): string {
+  if (!text || !triggerKeyword) return text
+  const escaped = triggerKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  // Word boundary aware: optional @, keyword, optional colon, followed by space or end
+  const pattern = new RegExp(`@?${escaped}:?(?:\\s+|$)`, 'gi')
+  return text.replace(pattern, '').trim()
+}
+
+/**
  * Get the parent page ID from a comment
  *
  * @param comment - Notion comment object
@@ -412,7 +429,10 @@ export class NotionAdapter implements DiscussionSourceAdapter {
       if (config?.apiToken) {
         const comment = await fetchComment(commentId, config.apiToken)
         if (comment) {
-          content = extractPlainText(comment.rich_text)
+          const rawContent = extractPlainText(comment.rich_text)
+          // Strip trigger keyword from content before processing
+          const triggerKeyword = config.sourceMetadata?.triggerKeyword || DEFAULT_TRIGGER_KEYWORD
+          content = stripTriggerKeyword(rawContent, triggerKeyword)
           authorId = comment.created_by.id
           createdTime = comment.created_time
           // Get discussionId from fetched comment if not in payload
@@ -526,7 +546,8 @@ export class NotionAdapter implements DiscussionSourceAdapter {
         participantSet.add(comment.created_by.id)
       })
 
-      return {
+      // Build thread
+      const thread = {
         id: discussionId,
         rootMessage: this.convertToThreadMessage(rootComment),
         replies: replies.map((c) => this.convertToThreadMessage(c)),
@@ -537,6 +558,15 @@ export class NotionAdapter implements DiscussionSourceAdapter {
           commentCount: comments.length,
         },
       }
+
+      // Strip trigger keyword from all message content before AI processing
+      const triggerKeyword = config.sourceMetadata?.triggerKeyword || DEFAULT_TRIGGER_KEYWORD
+      thread.rootMessage.content = stripTriggerKeyword(thread.rootMessage.content, triggerKeyword)
+      thread.replies.forEach((reply) => {
+        reply.content = stripTriggerKeyword(reply.content, triggerKeyword)
+      })
+
+      return thread
     } catch (error) {
       if (error instanceof AdapterError) {
         throw error
@@ -723,6 +753,7 @@ export {
   postComment,
   checkForTrigger,
   extractPlainText,
+  stripTriggerKeyword,
   DEFAULT_TRIGGER_KEYWORD,
 }
 
