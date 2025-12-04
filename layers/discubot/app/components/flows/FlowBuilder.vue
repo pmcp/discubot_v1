@@ -741,6 +741,62 @@ async function fetchAndMapNotionSchema() {
   }
 }
 
+/**
+ * Fetch schema for editing an existing output
+ * Does NOT auto-map - preserves existing field mappings
+ */
+async function fetchSchemaForEdit() {
+  if (!editingOutput.value) return
+
+  const config = editingOutput.value.outputConfig as NotionOutputConfig
+  if (!config?.notionToken || !config?.databaseId) {
+    toast.add({
+      title: 'Missing credentials',
+      description: 'Please enter Notion token and database ID first',
+      color: 'warning'
+    })
+    return
+  }
+
+  try {
+    await fetchNotionSchema({
+      databaseId: config.databaseId,
+      notionToken: config.notionToken
+    })
+
+    if (notionSchema.value && !schemaError.value) {
+      // Ensure fieldMapping exists with proper structure (don't overwrite existing values)
+      if (!config.fieldMapping) {
+        config.fieldMapping = {
+          priority: { notionProperty: '', propertyType: '', valueMap: {} },
+          type: { notionProperty: '', propertyType: '', valueMap: {} },
+          assignee: { notionProperty: '', propertyType: '', valueMap: {} },
+          domain: { notionProperty: '', propertyType: '', valueMap: {} }
+        }
+      }
+
+      toast.add({
+        title: 'Schema loaded',
+        description: 'You can now edit field mappings',
+        color: 'success'
+      })
+    } else if (schemaError.value) {
+      toast.add({
+        title: 'Schema fetch failed',
+        description: schemaError.value,
+        color: 'error'
+      })
+    }
+  } catch (error: any) {
+    console.error('[FlowBuilder] Error fetching schema for edit:', error)
+    toast.add({
+      title: 'Schema fetch failed',
+      description: error.message || 'Unknown error',
+      color: 'error'
+    })
+  }
+}
+
 function resetOutputForm(outputType: 'notion' | 'github' | 'linear') {
   outputFormState.outputType = outputType
   outputFormState.name = ''
@@ -2178,6 +2234,55 @@ function cancel() {
                           class="w-full"
                         />
                       </UFormField>
+
+                      <!-- Fetch Schema Button -->
+                      <UButton
+                        type="button"
+                        color="neutral"
+                        variant="outline"
+                        :loading="fetchingSchema"
+                        @click="fetchSchemaForEdit"
+                      >
+                        <UIcon name="i-lucide-refresh-cw" class="mr-2" />
+                        Load Schema for Field Mapping
+                      </UButton>
+
+                      <!-- Field Mapping (shown when schema is loaded) -->
+                      <div v-if="notionSchema && notionSchema.properties" class="space-y-4">
+                        <USeparator />
+                        <p class="text-sm font-medium">Field Mapping</p>
+                        <p class="text-xs text-muted">Map AI-extracted fields to your Notion database properties</p>
+
+                        <!-- Priority Field -->
+                        <UFormField label="Priority Field" hint="Where to store task priority">
+                          <USelectMenu
+                            v-model="(editingOutput.outputConfig as NotionOutputConfig).fieldMapping.priority.notionProperty"
+                            :items="Object.keys(notionSchema.properties || {})"
+                            placeholder="Select Notion property..."
+                            class="w-full"
+                          />
+                        </UFormField>
+
+                        <!-- Type Field -->
+                        <UFormField label="Type Field" hint="Where to store task type">
+                          <USelectMenu
+                            v-model="(editingOutput.outputConfig as NotionOutputConfig).fieldMapping.type.notionProperty"
+                            :items="Object.keys(notionSchema.properties || {})"
+                            placeholder="Select Notion property..."
+                            class="w-full"
+                          />
+                        </UFormField>
+
+                        <!-- Assignee Field -->
+                        <UFormField label="Assignee Field" hint="Where to store assignee">
+                          <USelectMenu
+                            v-model="(editingOutput.outputConfig as NotionOutputConfig).fieldMapping.assignee.notionProperty"
+                            :items="Object.keys(notionSchema.properties || {})"
+                            placeholder="Select Notion property..."
+                            class="w-full"
+                          />
+                        </UFormField>
+                      </div>
                     </template>
 
                     <div class="flex justify-end gap-2 mt-6">
