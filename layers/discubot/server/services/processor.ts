@@ -956,10 +956,34 @@ async function buildThread(
         )
       })
     } else if (parsed.sourceType === 'figma') {
-      // Figma format: @handle (e.g., @Maarten)
-
-      // First, remove bot mentions entirely (before converting user mentions)
+      // STEP 1: Handle Figma bracket format @[userId:displayName]
+      // This is the format returned by Figma API for resolved @mentions
+      const bracketMentionRegex = /@\[([^\]:]+):([^\]]+)\]/g
+      const botUserId = config.sourceMetadata?.botUserId
       const botHandle = config.sourceMetadata?.botHandle
+
+      converted = converted.replace(bracketMentionRegex, (_match, userId, displayName) => {
+        // Skip bot mentions entirely (check both userId and handle)
+        if ((botUserId && userId === botUserId) ||
+            (botHandle && displayName.toLowerCase() === botHandle.toLowerCase())) {
+          return '' // Remove bot mention
+        }
+
+        // Look up user in mappings by userId (Figma user ID)
+        const mappedUser = userIdToMentionMap.get(userId)
+        if (mappedUser) {
+          return `@${mappedUser.name} (${mappedUser.notionId})`
+        }
+
+        // Fallback: just use displayName (cleaned)
+        return `@${displayName.trim()}`
+      })
+
+      // Clean up multiple spaces from removed bot mentions
+      converted = converted.replace(/\s+/g, ' ').trim()
+
+      // STEP 2: Handle plain @handle format (for email webhook content)
+      // First, remove bot mentions entirely (before converting user mentions)
       if (botHandle) {
         // Escape special regex characters in handle
         const escapedBotHandle = botHandle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
