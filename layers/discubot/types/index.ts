@@ -5,6 +5,11 @@
  */
 
 /**
+ * Supported source types for discussion inputs
+ */
+export type SourceType = 'figma' | 'slack' | 'notion'
+
+/**
  * A single message in a discussion thread
  */
 export interface ThreadMessage {
@@ -168,6 +173,19 @@ export interface NotionTaskResult {
   url: string
   /** Creation timestamp */
   createdAt: Date
+}
+
+/**
+ * Configuration for Notion input source
+ * Stored in FlowInput.sourceMetadata or similar
+ */
+export interface NotionInputConfig {
+  /** Notion API token */
+  notionToken: string
+  /** Trigger keyword for discussion detection (default: '@discubot', configurable per flow) */
+  triggerKeyword: string
+  /** Optional workspace ID for display/organization purposes */
+  workspaceId?: string
 }
 
 // ============================================================================
