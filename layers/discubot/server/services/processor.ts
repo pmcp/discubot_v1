@@ -956,11 +956,38 @@ async function buildThread(
         )
       })
     } else if (parsed.sourceType === 'figma') {
-      // STEP 1: Handle Figma bracket format @[userId:displayName]
-      // This is the format returned by Figma API for resolved @mentions
-      const bracketMentionRegex = /@\[([^\]:]+):([^\]]+)\]/g
       const botUserId = config.sourceMetadata?.botUserId
       const botHandle = config.sourceMetadata?.botHandle
+
+      // STEP 1: Handle Figma parentheses format @Name (uuid)
+      // This is the actual format seen in Figma comments: @Maarten Lauwaert (a36f9347-1da7-400e-9ac5-06442413f18d)
+      const parenMentionRegex = /@([^(@]+?)\s*\(([a-f0-9-]+)\)/gi
+
+      converted = converted.replace(parenMentionRegex, (_match, displayName, userId) => {
+        const trimmedName = displayName.trim()
+
+        // Skip bot mentions entirely (check both userId and handle/name)
+        if ((botUserId && userId === botUserId) ||
+            (botHandle && trimmedName.toLowerCase() === botHandle.toLowerCase())) {
+          return '' // Remove bot mention
+        }
+
+        // Look up user in mappings by userId (Figma user ID)
+        const mappedUser = userIdToMentionMap.get(userId)
+        if (mappedUser) {
+          return `@${mappedUser.name} (${mappedUser.notionId})`
+        }
+
+        // Fallback: just use displayName without the UUID
+        return `@${trimmedName}`
+      })
+
+      // Clean up multiple spaces from removed bot mentions
+      converted = converted.replace(/\s+/g, ' ').trim()
+
+      // STEP 2: Handle Figma bracket format @[userId:displayName]
+      // Alternative format that may be returned by Figma API
+      const bracketMentionRegex = /@\[([^\]:]+):([^\]]+)\]/g
 
       converted = converted.replace(bracketMentionRegex, (_match, userId, displayName) => {
         // Skip bot mentions entirely (check both userId and handle)
@@ -982,7 +1009,7 @@ async function buildThread(
       // Clean up multiple spaces from removed bot mentions
       converted = converted.replace(/\s+/g, ' ').trim()
 
-      // STEP 2: Handle plain @handle format (for email webhook content)
+      // STEP 3: Handle plain @handle format (for email webhook content)
       // First, remove bot mentions entirely (before converting user mentions)
       if (botHandle) {
         // Escape special regex characters in handle
