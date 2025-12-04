@@ -1038,7 +1038,14 @@ async function buildThread(
     return converted
   }
 
-  if (botUserId || userIdToMentionMap.size > 0 || handleToMentionMap.size > 0) {
+  // Always run conversion for Figma (to strip UUIDs from mentions even without mappings)
+  // For other sources, only run if bot or mappings are configured
+  const shouldConvert = parsed.sourceType === 'figma' ||
+    botUserId ||
+    userIdToMentionMap.size > 0 ||
+    handleToMentionMap.size > 0
+
+  if (shouldConvert) {
     logger.debug('Converting user mentions for AI', {
       sourceType: parsed.sourceType,
       hasBot: !!botUserId,
