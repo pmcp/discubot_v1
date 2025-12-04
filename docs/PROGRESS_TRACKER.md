@@ -2,7 +2,7 @@
 
 **Project Start Date**: 2025-11-11
 **Current Feature**: Phase 18 - Notion as Input Source
-**Overall Progress**: 3/14 tasks complete
+**Overall Progress**: 4/14 tasks complete
 **Estimated Effort**: 12-16h
 
 > **Historical Archive**: For completed phases (1-17), see [PROGRESS_MADE.md](./PROGRESS_MADE.md)
@@ -13,9 +13,9 @@
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | 3 / 14 |
-| Remaining Tasks | 11 |
-| Hours Logged | 4 / 12-16 |
+| Tasks Completed | 6 / 14 |
+| Remaining Tasks | 8 |
+| Hours Logged | 8.5 / 12-16 |
 | Current Phase | Phase 18 - Notion Input Source |
 | Blockers | 0 |
 
@@ -24,8 +24,8 @@
 ## Phase 18: Notion as Input Source
 
 **Status**: In Progress
-**Progress**: 3/14 tasks (21%)
-**Time**: 4h / 12-16h estimated
+**Progress**: 6/14 tasks (43%)
+**Time**: 8.5h / 12-16h estimated
 **Briefing**: `/docs/briefings/notion-input-implementation-brief.md`
 
 **Goal**: Add Notion as a discussion input source, allowing users to tag `@discubot` (or custom trigger) in Notion comments to create tasks. This mirrors the existing Slack and Figma patterns.
@@ -50,7 +50,7 @@
   - `postComment(pageId, discussionId, content, token)` - Reply to thread
   - `checkForTrigger(richText[], keyword)` - Check for trigger keyword
 
-- [ ] Task 18.3: Register Adapter (0.5h)
+- [x] Task 18.3: Register Adapter (0.5h) [COMPLETED]
   - File: `layers/discubot/server/adapters/index.ts`
   - Add `notion: notionAdapter` to ADAPTERS registry
   - Export for use in processor
@@ -59,7 +59,7 @@
 
 ### Phase 2: Webhook Endpoint (2-3h)
 
-- [ ] Task 18.4: Create Notion Input Webhook (1.5h)
+- 🔄 Task 18.4: Create Notion Input Webhook (1.5h)
   - File: `layers/discubot/server/api/webhooks/notion-input.post.ts`
   - Verify webhook signature (X-Notion-Signature header)
   - Handle verification_token challenge (initial subscription)
@@ -69,11 +69,11 @@
   - Check for trigger keyword
   - Route to processor if triggered
 
-- [ ] Task 18.5: Webhook Signature Verification (0.5h)
+- 🔄 Task 18.5: Webhook Signature Verification (0.5h)
   - Add HMAC-SHA256 verification for `X-Notion-Signature` header
   - Use existing `webhookSecurity.ts` patterns
 
-- [ ] Task 18.6: Handle Verification Challenge (0.5h)
+- 🔄 Task 18.6: Handle Verification Challenge (0.5h)
   - Echo back `verification_token` when Notion sends subscription challenge
 
 ---
@@ -96,21 +96,23 @@
 
 ### Phase 4: Flow Integration (2-3h)
 
-- [ ] Task 18.8: Add Notion Input to FlowBuilder (2-3h)
+- [x] Task 18.8: Add Notion Input to FlowBuilder (2.5h) [COMPLETED]
   - File: `layers/discubot/app/components/flows/FlowBuilder.vue`
-  - Add "Notion" option to input source dropdown
+  - Added "Add Notion" button to input sources (alongside Slack and Figma)
   - Notion-specific configuration fields:
-    - Notion Integration Token (masked input)
-    - Trigger Keyword (UInput, default: `@discubot`)
-    - Webhook URL (read-only, copy button)
-    - "Test Connection" button
-    - Link to setup guide
+    - Notion Integration Token (masked input with password type)
+    - Trigger Keyword (UInput, default: `@discubot`, configurable)
+    - Webhook URL (read-only with copy button)
+    - "Test Connection" button with status indicator
+    - Setup guide with step-by-step instructions
+  - Created test-connection endpoint: `layers/discubot/server/api/notion/test-connection.post.ts`
+  - Updated input list to show Notion icon and trigger keyword
 
 ---
 
 ### Phase 5: Documentation (1h)
 
-- [ ] Task 18.9: Create Setup Guide (1h)
+- [x] Task 18.9: Create Setup Guide (1h) [COMPLETED]
   - File: `docs/guides/notion-input-setup-guide.md`
   - Contents:
     1. Create Notion Integration
@@ -124,7 +126,7 @@
 
 ### Phase 6: Testing (2-3h)
 
-- [ ] Task 18.10: Unit Tests - Adapter (1h)
+- [x] Task 18.10: Unit Tests - Adapter (1h) [COMPLETED]
   - File: `tests/adapters/notion.test.ts`
   - Test `parseIncoming()` with various payloads
   - Test `fetchThread()` response parsing
@@ -178,7 +180,7 @@ Following existing patterns:
 
 ## Success Criteria
 
-- [ ] User can add Notion as input source in FlowBuilder
+- [x] User can add Notion as input source in FlowBuilder
 - [ ] Configurable trigger keyword (default `@discubot`) triggers task creation
 - [ ] Reply posted to Notion comment thread with task link
 - [ ] Webhook signature verification working
@@ -209,6 +211,47 @@ Following existing patterns:
 - Typecheck passes for new file (pre-existing errors in other files)
 - Following existing adapter patterns (Slack, Figma)
 - Committed as: feat: add Notion input adapter (Task 18.1, 18.2)
+
+### 2025-12-04 - Day 1 (continued)
+**Focus**: FlowBuilder UI Integration
+**Hours**: 2.5h
+**Completed**:
+- [x] Task 18.8: Added Notion as input source option in FlowBuilder
+
+**Changes Made**:
+- Modified `layers/discubot/app/components/flows/FlowBuilder.vue`:
+  - Added 'notion' to InputFormData sourceType union
+  - Added notionToken and triggerKeyword fields to form state
+  - Added isNotionInputModalOpen modal state
+  - Added notionWebhookUrl computed property
+  - Added testingNotionConnection state and testNotionConnection function
+  - Added copyNotionWebhookUrl function
+  - Updated inputSchema to validate Notion-specific fields
+  - Updated resetInputForm to handle Notion source type
+  - Updated saveInput to store Notion config in sourceMetadata
+  - Added "Add Notion" button modal with complete form
+  - Updated inputs list to show Notion icon and trigger keyword
+- Created `layers/discubot/server/api/notion/test-connection.post.ts`:
+  - Simple endpoint to verify Notion token validity
+  - Calls Notion API GET /users/me
+  - Returns bot info on success
+
+### 2025-12-04 - Day 1 (continued)
+**Focus**: Documentation - Notion Setup Guide
+**Hours**: 1h
+**Completed**:
+- [x] Task 18.9: Created comprehensive Notion Input Setup Guide
+
+**Notes**:
+- Created `docs/guides/notion-input-setup-guide.md` (~600 lines)
+- Comprehensive user-facing documentation for configuring Notion as input source
+- Includes: architecture diagram, 6-step setup process, troubleshooting, environment variables
+- Follows existing guide patterns (Slack, Figma)
+- Covers: integration creation, webhook configuration, FlowBuilder setup, testing, production checklist
+- Added advanced configuration section for multiple teams/databases
+- Included performance characteristics and limitations
+- Added FAQ and related documentation references
+- Updated PROGRESS_TRACKER with task completion and statistics
 
 ---
 
@@ -246,4 +289,27 @@ Following existing patterns:
 
 ---
 
-**Last Updated**: 2025-12-04
+### 2025-12-04 - Day 1 (continued)
+**Focus**: Notion Adapter Unit Tests
+**Hours**: 1h
+**Completed**:
+- [x] Task 18.10: Created comprehensive unit tests for Notion adapter
+
+**Notes**:
+- Created `tests/adapters/notion.test.ts` (~600 lines)
+- 44 tests covering all adapter methods:
+  - `checkForTrigger()` - 10 tests (plain text, case insensitivity, empty arrays, custom keywords)
+  - `parseIncoming()` - 8 tests (valid payloads, block_id/page_id parents, missing fields, error handling)
+  - `fetchThread()` - 6 tests (valid format, invalid format, empty thread, pagination, filtering, sorting)
+  - `postReply()` - 4 tests (success, API error, missing discussion ID)
+  - `validateConfig()` - 6 tests (valid configs, missing token, invalid format, source mismatch)
+  - `testConnection()` - 6 tests (success, invalid token, network error)
+  - `updateStatus()` - 2 tests (no-op behavior verification)
+  - `sourceType` - 1 test
+- All tests pass (44/44)
+- Follows existing test patterns from Slack and Figma adapters
+- Uses vi.mock() for $fetch mocking and logger mocking
+
+---
+
+**Last Updated**: 2025-12-04 (Task 18.10 completed)
