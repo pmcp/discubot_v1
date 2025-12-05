@@ -3,12 +3,16 @@ import type { AccordionItem } from '@nuxt/ui'
 
 const faqs: AccordionItem[] = [
   {
-    label: 'How does Discubot access my data?',
-    content: 'Discubot only accesses data you explicitly authorize through secure OAuth connections (Slack) or webhook configurations (Figma). We use webhook signature verification and never store your credentials in plain text.',
+    label: 'Why shouldn\'t I just build this in Make or N8n?',
+    content: 'That\'s actually how this project got started. But it got messy fast—parsing webhooks, tweaking prompts, dealing with edge cases across platforms, chasing API changes. So we turned it into Rakim. Now we handle all that behind the scenes, and keep improving things so you don\'t have to. Look, if you enjoy tinkering with automations, Make and N8n are great. But if you\'d rather just have it work, that\'s what we\'re here for.',
+  },
+  {
+    label: 'How does Rakim access my data?',
+    content: 'Rakim only accesses data you explicitly authorize through secure OAuth connections (Slack) or webhook configurations (Figma). We use webhook signature verification and never store your credentials in plain text.',
   },
   {
     label: 'Which Notion properties does it populate?',
-    content: 'Discubot populates title, description, assignee, status, priority, and source URL. You can customize field mappings in the configuration dashboard to match your Notion database structure.',
+    content: 'Rakim populates title, description, assignee, status, priority, and source URL. You can customize field mappings in the configuration dashboard to match your Notion database structure.',
   },
   {
     label: 'Can I customize the AI prompts?',
@@ -20,7 +24,7 @@ const faqs: AccordionItem[] = [
   },
   {
     label: 'How much does it cost?',
-    content: 'Discubot is currently in beta. Pricing will be announced soon based on the number of tasks processed per month. Early adopters will receive preferential pricing.',
+    content: 'Rakim is currently in beta. Pricing will be announced soon based on the number of tasks processed per month. Early adopters will receive preferential pricing.',
   },
   {
     label: 'Can I add more integrations like Linear or GitHub?',
@@ -38,7 +42,7 @@ const faqs: AccordionItem[] = [
           Frequently Asked Questions
         </h2>
         <p class="mt-4 text-lg text-gray-600 dark:text-gray-400">
-          Everything you need to know about Discubot
+          Everything you need to know about Rakim
         </p>
       </div>
 
