@@ -271,9 +271,9 @@ const resumeScroll = () => isPaused.value = false
 </script>
 
 <template>
-  <div class="py-16 sm:py-24">
+  <div class="py-12 sm:py-24">
     <!-- Content -->
-    <div class="mx-auto max-w-4xl px-6 text-center lg:px-8">
+    <div class="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
       <!-- Trust badge -->
       <div
         class="mb-8 flex items-center justify-center transition-all duration-700"
@@ -289,10 +289,10 @@ const resumeScroll = () => isPaused.value = false
 
       <!-- Headline -->
       <h1
-        class="text-4xl font-bold tracking-tight text-balance text-gray-900 sm:text-6xl dark:text-white transition-all duration-700 delay-100"
+        class="text-3xl font-bold tracking-tight text-balance text-gray-900 sm:text-4xl lg:text-6xl dark:text-white transition-all duration-700 delay-100"
         :class="isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'"
       >
-        {{ headline || 'Never lose a task buried in design comments or Slack threads' }}
+        {{ headline || 'Stay on track of tasks while keeping the flow' }}
       </h1>
 
       <!-- Subheadline -->
@@ -300,7 +300,18 @@ const resumeScroll = () => isPaused.value = false
         class="mx-auto mt-6 max-w-2xl text-lg text-balance text-gray-600 sm:text-xl dark:text-gray-400 transition-all duration-700 delay-200"
         :class="isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'"
       >
-        {{ subheadline || 'Discubot uses AI to automatically convert Figma comments and Slack discussions into actionable Notion tasks' }}
+        <template v-if="!subheadline">
+          Rakim uses AI to turn Figma or Slack<UIcon name="i-lucide-sparkle" class="inline size-3 text-primary align-super" /> discussions into actionable Notion<UIcon name="i-lucide-sparkle" class="inline size-3 text-primary align-super" /> tasks, so you can stay in the flow of the conversation without losing track of what needs to be done.
+        </template>
+        <template v-else>{{ subheadline }}</template>
+      </p>
+
+      <!-- Services footnote -->
+      <p
+        class="mt-3 text-xs text-gray-400 dark:text-gray-500 transition-all duration-700 delay-200"
+        :class="isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'"
+      >
+        <UIcon name="i-lucide-sparkle" class="inline size-2.5 text-primary" /> more services coming soon
       </p>
 
       <!-- CTAs -->
@@ -344,9 +355,9 @@ const resumeScroll = () => isPaused.value = false
 
         <!-- Scroll Container with Mask -->
         <div class="relative h-72 overflow-hidden">
-          <!-- Fade masks -->
-          <div class="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-background to-transparent z-10 pointer-events-none" />
-          <div class="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-background to-transparent z-10 pointer-events-none" />
+          <!-- Fade masks - top and bottom gradients -->
+          <div class="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white from-20% to-transparent z-10 pointer-events-none dark:from-gray-950" />
+          <div class="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-white from-20% to-transparent z-10 pointer-events-none dark:from-gray-950" />
 
           <!-- Scrolling content -->
           <div
