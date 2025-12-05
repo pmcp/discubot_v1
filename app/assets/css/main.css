@@ -1,7 +1,7 @@
 @import 'tailwindcss' theme(static);
 @import '@nuxt/ui';
 
-/* Custom coral color palette - vibrant peach to sunset gradient */
+/* Custom coral color palette - vibrant peach to red gradient */
 @theme static {
   --color-coral-50: #FFF5F3;
   --color-coral-100: #FFE8E4;
@@ -9,28 +9,28 @@
   --color-coral-300: #FFB0A0;
   --color-coral-400: #FF8A78;
   --color-coral-500: #FF6B54;
-  --color-coral-600: #F04E35;
-  --color-coral-700: #E63320;
-  --color-coral-800: #C42A1A;
-  --color-coral-900: #A12518;
-  --color-coral-950: #5C110A;
+  --color-coral-600: #FF4530;
+  --color-coral-700: #FF1A00;
+  --color-coral-800: #DB1700;
+  --color-coral-900: #B01400;
+  --color-coral-950: #5C0A00;
 }
 
-/* Gradient buttons - vibrant coral to red-orange */
+/* Gradient buttons - vibrant coral to red */
 button.bg-primary,
 a.bg-primary,
 .bg-primary[role="button"] {
-  background: linear-gradient(135deg, var(--color-coral-400) 0%, var(--color-coral-600) 100%) !important;
+  background: linear-gradient(135deg, var(--color-coral-400) 0%, var(--color-coral-700) 100%) !important;
   border: none !important;
-  box-shadow: 0 2px 10px rgba(240, 78, 53, 0.4);
+  box-shadow: 0 2px 10px rgba(255, 26, 0, 0.35);
   transition: all 0.2s ease;
 }
 
 button.bg-primary:hover,
 a.bg-primary:hover,
 .bg-primary[role="button"]:hover {
-  background: linear-gradient(135deg, var(--color-coral-500) 0%, var(--color-coral-700) 100%) !important;
-  box-shadow: 0 4px 14px rgba(230, 51, 32, 0.5);
+  background: linear-gradient(135deg, var(--color-coral-500) 0%, var(--color-coral-800) 100%) !important;
+  box-shadow: 0 4px 14px rgba(255, 26, 0, 0.5);
   transform: translateY(-1px);
 }
 
