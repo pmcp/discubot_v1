@@ -30,7 +30,7 @@ export default defineAppConfig({
       },
     },
     colors: {
-      primary: 'emerald',
+      primary: 'coral',
       neutral: 'neutral',
     },
   },
