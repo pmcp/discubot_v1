@@ -3,38 +3,32 @@ const features = [
   {
     title: 'AI-Powered Analysis',
     description: 'Claude understands context, extracts action items, and generates clear task descriptions automatically.',
-    icon: 'i-lucide-sparkles',
-    color: 'primary' as const,
+    icon: 'i-lucide-brain',
   },
   {
     title: 'Multi-Source Support',
     description: 'Currently supports Figma comments and Slack threads. More integrations coming soon.',
-    icon: 'i-lucide-layers',
-    color: 'blue' as const,
+    icon: 'i-lucide-plug',
   },
   {
     title: 'Smart @Mentions',
     description: 'Automatically maps users across platforms so @mentions work correctly in Notion.',
     icon: 'i-lucide-at-sign',
-    color: 'purple' as const,
   },
   {
     title: 'Full Visibility',
     description: 'Track every discussion processed with detailed job monitoring and complete history.',
-    icon: 'i-lucide-eye',
-    color: 'success' as const,
+    icon: 'i-lucide-activity',
   },
   {
     title: 'Enterprise Security',
     description: 'Webhook verification, rate limiting, audit logs, and secure credential management.',
-    icon: 'i-lucide-shield-check',
-    color: 'orange' as const,
+    icon: 'i-lucide-lock',
   },
   {
     title: 'Edge Performance',
     description: 'Deployed on Cloudflare Workers for global speed and reliability.',
-    icon: 'i-lucide-zap',
-    color: 'yellow' as const,
+    icon: 'i-lucide-globe',
   },
 ]
 </script>
@@ -61,19 +55,10 @@ const features = [
             class="group relative rounded-2xl border border-gray-200 bg-white p-6 transition-all hover:border-primary-300 hover:shadow-lg dark:border-gray-800 dark:bg-gray-950 dark:hover:border-primary-700"
           >
             <!-- Icon -->
-            <div
-              :class="[
-                'mb-4 flex size-12 items-center justify-center rounded-xl',
-                `bg-${feature.color}-100 dark:bg-${feature.color}-900/20`,
-                'transition-transform group-hover:scale-110',
-              ]"
-            >
+            <div class="mb-3 flex size-9 items-center justify-center rounded-lg bg-gray-100 transition-transform group-hover:scale-110 dark:bg-gray-800">
               <UIcon
                 :name="feature.icon"
-                :class="[
-                  'size-6',
-                  `text-${feature.color}-600 dark:text-${feature.color}-400`,
-                ]"
+                class="size-5 text-gray-900 dark:text-white"
               />
             </div>
 

@@ -35,7 +35,7 @@ export default defineAppConfig({
     },
   },
   seo: {
-    title: 'Supersaas',
-    description: 'The fullstack Nuxt 3 SaaS starter kit',
+    title: 'Rakim',
+    description: 'Stay on track of tasks while keeping the flow',
   },
 })

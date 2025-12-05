@@ -14,6 +14,9 @@ useSeoMeta({
 // Auth state
 const { loggedIn } = useUserSession()
 
+// Mobile menu state
+const mobileMenuOpen = ref(false)
+
 // Auth dropdown options
 const authOptions = ref([
   {
@@ -49,6 +52,7 @@ const authOptions = ref([
 ])
 
 const scrollToSection = (sectionId: string) => {
+  mobileMenuOpen.value = false
   const element = document.getElementById(sectionId)
   if (element) {
     element.scrollIntoView({ behavior: 'smooth' })
@@ -60,7 +64,7 @@ const scrollToSection = (sectionId: string) => {
   <main>
     <!-- Header/Navigation -->
     <header class="sticky top-0 z-50 border-b border-gray-200 bg-white/80 backdrop-blur-lg dark:border-gray-800 dark:bg-gray-950/80">
-      <WebsiteSection class="flex w-full items-center justify-between py-4">
+      <div class="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
         <!-- Logo -->
         <NuxtLink to="/" class="flex items-center gap-2">
           <div class="flex size-8 items-center justify-center rounded-lg bg-primary-600 dark:bg-primary-500">
@@ -71,8 +75,8 @@ const scrollToSection = (sectionId: string) => {
           </p>
         </NuxtLink>
 
-        <!-- Desktop Navigation -->
-        <div class="hidden flex-1 items-center justify-center gap-3 md:flex">
+        <!-- Desktop Navigation (center) -->
+        <div class="hidden items-center gap-3 md:flex">
           <UButton
             label="Features"
             color="gray"
@@ -87,48 +91,111 @@ const scrollToSection = (sectionId: string) => {
           />
         </div>
 
-        <!-- Auth Buttons -->
-        <div class="flex items-center gap-3">
+        <!-- Desktop Auth Buttons -->
+        <div class="hidden items-center gap-3 md:flex">
           <AuthState v-slot="{ loggedIn: isAuthLoggedIn }">
             <UButton
               v-if="isAuthLoggedIn"
               color="gray"
               variant="soft"
-              label="Go to Dashboard"
+              label="Dashboard"
               to="/dashboard"
               icon="i-lucide-layout-dashboard"
             />
-            <UFieldGroup v-else>
+            <template v-else>
               <UButton
                 color="gray"
-                variant="soft"
+                variant="ghost"
                 to="/auth/login"
                 label="Login"
               />
-              <UDropdownMenu
-                :items="authOptions"
-                :content="{
-                  align: 'end',
-                  side: 'bottom',
-                  sideOffset: 8,
-                }"
-                :ui="{
-                  content: 'w-full',
-                  itemLeadingIcon: 'size-4',
-                }"
-              >
-                <UButton
-                  color="gray"
-                  variant="soft"
-                  icon="i-lucide-chevron-down"
-                  class="border-l border-gray-200/50 dark:border-white/10"
-                />
-              </UDropdownMenu>
-            </UFieldGroup>
+              <UButton
+                color="primary"
+                to="/auth/register"
+                label="Get Started"
+              />
+            </template>
           </AuthState>
           <ThemeToggle />
         </div>
-      </WebsiteSection>
+
+        <!-- Mobile: Theme toggle + Hamburger -->
+        <div class="flex items-center gap-2 md:hidden">
+          <ThemeToggle />
+          <UButton
+            color="gray"
+            variant="ghost"
+            :icon="mobileMenuOpen ? 'i-lucide-x' : 'i-lucide-menu'"
+            @click="mobileMenuOpen = !mobileMenuOpen"
+          />
+        </div>
+      </div>
+
+      <!-- Mobile Menu -->
+      <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="opacity-0 -translate-y-2"
+        enter-to-class="opacity-100 translate-y-0"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="opacity-100 translate-y-0"
+        leave-to-class="opacity-0 -translate-y-2"
+      >
+        <div
+          v-if="mobileMenuOpen"
+          class="border-t border-gray-200 bg-white px-4 pb-4 pt-2 dark:border-gray-800 dark:bg-gray-950 md:hidden"
+        >
+          <nav class="flex flex-col gap-1">
+            <UButton
+              label="Features"
+              color="gray"
+              variant="ghost"
+              block
+              class="justify-start"
+              @click="scrollToSection('features')"
+            />
+            <UButton
+              label="FAQ"
+              color="gray"
+              variant="ghost"
+              block
+              class="justify-start"
+              @click="scrollToSection('faq')"
+            />
+          </nav>
+          <USeparator class="my-3" />
+          <AuthState v-slot="{ loggedIn: isAuthLoggedIn }">
+            <div class="flex flex-col gap-2">
+              <UButton
+                v-if="isAuthLoggedIn"
+                color="gray"
+                variant="soft"
+                label="Go to Dashboard"
+                to="/dashboard"
+                icon="i-lucide-layout-dashboard"
+                block
+                @click="mobileMenuOpen = false"
+              />
+              <template v-else>
+                <UButton
+                  color="gray"
+                  variant="soft"
+                  to="/auth/login"
+                  label="Login"
+                  block
+                  @click="mobileMenuOpen = false"
+                />
+                <UButton
+                  color="primary"
+                  to="/auth/register"
+                  label="Get Started Free"
+                  block
+                  @click="mobileMenuOpen = false"
+                />
+              </template>
+            </div>
+          </AuthState>
+        </div>
+      </Transition>
     </header>
 
     <!-- Hero Section -->
@@ -154,10 +221,10 @@ const scrollToSection = (sectionId: string) => {
 
     <!-- Footer -->
     <footer class="border-t border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900">
-      <WebsiteSection class="py-12">
-        <div class="grid gap-8 md:grid-cols-4">
+      <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+        <div class="grid grid-cols-2 gap-8 sm:grid-cols-4">
           <!-- Brand -->
-          <div>
+          <div class="col-span-2 sm:col-span-1">
             <div class="flex items-center gap-2">
               <div class="flex size-8 items-center justify-center rounded-lg bg-primary-600 dark:bg-primary-500">
                 <UIcon name="i-lucide-message-square-quote" class="size-5 text-white" />
@@ -166,10 +233,10 @@ const scrollToSection = (sectionId: string) => {
                 rakim
               </p>
             </div>
-            <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">
+            <p class="mt-3 text-sm text-gray-600 dark:text-gray-400">
               keep the flow
             </p>
-            <div class="mt-4 flex gap-3">
+            <div class="mt-3 flex gap-2">
               <UButton
                 icon="i-lucide-github"
                 color="gray"
@@ -194,7 +261,7 @@ const scrollToSection = (sectionId: string) => {
             <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
               Product
             </h3>
-            <ul class="mt-4 space-y-2">
+            <ul class="mt-3 space-y-2">
               <li>
                 <NuxtLink to="#features" class="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
                   Features
@@ -213,15 +280,10 @@ const scrollToSection = (sectionId: string) => {
             <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
               Resources
             </h3>
-            <ul class="mt-4 space-y-2">
+            <ul class="mt-3 space-y-2">
               <li>
                 <NuxtLink to="/docs" class="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
                   Documentation
-                </NuxtLink>
-              </li>
-              <li>
-                <NuxtLink to="/support" class="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
-                  Support
                 </NuxtLink>
               </li>
               <li>
@@ -237,15 +299,15 @@ const scrollToSection = (sectionId: string) => {
             <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
               Legal
             </h3>
-            <ul class="mt-4 space-y-2">
+            <ul class="mt-3 space-y-2">
               <li>
                 <NuxtLink to="/privacy" class="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
-                  Privacy Policy
+                  Privacy
                 </NuxtLink>
               </li>
               <li>
                 <NuxtLink to="/terms" class="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
-                  Terms of Service
+                  Terms
                 </NuxtLink>
               </li>
             </ul>
@@ -253,12 +315,12 @@ const scrollToSection = (sectionId: string) => {
         </div>
 
         <!-- Copyright -->
-        <div class="mt-12 border-t border-gray-200 pt-8 dark:border-gray-800">
+        <div class="mt-8 border-t border-gray-200 pt-6 dark:border-gray-800">
           <p class="text-center text-sm text-gray-500">
             © {{ new Date().getFullYear() }} rakim. All rights reserved.
           </p>
         </div>
-      </WebsiteSection>
+      </div>
     </footer>
 
   </main>

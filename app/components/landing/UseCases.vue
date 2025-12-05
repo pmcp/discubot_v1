@@ -36,7 +36,7 @@ const useCases = [
           Built for Modern Teams
         </h2>
         <p class="mt-4 text-lg text-gray-600 dark:text-gray-400">
-          See how teams use Discubot to streamline their workflow
+          See how teams use Rakim to streamline their workflow
         </p>
       </div>
 
