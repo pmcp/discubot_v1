@@ -3,10 +3,10 @@ import { ref } from 'vue'
 
 // SEO
 useSeoMeta({
-  title: 'Discubot - AI-Powered Discussion to Task Automation',
-  description: 'Never lose a task buried in Figma comments or Slack threads. Discubot uses AI to automatically convert discussions into actionable Notion tasks.',
-  ogTitle: 'Discubot - Turn Discussions into Tasks Automatically',
-  ogDescription: 'AI-powered automation that converts Figma comments and Slack threads into Notion tasks',
+  title: 'rakim - keep the flow',
+  description: 'Never lose a task buried in Figma comments or Slack threads. rakim uses AI to automatically convert discussions into actionable tasks.',
+  ogTitle: 'rakim - keep the flow',
+  ogDescription: 'AI-powered automation that converts Figma comments and Slack threads into tasks',
   ogImage: '/og-image.png',
   twitterCard: 'summary_large_image',
 })
@@ -48,9 +48,6 @@ const authOptions = ref([
   },
 ])
 
-// Video modal
-const showVideoModal = ref(false)
-
 const scrollToSection = (sectionId: string) => {
   const element = document.getElementById(sectionId)
   if (element) {
@@ -70,7 +67,7 @@ const scrollToSection = (sectionId: string) => {
             <UIcon name="i-lucide-message-square-quote" class="size-5 text-white" />
           </div>
           <p class="text-xl font-bold text-gray-900 dark:text-white">
-            Discubot
+            rakim
           </p>
         </NuxtLink>
 
@@ -81,18 +78,6 @@ const scrollToSection = (sectionId: string) => {
             color="gray"
             variant="ghost"
             @click="scrollToSection('features')"
-          />
-          <UButton
-            label="How it Works"
-            color="gray"
-            variant="ghost"
-            @click="scrollToSection('how-it-works')"
-          />
-          <UButton
-            label="Use Cases"
-            color="gray"
-            variant="ghost"
-            @click="scrollToSection('use-cases')"
           />
           <UButton
             label="FAQ"
@@ -152,20 +137,10 @@ const scrollToSection = (sectionId: string) => {
         label: loggedIn ? 'Go to Dashboard' : 'Get Started Free',
         to: loggedIn ? '/dashboard' : '/auth/register',
       }"
-      :secondary-cta="{
-        label: 'Watch Demo',
-        onClick: () => showVideoModal = true,
-      }"
-      @secondary-click="showVideoModal = true"
     />
 
     <!-- Problem/Solution Section -->
     <LandingProblemSolution />
-
-    <!-- How It Works Section -->
-    <div id="how-it-works">
-      <LandingHowItWorks />
-    </div>
 
     <!-- Features Grid -->
     <div id="features">
@@ -176,14 +151,6 @@ const scrollToSection = (sectionId: string) => {
     <div id="faq">
       <LandingFAQ />
     </div>
-
-    <!-- Final CTA -->
-    <LandingFinalCTA
-      :primary-cta="{
-        label: loggedIn ? 'Go to Dashboard' : 'Get Started Free',
-        to: loggedIn ? '/dashboard' : '/auth/register',
-      }"
-    />
 
     <!-- Footer -->
     <footer class="border-t border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-900">
@@ -196,11 +163,11 @@ const scrollToSection = (sectionId: string) => {
                 <UIcon name="i-lucide-message-square-quote" class="size-5 text-white" />
               </div>
               <p class="text-xl font-bold text-gray-900 dark:text-white">
-                Discubot
+                rakim
               </p>
             </div>
             <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">
-              AI-powered discussion to task automation
+              keep the flow
             </p>
             <div class="mt-4 flex gap-3">
               <UButton
@@ -231,11 +198,6 @@ const scrollToSection = (sectionId: string) => {
               <li>
                 <NuxtLink to="#features" class="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
                   Features
-                </NuxtLink>
-              </li>
-              <li>
-                <NuxtLink to="#how-it-works" class="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
-                  How it Works
                 </NuxtLink>
               </li>
               <li>
@@ -293,41 +255,11 @@ const scrollToSection = (sectionId: string) => {
         <!-- Copyright -->
         <div class="mt-12 border-t border-gray-200 pt-8 dark:border-gray-800">
           <p class="text-center text-sm text-gray-500">
-            © {{ new Date().getFullYear() }} Discubot. All rights reserved.
+            © {{ new Date().getFullYear() }} rakim. All rights reserved.
           </p>
         </div>
       </WebsiteSection>
     </footer>
 
-    <!-- Video Demo Modal -->
-    <UModal v-model="showVideoModal">
-      <template #content="{ close }">
-        <div class="p-6">
-          <div class="mb-4 flex items-center justify-between">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-              Discubot Demo
-            </h3>
-            <UButton
-              color="gray"
-              variant="ghost"
-              icon="i-lucide-x"
-              @click="close"
-            />
-          </div>
-
-          <!-- Video placeholder -->
-          <div class="aspect-video w-full rounded-lg border border-gray-200 bg-gray-100 dark:border-gray-800 dark:bg-gray-900">
-            <div class="flex size-full items-center justify-center">
-              <div class="text-center">
-                <UIcon name="i-lucide-video" class="mx-auto size-12 text-gray-400" />
-                <p class="mt-2 text-sm text-gray-500">
-                  Demo video coming soon
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </template>
-    </UModal>
   </main>
 </template>

@@ -1,32 +1,11 @@
-<template>
-  <AppContainer title="Flows">
-    <div class="mb-4">
-      <NuxtLink
-        :to="`/dashboard/${currentTeam?.slug}`"
-        class="hover:underline inline-flex items-center gap-1 text-sm text-muted-foreground"
-      >
-        <UIcon name="i-lucide-arrow-left" class="w-4 h-4" />
-        Back to Dashboard
-      </NuxtLink>
-    </div>
-
-    <FlowList
-      v-if="currentTeam?.id"
-      :team-id="currentTeam.id"
-      :team-slug="currentTeam.slug"
-    />
-    <div v-else class="text-center text-muted-foreground">
-      Loading...
-    </div>
-  </AppContainer>
-</template>
-
 <script setup lang="ts">
-import FlowList from '#layers/discubot/app/components/flows/FlowList.vue'
-
+// Flows is now the main dashboard - redirect there
 const { currentTeam } = useTeam()
 
 definePageMeta({
   middleware: 'auth'
 })
+
+// Redirect to main dashboard
+navigateTo(`/dashboard/${currentTeam.value?.slug}`)
 </script>
