@@ -27,7 +27,7 @@ function getSourceIcon(sourceType: string): string {
 // Source color mapping
 function getSourceColor(sourceType: string): string {
   const colors: Record<string, string> = {
-    slack: 'text-[#4A154B]',
+    slack: 'text-[#4A154B] dark:text-[#E01E5A]',
     figma: 'text-[#F24E1E]',
     notion: 'text-gray-900 dark:text-white',
     email: 'text-blue-500',
@@ -56,7 +56,10 @@ function getOutputColor(outputType: string): string {
 }
 
 // Personality icon mapping
-function getPersonalityIcon(personality: string | undefined): string {
+function getPersonalityIcon(personality: string | undefined, customIcon?: string): string {
+  // If custom icon is set, return empty (we'll render the emoji directly)
+  if (customIcon) return ''
+
   if (!personality) return 'i-lucide-message-circle'
   if (personality.startsWith('custom:')) return 'i-lucide-pencil'
 
@@ -69,6 +72,13 @@ function getPersonalityIcon(personality: string | undefined): string {
     zen: 'i-lucide-flower-2',
   }
   return icons[personality] || 'i-lucide-message-circle'
+}
+
+// Check if icon is a unicode emoji (not a lucide icon)
+function isEmoji(icon: string | undefined): boolean {
+  if (!icon) return false
+  // Lucide icons start with 'i-'
+  return !icon.startsWith('i-')
 }
 
 // Personality label for tooltip
@@ -208,8 +218,17 @@ const aiStatus = computed(() => {
 
       <!-- Personality indicator -->
       <UTooltip :text="getPersonalityLabel(flow.replyPersonality)">
+        <!-- Custom emoji icon -->
+        <span
+          v-if="flow.personalityIcon && isEmoji(flow.personalityIcon)"
+          class="text-base transition-transform hover:scale-110 cursor-default"
+        >
+          {{ flow.personalityIcon }}
+        </span>
+        <!-- Lucide icon fallback -->
         <UIcon
-          :name="getPersonalityIcon(flow.replyPersonality)"
+          v-else
+          :name="getPersonalityIcon(flow.replyPersonality, flow.personalityIcon)"
           :class="[
             'w-4 h-4 transition-transform hover:scale-110',
             flow.replyPersonality ? 'text-amber-500' : 'text-gray-300 dark:text-gray-600'

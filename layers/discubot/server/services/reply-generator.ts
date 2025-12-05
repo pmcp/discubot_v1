@@ -145,45 +145,56 @@ export function extractCustomPrompt(personality: string): string {
  * @param tasks - Created Notion tasks (can be empty array)
  * @param personality - Preset key or 'custom:...' prompt
  * @param anthropicApiKey - Required for custom prompts
+ * @param personalityIcon - Optional emoji/icon to prefix the message
  * @returns Generated reply message
  */
 export async function generateReplyMessage(
   tasks: NotionTaskResult[],
   personality: string | null | undefined,
   anthropicApiKey?: string,
+  personalityIcon?: string,
 ): Promise<string> {
   // Default to professional if no personality specified
   const selectedPersonality = personality || 'professional'
+
+  // Helper to prefix message with icon if provided
+  const prefixIcon = (message: string): string => {
+    if (personalityIcon && !message.startsWith(personalityIcon)) {
+      return `${personalityIcon} ${message}`
+    }
+    return message
+  }
 
   // Handle preset personalities
   if (isPreset(selectedPersonality)) {
     const preset = PERSONALITY_PRESETS[selectedPersonality]
 
     if (tasks.length === 0) {
-      return preset.templates.noTasks
+      return prefixIcon(preset.templates.noTasks)
     }
 
     if (tasks.length === 1 && tasks[0]) {
-      return preset.templates.singleTask(tasks[0].url)
+      return prefixIcon(preset.templates.singleTask(tasks[0].url))
     }
 
-    return preset.templates.multipleTasks(tasks)
+    return prefixIcon(preset.templates.multipleTasks(tasks))
   }
 
   // Handle custom prompts
   if (isCustomPrompt(selectedPersonality)) {
     if (!anthropicApiKey) {
       logger.warn('Custom personality requires API key, falling back to professional')
-      return generateReplyMessage(tasks, 'professional')
+      return generateReplyMessage(tasks, 'professional', undefined, personalityIcon)
     }
 
     const customPrompt = extractCustomPrompt(selectedPersonality)
-    return generateCustomReply(tasks, customPrompt, anthropicApiKey)
+    const message = await generateCustomReply(tasks, customPrompt, anthropicApiKey)
+    return prefixIcon(message)
   }
 
   // Unknown personality, fall back to professional
   logger.warn('Unknown personality, falling back to professional', { personality: selectedPersonality })
-  return generateReplyMessage(tasks, 'professional')
+  return generateReplyMessage(tasks, 'professional', undefined, personalityIcon)
 }
 
 /**
@@ -192,34 +203,45 @@ export async function generateReplyMessage(
  * @param userCount - Number of users discovered
  * @param personality - Preset key or 'custom:...' prompt
  * @param anthropicApiKey - Required for custom prompts
+ * @param personalityIcon - Optional emoji/icon to prefix the message
  * @returns Generated bootstrap reply message
  */
 export async function generateBootstrapMessage(
   userCount: number,
   personality: string | null | undefined,
   anthropicApiKey?: string,
+  personalityIcon?: string,
 ): Promise<string> {
   const selectedPersonality = personality || 'professional'
+
+  // Helper to prefix message with icon if provided
+  const prefixIcon = (message: string): string => {
+    if (personalityIcon && !message.startsWith(personalityIcon)) {
+      return `${personalityIcon} ${message}`
+    }
+    return message
+  }
 
   // Handle preset personalities
   if (isPreset(selectedPersonality)) {
     const preset = PERSONALITY_PRESETS[selectedPersonality]
-    return preset.templates.bootstrap(userCount)
+    return prefixIcon(preset.templates.bootstrap(userCount))
   }
 
   // Handle custom prompts
   if (isCustomPrompt(selectedPersonality)) {
     if (!anthropicApiKey) {
       logger.warn('Custom personality requires API key, falling back to professional')
-      return generateBootstrapMessage(userCount, 'professional')
+      return generateBootstrapMessage(userCount, 'professional', undefined, personalityIcon)
     }
 
     const customPrompt = extractCustomPrompt(selectedPersonality)
-    return generateCustomBootstrapReply(userCount, customPrompt, anthropicApiKey)
+    const message = await generateCustomBootstrapReply(userCount, customPrompt, anthropicApiKey)
+    return prefixIcon(message)
   }
 
   // Unknown personality, fall back to professional
-  return generateBootstrapMessage(userCount, 'professional')
+  return generateBootstrapMessage(userCount, 'professional', undefined, personalityIcon)
 }
 
 /**

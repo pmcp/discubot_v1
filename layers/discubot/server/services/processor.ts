@@ -1682,7 +1682,8 @@ export async function processDiscussion(
         const userCount = bootstrapResult.mentionedUsers.length
         const replyPersonality = flowData?.flow.replyPersonality || null
         const anthropicApiKey = flowData?.flow.anthropicApiKey || config?.anthropicApiKey
-        const bootstrapMessage = await generateBootstrapMessage(userCount, replyPersonality, anthropicApiKey)
+        const personalityIcon = flowData?.flow.personalityIcon || undefined
+        const bootstrapMessage = await generateBootstrapMessage(userCount, replyPersonality, anthropicApiKey, personalityIcon)
 
         await adapter.postReply(parsed.sourceThreadId, bootstrapMessage, replyConfig)
         await adapter.updateStatus(parsed.sourceThreadId, 'completed', replyConfig)
@@ -1977,7 +1978,8 @@ export async function processDiscussion(
       // Build confirmation message with personality
       const replyPersonality = flowData?.flow.replyPersonality || null
       const anthropicApiKey = flowData?.flow.anthropicApiKey || config?.anthropicApiKey
-      const confirmationMessage = await generateReplyMessage(notionTasks, replyPersonality, anthropicApiKey)
+      const personalityIcon = flowData?.flow.personalityIcon || undefined
+      const confirmationMessage = await generateReplyMessage(notionTasks, replyPersonality, anthropicApiKey, personalityIcon)
 
       // Post reply to the thread
       await adapter.postReply(parsed.sourceThreadId, confirmationMessage, threadBuildConfig)

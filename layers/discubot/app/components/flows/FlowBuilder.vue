@@ -63,6 +63,7 @@ const flowSchema = z.object({
   aiSummaryPrompt: z.string().optional(),
   aiTaskPrompt: z.string().optional(),
   replyPersonality: z.string().optional(),
+  personalityIcon: z.string().optional(),
   availableDomains: z.array(z.string()).min(1, 'At least one domain required').default(DEFAULT_DOMAINS)
 })
 
@@ -76,6 +77,7 @@ const flowState = reactive<Partial<FlowSchema>>({
   aiSummaryPrompt: props.flow?.aiSummaryPrompt || '',
   aiTaskPrompt: props.flow?.aiTaskPrompt || '',
   replyPersonality: props.flow?.replyPersonality || '',
+  personalityIcon: props.flow?.personalityIcon || '',
   availableDomains: props.flow?.availableDomains || DEFAULT_DOMAINS
 })
 
@@ -151,6 +153,88 @@ watch(customPersonalityPrompt, (value) => {
     flowState.replyPersonality = value ? `custom:${value}` : 'custom'
   }
 })
+
+// ============================================================================
+// PERSONALITY ICON SUGGESTIONS
+// ============================================================================
+
+interface IconSuggestion {
+  icon: string
+  type: 'emoji' | 'lucide' | 'svg'
+  label: string
+}
+
+const iconSuggestions = ref<IconSuggestion[]>([])
+const loadingIconSuggestions = ref(false)
+const showManualIconInput = ref(false)
+const manualIconInput = ref('')
+
+async function suggestPersonalityIcons() {
+  if (!customPersonalityPrompt.value || customPersonalityPrompt.value.length < 3) {
+    toast.add({
+      title: 'Enter a description first',
+      description: 'Please describe the personality before suggesting icons',
+      color: 'warning'
+    })
+    return
+  }
+
+  loadingIconSuggestions.value = true
+  iconSuggestions.value = []
+
+  try {
+    const response = await $fetch<{ suggestions: IconSuggestion[] }>('/api/ai/suggest-icons', {
+      method: 'POST',
+      body: {
+        description: customPersonalityPrompt.value,
+        anthropicApiKey: flowState.anthropicApiKey
+      }
+    })
+
+    iconSuggestions.value = response.suggestions
+  } catch (error: any) {
+    console.error('Failed to suggest icons:', error)
+    toast.add({
+      title: 'Icon suggestion failed',
+      description: error.message || 'Could not generate icon suggestions',
+      color: 'error'
+    })
+    // Provide fallback suggestions
+    iconSuggestions.value = [
+      { icon: '🤖', type: 'emoji', label: 'Robot' },
+      { icon: '💬', type: 'emoji', label: 'Chat' },
+      { icon: '✨', type: 'emoji', label: 'Sparkles' }
+    ]
+  } finally {
+    loadingIconSuggestions.value = false
+  }
+}
+
+function selectIcon(icon: string) {
+  flowState.personalityIcon = icon
+  toast.add({
+    title: 'Icon selected',
+    description: `${icon} will be used for this personality`,
+    color: 'success'
+  })
+}
+
+function applyManualIcon() {
+  if (manualIconInput.value) {
+    flowState.personalityIcon = manualIconInput.value
+    showManualIconInput.value = false
+    manualIconInput.value = ''
+    toast.add({
+      title: 'Icon applied',
+      description: `${flowState.personalityIcon} will be used for this personality`,
+      color: 'success'
+    })
+  }
+}
+
+function clearPersonalityIcon() {
+  flowState.personalityIcon = ''
+}
 
 // Watch preset changes
 watch(selectedPreset, (preset) => {
@@ -1295,6 +1379,99 @@ function cancel() {
                     class="w-full"
                   />
                 </UFormField>
+
+                <!-- Personality Icon Picker (shown when custom personality is selected) -->
+                <div
+                  v-if="flowState.replyPersonality === 'custom' || (flowState.replyPersonality && flowState.replyPersonality.startsWith('custom:'))"
+                  class="space-y-3"
+                >
+                  <div class="flex items-center justify-between">
+                    <label class="text-sm font-medium">Personality Icon</label>
+                    <div class="flex items-center gap-2">
+                      <!-- Current icon display -->
+                      <span v-if="flowState.personalityIcon" class="text-2xl">
+                        {{ flowState.personalityIcon }}
+                      </span>
+                      <UButton
+                        v-if="flowState.personalityIcon"
+                        type="button"
+                        color="neutral"
+                        variant="ghost"
+                        size="xs"
+                        icon="i-lucide-x"
+                        @click="clearPersonalityIcon"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Suggest Icons Button -->
+                  <div class="flex gap-2">
+                    <UButton
+                      type="button"
+                      color="primary"
+                      variant="outline"
+                      size="sm"
+                      :loading="loadingIconSuggestions"
+                      :disabled="!customPersonalityPrompt || customPersonalityPrompt.length < 3"
+                      @click="suggestPersonalityIcons"
+                    >
+                      <UIcon name="i-lucide-sparkles" class="mr-1" />
+                      Suggest Icons
+                    </UButton>
+                    <UButton
+                      type="button"
+                      color="neutral"
+                      variant="ghost"
+                      size="sm"
+                      @click="showManualIconInput = !showManualIconInput"
+                    >
+                      {{ showManualIconInput ? 'Hide' : 'Enter manually' }}
+                    </UButton>
+                  </div>
+
+                  <!-- Manual Icon Input -->
+                  <div v-if="showManualIconInput" class="flex gap-2">
+                    <UInput
+                      v-model="manualIconInput"
+                      placeholder="Enter emoji (e.g., 🦘)"
+                      class="w-32"
+                      @keyup.enter="applyManualIcon"
+                    />
+                    <UButton
+                      type="button"
+                      color="primary"
+                      size="sm"
+                      :disabled="!manualIconInput"
+                      @click="applyManualIcon"
+                    >
+                      Apply
+                    </UButton>
+                  </div>
+
+                  <!-- Icon Suggestions -->
+                  <div v-if="iconSuggestions.length > 0" class="flex gap-2">
+                    <UTooltip
+                      v-for="(suggestion, index) in iconSuggestions"
+                      :key="index"
+                      :text="suggestion.label"
+                    >
+                      <button
+                        type="button"
+                        class="w-12 h-12 text-2xl rounded-lg border-2 transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-primary"
+                        :class="flowState.personalityIcon === suggestion.icon
+                          ? 'border-primary bg-primary/10'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-primary/50'"
+                        @click="selectIcon(suggestion.icon)"
+                      >
+                        {{ suggestion.icon }}
+                      </button>
+                    </UTooltip>
+                  </div>
+
+                  <p class="text-xs text-muted-foreground">
+                    This icon will appear in the pipeline visualization and reply messages
+                  </p>
+                </div>
 
                 <USeparator class="my-4" />
 

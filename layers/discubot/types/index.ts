@@ -294,6 +294,8 @@ export interface Flow {
   aiTaskPrompt?: string
   /** Reply personality - preset key (e.g., 'friendly') or 'custom:...' for AI prompt */
   replyPersonality?: string
+  /** Custom icon for personality - emoji (🤖), lucide icon (i-lucide-bot), or SVG data URL */
+  personalityIcon?: string
   /** Whether onboarding is complete */
   onboardingComplete?: boolean
   /** Whether this flow is active */
