@@ -107,7 +107,20 @@ const promptPresets = [
   }
 ]
 
-const selectedPreset = ref('default')
+// Detect preset from existing prompts
+function detectPresetFromPrompts(summaryPrompt?: string, taskPrompt?: string): string {
+  if (!summaryPrompt && !taskPrompt) return 'default'
+
+  for (const preset of promptPresets) {
+    if (preset.value === 'default') continue
+    if (preset.summaryPrompt === summaryPrompt && preset.taskPrompt === taskPrompt) {
+      return preset.value
+    }
+  }
+  return 'default' // Custom prompts that don't match any preset
+}
+
+const selectedPreset = ref(detectPresetFromPrompts(props.flow?.aiSummaryPrompt, props.flow?.aiTaskPrompt))
 
 // Reply personality presets
 const personalityPresets = [

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { h, resolveComponent } from 'vue'
-import type { Flow, FlowInput, FlowOutput } from '~/layers/discubot/types'
+import type { Flow, FlowInput, FlowOutput } from '#layers/discubot/types'
+import FlowPipelineVisual from '#layers/discubot/app/components/flows/FlowPipelineVisual.vue'
 
 // Resolve UI components for use in render functions
 const UBadge = resolveComponent('UBadge')
@@ -61,13 +62,23 @@ onMounted(() => {
 })
 
 // Helper to count inputs for a flow
-const getInputCount = (flowId: string) => {
-  return inputs.value.filter(input => input.flowId === flowId && input.active).length
+const getInputCount = (flowId: string): number => {
+  return inputs.value.filter((input: FlowInput) => input.flowId === flowId && input.active).length
 }
 
 // Helper to count outputs for a flow
-const getOutputCount = (flowId: string) => {
-  return outputs.value.filter(output => output.flowId === flowId && output.active).length
+const getOutputCount = (flowId: string): number => {
+  return outputs.value.filter((output: FlowOutput) => output.flowId === flowId && output.active).length
+}
+
+// Helper to get inputs for a flow
+const getInputsForFlow = (flowId: string): FlowInput[] => {
+  return inputs.value.filter((input: FlowInput) => input.flowId === flowId)
+}
+
+// Helper to get outputs for a flow
+const getOutputsForFlow = (flowId: string): FlowOutput[] => {
+  return outputs.value.filter((output: FlowOutput) => output.flowId === flowId)
 }
 
 // Table columns (Nuxt UI v4 format with cell renderers)
@@ -78,25 +89,13 @@ const columns = [
     cell: ({ row }: any) => h('div', { class: 'font-medium' }, row.original.name)
   },
   {
-    accessorKey: 'description',
-    header: 'Description',
-    cell: ({ row }: any) => h('div', { class: 'text-sm text-muted-foreground max-w-md truncate' }, row.original.description || '—')
-  },
-  {
-    accessorKey: 'inputCount',
-    header: 'Inputs',
-    cell: ({ row }: any) => h(UBadge, {
-      color: row.original.inputCount > 0 ? 'primary' : 'neutral',
-      variant: 'subtle'
-    }, () => `${row.original.inputCount} ${row.original.inputCount === 1 ? 'input' : 'inputs'}`)
-  },
-  {
-    accessorKey: 'outputCount',
-    header: 'Outputs',
-    cell: ({ row }: any) => h(UBadge, {
-      color: row.original.outputCount > 0 ? 'primary' : 'neutral',
-      variant: 'subtle'
-    }, () => `${row.original.outputCount} ${row.original.outputCount === 1 ? 'output' : 'outputs'}`)
+    id: 'pipeline',
+    header: 'Pipeline',
+    cell: ({ row }: any) => h(FlowPipelineVisual, {
+      flow: row.original.flow,
+      inputs: row.original.flowInputs,
+      outputs: row.original.flowOutputs
+    })
   },
   {
     id: 'status',
@@ -125,7 +124,7 @@ const columns = [
   }
 ]
 
-// Transform flows into table rows with counts
+// Transform flows into table rows with counts and related data
 const rows = computed(() => {
   return flows.value.map(flow => ({
     id: flow.id,
@@ -135,7 +134,9 @@ const rows = computed(() => {
     outputCount: getOutputCount(flow.id),
     active: flow.active,
     onboardingComplete: flow.onboardingComplete,
-    flow // Keep reference to full flow object
+    flow, // Keep reference to full flow object
+    flowInputs: getInputsForFlow(flow.id),
+    flowOutputs: getOutputsForFlow(flow.id)
   }))
 })
 
